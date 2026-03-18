@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getQuizWithLegacyFallback } from "@/lib/legacy-quiz-api";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -40,11 +41,27 @@ export async function GET(
 
     return NextResponse.json(quiz);
   } catch (error) {
-    console.error(`Failed to load quiz ${id}`, error);
-    return NextResponse.json(
-      { error: "Failed to load quiz" },
-      { status: 500 }
-    );
+    console.error(`Failed to load quiz ${id} via Prisma, trying legacy fallback`, error);
+
+    try {
+      const quiz = await getQuizWithLegacyFallback(id);
+
+      if (!quiz) {
+        return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+      }
+
+      if (quiz.teacherId !== session.user.id && session.user.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      return NextResponse.json(quiz);
+    } catch (fallbackError) {
+      console.error(`Legacy quiz fallback failed for ${id}`, fallbackError);
+      return NextResponse.json(
+        { error: "Failed to load quiz" },
+        { status: 500 }
+      );
+    }
   }
 }
 

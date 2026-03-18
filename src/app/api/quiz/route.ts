@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { listQuizzesWithLegacyFallback } from "@/lib/legacy-quiz-api";
 import { prisma } from "@/lib/prisma";
 import { quizSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
@@ -20,11 +21,18 @@ export async function GET() {
 
     return NextResponse.json(quizzes);
   } catch (error) {
-    console.error("Failed to load quizzes", error);
-    return NextResponse.json(
-      { error: "Failed to load quizzes" },
-      { status: 500 }
-    );
+    console.error("Failed to load quizzes via Prisma, trying legacy fallback", error);
+
+    try {
+      const quizzes = await listQuizzesWithLegacyFallback(session.user.id);
+      return NextResponse.json(quizzes);
+    } catch (fallbackError) {
+      console.error("Legacy quiz fallback failed", fallbackError);
+      return NextResponse.json(
+        { error: "Failed to load quizzes" },
+        { status: 500 }
+      );
+    }
   }
 }
 
