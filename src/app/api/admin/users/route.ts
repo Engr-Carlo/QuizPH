@@ -41,8 +41,9 @@ export async function POST(req: Request) {
 
   try {
     const { name, email, password, role } = await req.json();
+    const normalizedEmail = String(email || "").toLowerCase().trim();
 
-    if (!name || !email || !password || !role) {
+    if (!name || !normalizedEmail || !password || !role) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
     const passwordHash = await hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role },
+      data: { name, email: normalizedEmail, passwordHash, role, emailVerifiedAt: new Date() },
     });
 
     return NextResponse.json({ message: "User created", userId: user.id }, { status: 201 });

@@ -43,6 +43,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
+  emailVerifiedAt DateTime?
   role         Role     @default(STUDENT)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -50,6 +51,21 @@ model User {
 
   quizzes      Quiz[]
   participants Participant[]
+  verificationCodes EmailVerificationCode[]
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  codeHash  String
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, codeHash])
 }
 
 model Quiz {

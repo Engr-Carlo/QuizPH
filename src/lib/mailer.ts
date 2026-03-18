@@ -1,0 +1,49 @@
+import nodemailer from "nodemailer";
+
+export async function sendMail(params: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}) {
+  const {
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USER,
+    SMTP_PASS,
+    SMTP_FROM,
+    NODE_ENV,
+  } = process.env;
+
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
+    console.warn("SMTP is not configured. Email not sent.");
+    if (NODE_ENV !== "production") {
+      console.info("Email debug payload:", {
+        to: params.to,
+        subject: params.subject,
+        text: params.text,
+      });
+    }
+    return { delivered: false };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT),
+    secure: Number(SMTP_PORT) === 465,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+    text: params.text,
+  });
+
+  return { delivered: true };
+}

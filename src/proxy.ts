@@ -6,13 +6,17 @@ export default auth((req) => {
   const user = req.auth?.user;
 
   // Public routes
-  const publicRoutes = ["/login", "/register", "/"];
+  const publicRoutes = ["/login", "/register", "/verify-email", "/"];
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
 
   // API auth routes are public
   if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/register") || pathname.startsWith("/api/email-verification")) {
     return NextResponse.next();
   }
 

@@ -32,7 +32,15 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/login?registered=true");
+    const target = new URLSearchParams({
+      email,
+      registered: "true",
+    });
+    if (data.previewCode) {
+      target.set("previewCode", data.previewCode);
+    }
+
+    router.push(`/verify-email?${target.toString()}`);
   }
 
   return (

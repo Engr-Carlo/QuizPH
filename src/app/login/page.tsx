@@ -2,19 +2,32 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState(
+    searchParams.get("verified") === "true"
+      ? "Email verified successfully. You can sign in now."
+      : searchParams.get("registered") === "true"
+      ? "Account created. Please verify your email before signing in."
+      : ""
+  );
+  const [showResend, setShowResend] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [previewCode, setPreviewCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
+    setShowResend(false);
     setLoading(true);
 
     const res = await signIn("credentials", {
@@ -26,7 +39,19 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res?.error) {
-      setError("Invalid email or password. Please try again.");
+      const statusRes = await fetch("/api/email-verification/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const statusData = await statusRes.json();
+
+      if (statusData.exists && !statusData.verified) {
+        setError("Your email is not verified yet. Please verify your email first.");
+        setShowResend(true);
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
       return;
     }
 
@@ -37,6 +62,34 @@ export default function LoginPage() {
     if (role === "SUPER_ADMIN") router.push("/admin");
     else if (role === "TEACHER") router.push("/teacher");
     else router.push("/student");
+  }
+
+  async function handleResendCode() {
+    if (!email) {
+      setError("Please enter your email first.");
+      return;
+    }
+
+    setError("");
+    setInfo("");
+    setResendLoading(true);
+
+    const res = await fetch("/api/email-verification/resend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+
+    setResendLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to resend verification code.");
+      return;
+    }
+
+    setInfo(data.message || "Verification code sent.");
+    if (data.previewCode) setPreviewCode(data.previewCode);
   }
 
   return (
@@ -107,12 +160,24 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+            {info && (
+              <div className="flex items-start gap-2.5 bg-success/6 border border-success/25 text-success text-sm p-3.5 rounded-xl">
+                <span>{info}</span>
+              </div>
+            )}
+
             {error && (
               <div className="flex items-start gap-2.5 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl">
                 <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
                 <span>{error}</span>
+              </div>
+            )}
+
+            {previewCode && (
+              <div className="bg-warning/8 border border-warning/30 text-warning text-sm p-3.5 rounded-xl">
+                Dev preview code: <span className="font-bold tracking-[0.2em]">{previewCode}</span>
               </div>
             )}
 
@@ -150,8 +215,25 @@ export default function LoginPage() {
               className="w-full py-2.5 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm shadow-sm"
               style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
             >
-              {loading ? "Signing in…" : "Sign In →"}
+              {loading ? "Signing in..." : "Sign In ->"}
             </button>
+
+            {showResend && (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendLoading}
+                  className="text-sm font-semibold text-primary hover:underline disabled:opacity-50"
+                >
+                  {resendLoading ? "Sending..." : "Resend verification code"}
+                </button>
+
+                <Link href={`/verify-email?email=${encodeURIComponent(email)}`} className="text-sm text-muted hover:text-foreground transition">
+                  Verify email
+                </Link>
+              </div>
+            )}
           </form>
 
           <p className="text-center text-sm text-muted mt-6">

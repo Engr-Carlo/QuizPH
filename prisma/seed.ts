@@ -1,5 +1,5 @@
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../node_modules/.prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -16,6 +16,7 @@ async function main() {
       email: "admin@quizph.com",
       passwordHash,
       role: "SUPER_ADMIN",
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -31,6 +32,7 @@ async function main() {
       email: "teacher@quizph.com",
       passwordHash: teacherHash,
       role: "TEACHER",
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -46,6 +48,7 @@ async function main() {
       email: "student@quizph.com",
       passwordHash: studentHash,
       role: "STUDENT",
+      emailVerifiedAt: new Date(),
     },
   });
 
