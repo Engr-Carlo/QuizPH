@@ -9,15 +9,23 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const quizzes = await prisma.quiz.findMany({
-    where: { teacherId: session.user.id },
-    include: {
-      _count: { select: { questions: true, sessions: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const quizzes = await prisma.quiz.findMany({
+      where: { teacherId: session.user.id },
+      include: {
+        _count: { select: { questions: true, sessions: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json(quizzes);
+    return NextResponse.json(quizzes);
+  } catch (error) {
+    console.error("Failed to load quizzes", error);
+    return NextResponse.json(
+      { error: "Failed to load quizzes" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {

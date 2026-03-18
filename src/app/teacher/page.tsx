@@ -75,14 +75,30 @@ export default function TeacherDashboard() {
   const { data: session } = useSession();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/quiz")
-      .then((r) => r.json())
-      .then((data) => {
-        setQuizzes(data);
+    async function loadQuizzes() {
+      try {
+        const res = await fetch("/api/quiz");
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          setError(payload?.error || "Failed to load quizzes");
+          setQuizzes([]);
+          return;
+        }
+
+        setQuizzes(Array.isArray(payload) ? payload : []);
+      } catch {
+        setError("Failed to load quizzes");
+        setQuizzes([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+
+    loadQuizzes();
   }, []);
 
   const firstName = session?.user?.name?.split(" ")[0] || "Teacher";
@@ -117,6 +133,10 @@ export default function TeacherDashboard() {
       {loading ? (
         <div className="flex items-center justify-center py-24">
           <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-danger/20 bg-danger/5 px-5 py-4 text-sm text-danger">
+          {error}
         </div>
       ) : quizzes.length === 0 ? (
         /* Empty state */

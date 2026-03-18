@@ -168,6 +168,7 @@ export default function QuizDetailPage() {
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -200,10 +201,19 @@ export default function QuizDetailPage() {
   ]);
 
   const fetchQuiz = useCallback(async () => {
-    const res = await fetch(`/api/quiz/${quizId}`);
-    if (res.ok) {
-      const data: Quiz = await res.json();
+    try {
+      const res = await fetch(`/api/quiz/${quizId}`);
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setError(payload?.error || "Failed to load quiz");
+        setQuiz(null);
+        return;
+      }
+
+      const data = payload as Quiz;
       setQuiz(data);
+      setError("");
       setSettingsTitle(data.title);
       setSettingsDescription(data.description || "");
       setSettingsTimerType(data.timerType as "PER_QUIZ" | "PER_QUESTION");
@@ -215,8 +225,12 @@ export default function QuizDetailPage() {
       setSettingsRandomizeQuestions(data.randomizeQuestions);
       setSettingsRandomizeAnswers(data.randomizeAnswers);
       setSettingsAntiCheatEnabled(data.antiCheatEnabled);
+    } catch {
+      setError("Failed to load quiz");
+      setQuiz(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [quizId]);
 
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
@@ -413,7 +427,7 @@ export default function QuizDetailPage() {
   if (!quiz) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">Quiz not found</div>
+        <div className="text-center py-12">{error || "Quiz not found"}</div>
       </DashboardLayout>
     );
   }
