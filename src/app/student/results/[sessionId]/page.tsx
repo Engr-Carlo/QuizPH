@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import Link from "next/link";
 
 interface Option {
   id: string;
@@ -40,6 +41,12 @@ interface SessionData {
   participants: ParticipantData[];
 }
 
+const Q_TYPE_LABELS: Record<string, string> = {
+  MCQ: "Multiple Choice",
+  TRUE_FALSE: "True / False",
+  SHORT_ANSWER: "Short Answer",
+};
+
 export default function StudentResultsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -51,20 +58,18 @@ export default function StudentResultsPage() {
 
   const fetchResults = useCallback(async () => {
     const res = await fetch(`/api/sessions/${sessionId}`);
-    if (res.ok) {
-      setData(await res.json());
-    }
+    if (res.ok) setData(await res.json());
     setLoading(false);
   }, [sessionId]);
 
-  useEffect(() => {
-    fetchResults();
-  }, [fetchResults]);
+  useEffect(() => { fetchResults(); }, [fetchResults]);
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12 text-muted">Loading results...</div>
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
       </DashboardLayout>
     );
   }
@@ -72,7 +77,7 @@ export default function StudentResultsPage() {
   if (!data) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">Session not found</div>
+        <div className="text-center py-12 text-muted">Session not found.</div>
       </DashboardLayout>
     );
   }
@@ -81,195 +86,189 @@ export default function StudentResultsPage() {
   if (!participant) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">Participant not found</div>
+        <div className="text-center py-12 text-muted">Participant not found.</div>
       </DashboardLayout>
     );
   }
 
   const totalQuestions = data.quiz.questions.length;
   const correctCount = participant.answers.filter((a) => a.isCorrect).length;
-  const accuracy =
-    totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+  const wrongCount = participant.answers.filter((a) => !a.isCorrect).length;
+  const skippedCount = totalQuestions - participant.answers.length;
+  const accuracy = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
-  // Build a lookup of answers by questionId
-  const answerMap = new Map(
-    participant.answers.map((a) => [a.questionId, a])
-  );
+  // Score color based on accuracy
+  const scoreColor = accuracy >= 80 ? "text-success" : accuracy >= 60 ? "text-warning" : "text-danger";
+  const scoreMsg = accuracy >= 80 ? "Excellent!" : accuracy >= 60 ? "Good job!" : "Keep practicing!";
+
+  const answerMap = new Map(participant.answers.map((a) => [a.questionId, a]));
 
   return (
     <DashboardLayout>
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold mb-1">
-          {data.quiz.title} — Your Results
-        </h1>
-        <p className="text-muted text-sm mb-6">
-          Session Code:{" "}
-          <span className="font-mono font-bold text-primary">{data.code}</span>
-        </p>
 
-        {/* Score summary */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-xl p-5 text-center">
-            <div className="text-4xl font-bold text-primary">
-              {participant.score}
+        {/* Header */}
+        <div className="mb-6">
+          <p className="text-sm text-muted mb-1">
+            Session Code:{" "}
+            <span className="font-mono font-bold text-primary">{data.code}</span>
+          </p>
+          <h1 className="text-2xl font-extrabold text-foreground">{data.quiz.title}</h1>
+        </div>
+
+        {/* Score summary card */}
+        <div className="bg-card border border-border rounded-2xl p-6 mb-8 shadow-sm">
+          <div className="flex items-center gap-8">
+            {/* Big score circle */}
+            <div className="relative w-28 h-28 flex-shrink-0">
+              <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="8" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke={accuracy >= 80 ? "var(--success)" : accuracy >= 60 ? "var(--warning)" : "var(--danger)"}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - accuracy / 100)}`}
+                  style={{ transition: "stroke-dashoffset 0.8s ease" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-2xl font-extrabold leading-none ${scoreColor}`}>{accuracy}%</span>
+                <span className="text-[10px] text-muted mt-0.5">accuracy</span>
+              </div>
             </div>
-            <div className="text-sm text-muted">Score</div>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-5 text-center">
-            <div className="text-4xl font-bold text-primary">{accuracy}%</div>
-            <div className="text-sm text-muted">Accuracy</div>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-5 text-center">
-            <div className="text-4xl font-bold">
-              <span className="text-success">{correctCount}</span>
-              <span className="text-muted text-2xl">/{totalQuestions}</span>
+
+            {/* Stats */}
+            <div className="flex-1">
+              <p className={`text-lg font-extrabold ${scoreColor} mb-3`}>{scoreMsg}</p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Score", value: participant.score, color: "text-primary", bg: "bg-primary/8" },
+                  { label: "Correct", value: correctCount, color: "text-success", bg: "bg-success/8" },
+                  { label: "Wrong", value: wrongCount, color: "text-danger", bg: "bg-danger/8" },
+                  ...(skippedCount > 0 ? [{ label: "Skipped", value: skippedCount, color: "text-muted", bg: "bg-surface" }] : []),
+                ].map(({ label, value, color, bg }) => (
+                  <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
+                    <div className={`text-xl font-extrabold ${color}`}>{value}</div>
+                    <div className="text-[11px] text-muted">{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="text-sm text-muted">Correct</div>
           </div>
         </div>
 
-        {/* Per-question breakdown */}
-        <h2 className="text-lg font-semibold mb-4">Question Breakdown</h2>
-        <div className="space-y-4">
+        {/* Question breakdown */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-foreground">Question Breakdown</h2>
+          <span className="text-xs text-muted">{totalQuestions} question{totalQuestions !== 1 ? "s" : ""}</span>
+        </div>
+
+        <div className="space-y-3">
           {data.quiz.questions.map((q, idx) => {
             const answer = answerMap.get(q.id);
             const isCorrect = answer?.isCorrect ?? false;
             const isUnanswered = !answer;
 
-            // Find what the student answered
             let studentAnswerDisplay = "Not answered";
             if (answer) {
               if (q.type === "SHORT_ANSWER") {
                 studentAnswerDisplay = answer.answerText;
               } else {
-                const selectedOpt = q.options.find(
-                  (o) => o.id === answer.answerText || o.text === answer.answerText
-                );
-                studentAnswerDisplay = selectedOpt?.text || answer.answerText;
+                const sel = q.options.find((o) => o.id === answer.answerText || o.text === answer.answerText);
+                studentAnswerDisplay = sel?.text || answer.answerText;
               }
             }
 
             const correctOption = q.options.find((o) => o.isCorrect);
 
+            const borderStyle = isUnanswered
+              ? "border-border"
+              : isCorrect
+              ? "border-success/40"
+              : "border-danger/40";
+
+            const bgStyle = isUnanswered ? "" : isCorrect ? "bg-success/3" : "bg-danger/3";
+
             return (
               <div
                 key={q.id}
-                className={`bg-card border rounded-xl p-5 ${
-                  isUnanswered
-                    ? "border-border"
-                    : isCorrect
-                    ? "border-success/50"
-                    : "border-danger/50"
-                }`}
+                className={`bg-card border-2 rounded-2xl p-5 shadow-sm transition ${borderStyle} ${bgStyle}`}
               >
+                {/* Question header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">
-                      Q{idx + 1}
-                    </span>
-                    <span className="text-xs text-muted uppercase">
-                      {q.type === "MCQ"
-                        ? "Multiple Choice"
-                        : q.type === "TRUE_FALSE"
-                        ? "True/False"
-                        : "Short Answer"}
+                    <span className="text-xs font-bold text-muted/60">Q{idx + 1}</span>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface border border-border text-muted">
+                      {Q_TYPE_LABELS[q.type] || q.type}
                     </span>
                   </div>
                   {isUnanswered ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted/20 text-muted">
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-muted/10 text-muted">
                       Skipped
                     </span>
                   ) : isCorrect ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-success/20 text-success font-medium">
-                      ✓ Correct
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/15 text-success">
+                      âœ“ Correct
                     </span>
                   ) : (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-danger/20 text-danger font-medium">
-                      ✕ Wrong
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-danger/15 text-danger">
+                      âœ• Incorrect
                     </span>
                   )}
                 </div>
 
-                <p className="font-medium mb-3">{q.text}</p>
+                {/* Question text */}
+                <p className="font-semibold text-sm text-foreground mb-3">{q.text}</p>
 
-                {/* Show options with correct/wrong markings */}
+                {/* Answer breakdown */}
                 {q.type === "SHORT_ANSWER" ? (
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-1.5 text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-muted">Your answer:</span>
-                      <span
-                        className={
-                          isCorrect
-                            ? "text-success font-medium"
-                            : "text-danger font-medium"
-                        }
-                      >
+                      <span className="text-xs text-muted w-24 flex-shrink-0">Your answer:</span>
+                      <span className={isCorrect ? "text-success font-semibold" : "text-danger font-semibold"}>
                         {studentAnswerDisplay}
                       </span>
                     </div>
                     {!isCorrect && correctOption && (
                       <div className="flex items-center gap-2">
-                        <span className="text-muted">Correct answer:</span>
-                        <span className="text-success font-medium">
-                          {correctOption.text}
-                        </span>
+                        <span className="text-xs text-muted w-24 flex-shrink-0">Correct answer:</span>
+                        <span className="text-success font-semibold">{correctOption.text}</span>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-1.5">
                     {q.options.map((opt) => {
-                      const isStudentChoice =
-                        answer &&
-                        (opt.id === answer.answerText ||
-                          opt.text === answer.answerText);
+                      const isStudentChoice = answer &&
+                        (opt.id === answer.answerText || opt.text === answer.answerText);
                       const isCorrectOpt = opt.isCorrect;
 
-                      let borderClass = "border-border";
-                      let bgClass = "";
-                      let textClass = "";
-
-                      if (isCorrectOpt) {
-                        borderClass = "border-success/50";
-                        bgClass = "bg-success/5";
-                        textClass = "text-success";
-                      }
-                      if (isStudentChoice && !isCorrect) {
-                        borderClass = "border-danger/50";
-                        bgClass = "bg-danger/5";
-                        textClass = "text-danger";
-                      }
-                      if (isStudentChoice && isCorrect) {
-                        borderClass = "border-success/50";
-                        bgClass = "bg-success/10";
-                        textClass = "text-success";
-                      }
+                      let cls = "border-border text-muted bg-surface";
+                      if (isCorrectOpt) cls = "border-success/40 bg-success/8 text-success";
+                      if (isStudentChoice && !isCorrect) cls = "border-danger/40 bg-danger/8 text-danger";
+                      if (isStudentChoice && isCorrect) cls = "border-success/50 bg-success/12 text-success";
 
                       return (
                         <div
                           key={opt.id}
-                          className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border ${borderClass} ${bgClass}`}
+                          className={`flex items-center gap-2.5 text-sm px-4 py-2.5 rounded-xl border ${cls}`}
                         >
-                          <span className={textClass}>
-                            {isCorrectOpt
-                              ? "✓"
-                              : isStudentChoice
-                              ? "✕"
-                              : "○"}
+                          <span className="w-4 flex-shrink-0 text-center font-bold">
+                            {isCorrectOpt ? "âœ“" : isStudentChoice ? "âœ•" : "â—‹"}
                           </span>
-                          <span
-                            className={
-                              isStudentChoice || isCorrectOpt
-                                ? "font-medium"
-                                : "text-muted"
-                            }
-                          >
+                          <span className={`flex-1 ${isStudentChoice || isCorrectOpt ? "font-semibold" : ""}`}>
                             {opt.text}
                           </span>
                           {isStudentChoice && (
-                            <span className="text-xs text-muted ml-auto">
-                              Your answer
-                            </span>
+                            <span className="text-[10px] opacity-60 ml-auto">Your answer</span>
+                          )}
+                          {isCorrectOpt && !isStudentChoice && (
+                            <span className="text-[10px] opacity-60 ml-auto">Correct</span>
                           )}
                         </div>
                       );
@@ -281,16 +280,18 @@ export default function StudentResultsPage() {
           })}
         </div>
 
-        {/* Back to dashboard */}
-        <div className="mt-8 text-center">
-          <a
+        {/* Back button */}
+        <div className="mt-8">
+          <Link
             href="/student"
-            className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+            className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl shadow-sm transition hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
           >
-            Back to Dashboard
-          </a>
+            â† Back to Dashboard
+          </Link>
         </div>
       </div>
     </DashboardLayout>
   );
 }
+

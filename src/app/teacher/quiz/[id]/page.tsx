@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -40,6 +40,29 @@ interface Quiz {
   sessions: Session[];
 }
 
+const Q_TYPE_LABELS: Record<string, string> = {
+  MCQ: "Multiple Choice",
+  TRUE_FALSE: "True / False",
+  SHORT_ANSWER: "Short Answer",
+};
+const Q_TYPE_COLORS: Record<string, string> = {
+  MCQ: "bg-primary/10 text-primary",
+  TRUE_FALSE: "bg-secondary/10 text-secondary",
+  SHORT_ANSWER: "bg-accent/10 text-accent",
+};
+
+const SESSION_STATUS_STYLE: Record<string, string> = {
+  WAITING: "bg-warning/10 text-warning border border-warning/30",
+  ACTIVE: "bg-success/10 text-success border border-success/30",
+  ENDED: "bg-muted/10 text-muted border border-muted/20",
+};
+
+function formatDuration(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return s ? `${m}m ${s}s` : `${m}m`;
+}
+
 export default function QuizDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -49,8 +72,8 @@ export default function QuizDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // Question form state
   const [qType, setQType] = useState<"MCQ" | "TRUE_FALSE" | "SHORT_ANSWER">("MCQ");
   const [qText, setQText] = useState("");
   const [qOptions, setQOptions] = useState<{ text: string; isCorrect: boolean }[]>([
@@ -62,15 +85,11 @@ export default function QuizDetailPage() {
 
   const fetchQuiz = useCallback(async () => {
     const res = await fetch(`/api/quiz/${quizId}`);
-    if (res.ok) {
-      setQuiz(await res.json());
-    }
+    if (res.ok) setQuiz(await res.json());
     setLoading(false);
   }, [quizId]);
 
-  useEffect(() => {
-    fetchQuiz();
-  }, [fetchQuiz]);
+  useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
 
   function resetForm() {
     setQType("MCQ");
@@ -88,10 +107,7 @@ export default function QuizDetailPage() {
   function handleTypeChange(type: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER") {
     setQType(type);
     if (type === "TRUE_FALSE") {
-      setQOptions([
-        { text: "True", isCorrect: true },
-        { text: "False", isCorrect: false },
-      ]);
+      setQOptions([{ text: "True", isCorrect: true }, { text: "False", isCorrect: false }]);
     } else if (type === "SHORT_ANSWER") {
       setQOptions([{ text: "", isCorrect: true }]);
     } else {
@@ -108,21 +124,12 @@ export default function QuizDetailPage() {
     const url = editingQuestion
       ? `/api/quiz/${quizId}/questions/${editingQuestion.id}`
       : `/api/quiz/${quizId}/questions`;
-
     const res = await fetch(url, {
       method: editingQuestion ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: qType,
-        text: qText,
-        options: qOptions.filter((o) => o.text.trim()),
-      }),
+      body: JSON.stringify({ type: qType, text: qText, options: qOptions.filter((o) => o.text.trim()) }),
     });
-
-    if (res.ok) {
-      resetForm();
-      fetchQuiz();
-    }
+    if (res.ok) { resetForm(); fetchQuiz(); }
   }
 
   async function handleDeleteQuestion(questionId: string) {
@@ -135,9 +142,7 @@ export default function QuizDetailPage() {
     setEditingQuestion(question);
     setQType(question.type as "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER");
     setQText(question.text);
-    setQOptions(
-      question.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
-    );
+    setQOptions(question.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })));
     setShowQuestionForm(true);
   }
 
@@ -156,16 +161,23 @@ export default function QuizDetailPage() {
   }
 
   async function handleDeleteQuiz() {
-    if (!confirm("Are you sure you want to delete this quiz? This cannot be undone."))
-      return;
+    if (!confirm("Are you sure you want to delete this quiz? This cannot be undone.")) return;
     const res = await fetch(`/api/quiz/${quizId}`, { method: "DELETE" });
     if (res.ok) router.push("/teacher");
+  }
+
+  function copyCode(code: string) {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
   }
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12 text-muted">Loading...</div>
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
       </DashboardLayout>
     );
   }
@@ -180,248 +192,265 @@ export default function QuizDetailPage() {
 
   return (
     <DashboardLayout>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted mb-6">
+        <Link href="/teacher" className="hover:text-foreground transition">My Quizzes</Link>
+        <span>/</span>
+        <span className="text-foreground font-medium truncate max-w-[200px]">{quiz.title}</span>
+      </div>
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{quiz.title}</h1>
-          {quiz.description && (
-            <p className="text-muted text-sm mt-1">{quiz.description}</p>
-          )}
-          <div className="flex gap-4 mt-2 text-xs text-muted">
-            <span>⏱️ {quiz.timerType === "PER_QUIZ" ? "Per Quiz" : "Per Question"}: {Math.floor(quiz.duration / 60)}m {quiz.duration % 60}s</span>
-            {quiz.randomizeQuestions && <span>🔀 Random questions</span>}
-            {quiz.randomizeAnswers && <span>🔀 Random answers</span>}
+          <h1 className="text-2xl font-extrabold text-foreground mb-2">{quiz.title}</h1>
+          {quiz.description && <p className="text-muted text-sm mb-3">{quiz.description}</p>}
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
+              â±ï¸ {quiz.timerType === "PER_QUIZ" ? "Per Quiz" : "Per Question"} Â· {formatDuration(quiz.duration)}
+            </span>
+            {quiz.randomizeQuestions && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
+                ðŸ”€ Random questions
+              </span>
+            )}
+            {quiz.randomizeAnswers && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
+                ðŸ”€ Random answers
+              </span>
+            )}
           </div>
         </div>
         <button
           onClick={handleDeleteQuiz}
-          className="text-sm text-danger hover:bg-danger/10 px-3 py-1.5 rounded-lg transition"
+          className="text-xs font-medium text-danger hover:bg-danger/8 px-3 py-2 rounded-xl transition border border-danger/20"
         >
           Delete Quiz
         </button>
       </div>
 
-      {/* Sessions */}
+      {/* â”€â”€ Sessions â”€â”€ */}
       <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Quiz Sessions</h2>
-          <button
-            onClick={handleCreateSession}
-            className="px-4 py-2 bg-secondary text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
-          >
-            + New Session
-          </button>
-        </div>
-
-        {quiz.sessions.length === 0 ? (
-          <p className="text-muted text-sm">No sessions yet. Create one to start.</p>
-        ) : (
-          <div className="space-y-3">
-            {quiz.sessions.map((s) => (
-              <div
-                key={s.id}
-                className="bg-card border border-border rounded-lg p-4 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-lg font-bold tracking-widest text-primary">
-                    {s.code}
-                  </span>
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      s.status === "WAITING"
-                        ? "bg-warning/20 text-warning"
-                        : s.status === "ACTIVE"
-                        ? "bg-success/20 text-success"
-                        : "bg-muted/20 text-muted"
-                    }`}
-                  >
-                    {s.status}
-                  </span>
-                  <span className="text-sm text-muted">
-                    {s._count.participants} participant(s)
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  {s.status === "WAITING" && (
-                    <button
-                      onClick={() => handleSessionAction(s.id, "ACTIVE")}
-                      className="px-3 py-1.5 text-sm bg-success text-white rounded-lg hover:opacity-90 transition"
-                    >
-                      Start
-                    </button>
-                  )}
-                  {s.status === "ACTIVE" && (
-                    <>
-                      <Link
-                        href={`/teacher/quiz/${quizId}/monitor/${s.id}`}
-                        className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition"
-                      >
-                        Monitor Live
-                      </Link>
-                      <button
-                        onClick={() => handleSessionAction(s.id, "ENDED")}
-                        className="px-3 py-1.5 text-sm bg-danger text-white rounded-lg hover:opacity-90 transition"
-                      >
-                        End
-                      </button>
-                    </>
-                  )}
-                  {s.status === "ENDED" && (
-                    <Link
-                      href={`/teacher/quiz/${quizId}/results/${s.id}`}
-                      className="px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition"
-                    >
-                      View Results
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+            <h2 className="text-base font-bold text-foreground">Sessions</h2>
+            <button
+              onClick={handleCreateSession}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl shadow-sm transition hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--secondary), #00a8a5)" }}
+            >
+              + New Session
+            </button>
           </div>
-        )}
+
+          {quiz.sessions.length === 0 ? (
+            <div className="text-center py-10 text-muted text-sm">
+              No sessions yet. Create one to start distributing this quiz.
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {quiz.sessions.map((s) => (
+                <div key={s.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {/* Join code */}
+                    <button
+                      onClick={() => copyCode(s.code)}
+                      className="font-mono text-xl font-extrabold tracking-[0.25em] text-primary hover:text-primary-dark transition flex items-center gap-2"
+                      title="Click to copy"
+                    >
+                      {s.code}
+                      <span className="text-xs font-sans font-normal text-muted">
+                        {copiedCode === s.code ? "âœ“ Copied!" : "copy"}
+                      </span>
+                    </button>
+                    {/* Status badge */}
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${SESSION_STATUS_STYLE[s.status] || ""}`}>
+                      {s.status}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {s._count.participants} participant{s._count.participants !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {s.status === "WAITING" && (
+                      <button
+                        onClick={() => handleSessionAction(s.id, "ACTIVE")}
+                        className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl transition hover:opacity-90"
+                        style={{ background: "var(--success)" }}
+                      >
+                        Start Session
+                      </button>
+                    )}
+                    {s.status === "ACTIVE" && (
+                      <>
+                        <Link
+                          href={`/teacher/quiz/${quizId}/monitor/${s.id}`}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl transition hover:opacity-90"
+                          style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+                        >
+                          ðŸ”´ Monitor Live
+                        </Link>
+                        <button
+                          onClick={() => handleSessionAction(s.id, "ENDED")}
+                          className="px-3.5 py-1.5 text-xs font-semibold border border-danger/30 text-danger rounded-xl hover:bg-danger/8 transition"
+                        >
+                          End
+                        </button>
+                      </>
+                    )}
+                    {s.status === "ENDED" && (
+                      <Link
+                        href={`/teacher/quiz/${quizId}/results/${s.id}`}
+                        className="px-3.5 py-1.5 text-xs font-semibold border border-primary/30 text-primary rounded-xl hover:bg-primary/8 transition"
+                      >
+                        View Results
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* Questions */}
+      {/* â”€â”€ Questions â”€â”€ */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">
-            Questions ({quiz.questions.length})
-          </h2>
+          <div>
+            <h2 className="text-base font-bold text-foreground">Questions</h2>
+            <p className="text-xs text-muted mt-0.5">{quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""} added</p>
+          </div>
           <button
-            onClick={() => {
-              resetForm();
-              setShowQuestionForm(true);
-            }}
-            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition"
+            onClick={() => { resetForm(); setShowQuestionForm(true); }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl shadow-sm transition hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
           >
             + Add Question
           </button>
         </div>
 
-        {/* Question form */}
+        {/* â”€â”€ Question form â”€â”€ */}
         {showQuestionForm && (
-          <div className="bg-card border-2 border-primary/30 rounded-xl p-6 mb-6">
-            <h3 className="font-semibold mb-4">
+          <div className="bg-card border-2 border-primary/25 rounded-2xl p-6 mb-5 shadow-sm fade-in">
+            <h3 className="font-bold text-foreground mb-5">
               {editingQuestion ? "Edit Question" : "New Question"}
             </h3>
 
             <div className="space-y-4">
+              {/* Type selector */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">Type</label>
+                <label className="block text-sm font-semibold text-foreground mb-2">Question Type</label>
                 <div className="flex gap-2">
                   {(["MCQ", "TRUE_FALSE", "SHORT_ANSWER"] as const).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => handleTypeChange(t)}
-                      className={`px-3 py-1.5 text-sm rounded-lg border transition ${
+                      className={`px-4 py-2 text-sm font-medium rounded-xl border-2 transition ${
                         qType === t
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted hover:border-primary/50"
+                          ? "border-primary bg-primary/8 text-primary"
+                          : "border-border text-muted hover:border-primary/40"
                       }`}
                     >
-                      {t === "MCQ"
-                        ? "Multiple Choice"
-                        : t === "TRUE_FALSE"
-                        ? "True/False"
-                        : "Short Answer"}
+                      {Q_TYPE_LABELS[t]}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* Question text */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Question Text
-                </label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Question Text</label>
                 <textarea
                   value={qText}
                   onChange={(e) => setQText(e.target.value)}
                   rows={2}
-                  className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                  placeholder="Enter your question..."
+                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition placeholder:text-muted"
+                  placeholder="Enter your questionâ€¦"
                 />
               </div>
 
               {/* Options */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  {qType === "SHORT_ANSWER" ? "Correct Answer" : "Options"}
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  {qType === "SHORT_ANSWER" ? "Correct Answer" : "Answer Choices"}
                 </label>
                 <div className="space-y-2">
                   {qOptions.map((opt, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="correct"
-                        checked={opt.isCorrect}
-                        onChange={() =>
-                          setQOptions(
-                            qOptions.map((o, i) => ({
-                              ...o,
-                              isCorrect: i === idx,
-                            }))
-                          )
-                        }
-                        className="accent-primary"
+                    <div key={idx} className="flex items-center gap-3">
+                      {/* Correct radio / indicator */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (qType === "SHORT_ANSWER") return;
+                          setQOptions(qOptions.map((o, i) => ({ ...o, isCorrect: i === idx })));
+                        }}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition ${
+                          opt.isCorrect
+                            ? "border-success bg-success"
+                            : "border-border hover:border-success/50"
+                        }`}
                         disabled={qType === "SHORT_ANSWER"}
-                      />
+                        title="Mark as correct"
+                      >
+                        {opt.isCorrect && <span className="text-white text-[10px] font-black">âœ“</span>}
+                      </button>
+
                       <input
                         type="text"
                         value={opt.text}
                         onChange={(e) =>
-                          setQOptions(
-                            qOptions.map((o, i) =>
-                              i === idx ? { ...o, text: e.target.value } : o
-                            )
-                          )
+                          setQOptions(qOptions.map((o, i) => i === idx ? { ...o, text: e.target.value } : o))
                         }
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className={`flex-1 px-3 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted ${
+                          opt.isCorrect ? "border-success/40 bg-success/5" : "border-border"
+                        }`}
                         placeholder={
                           qType === "SHORT_ANSWER"
                             ? "Expected correct answer"
-                            : `Option ${idx + 1}`
+                            : `Option ${String.fromCharCode(65 + idx)}`
                         }
                         disabled={qType === "TRUE_FALSE"}
                       />
+
                       {qType === "MCQ" && qOptions.length > 2 && (
                         <button
                           type="button"
-                          onClick={() =>
-                            setQOptions(qOptions.filter((_, i) => i !== idx))
-                          }
-                          className="text-danger text-sm hover:bg-danger/10 px-2 py-1 rounded"
+                          onClick={() => setQOptions(qOptions.filter((_, i) => i !== idx))}
+                          className="text-muted hover:text-danger w-7 h-7 rounded-lg hover:bg-danger/8 flex items-center justify-center text-sm transition"
                         >
-                          ✕
+                          Ã—
                         </button>
                       )}
                     </div>
                   ))}
                 </div>
+
                 {qType === "MCQ" && qOptions.length < 6 && (
                   <button
                     type="button"
-                    onClick={() =>
-                      setQOptions([...qOptions, { text: "", isCorrect: false }])
-                    }
-                    className="text-sm text-primary mt-2 hover:underline"
+                    onClick={() => setQOptions([...qOptions, { text: "", isCorrect: false }])}
+                    className="text-xs font-semibold text-primary mt-3 hover:underline"
                   >
-                    + Add option
+                    + Add another option
                   </button>
                 )}
               </div>
 
-              <div className="flex gap-2">
+              {/* Form actions */}
+              <div className="flex gap-2 pt-2">
                 <button
                   onClick={handleSaveQuestion}
                   disabled={!qText.trim()}
-                  className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
+                  className="px-5 py-2 text-white text-sm font-semibold rounded-xl transition disabled:opacity-40 hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
                 >
-                  {editingQuestion ? "Update" : "Add"} Question
+                  {editingQuestion ? "Update Question" : "Add Question"}
                 </button>
                 <button
                   onClick={resetForm}
-                  className="px-4 py-2 border border-border text-sm rounded-lg hover:bg-primary/5 transition"
+                  className="px-5 py-2 border border-border text-muted text-sm rounded-xl hover:bg-surface transition"
                 >
                   Cancel
                 </button>
@@ -431,56 +460,61 @@ export default function QuizDetailPage() {
         )}
 
         {/* Question list */}
-        <div className="space-y-3">
-          {quiz.questions.map((q, idx) => (
-            <div
-              key={q.id}
-              className="bg-card border border-border rounded-lg p-4"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">
-                      {q.type === "MCQ"
-                        ? "MCQ"
-                        : q.type === "TRUE_FALSE"
-                        ? "T/F"
-                        : "Short"}
-                    </span>
-                    <span className="text-xs text-muted">Q{idx + 1}</span>
+        {quiz.questions.length === 0 && !showQuestionForm ? (
+          <div className="text-center py-12 bg-card border border-dashed border-border rounded-2xl">
+            <p className="text-muted text-sm">No questions yet. Add your first one above.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {quiz.questions.map((q, idx) => (
+              <div key={q.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:border-primary/20 transition">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    {/* Type + number */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-muted/60">Q{idx + 1}</span>
+                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${Q_TYPE_COLORS[q.type] || "bg-muted/10 text-muted"}`}>
+                        {Q_TYPE_LABELS[q.type] || q.type}
+                      </span>
+                    </div>
+                    {/* Question text */}
+                    <p className="font-semibold text-foreground text-sm mb-2">{q.text}</p>
+                    {/* Options preview */}
+                    <div className="flex flex-wrap gap-2">
+                      {q.options.map((opt) => (
+                        <span
+                          key={opt.id}
+                          className={`text-xs px-2.5 py-1 rounded-full border ${
+                            opt.isCorrect
+                              ? "bg-success/10 border-success/30 text-success font-semibold"
+                              : "bg-surface border-border text-muted"
+                          }`}
+                        >
+                          {opt.isCorrect ? "âœ“ " : ""}{opt.text}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <p className="font-medium">{q.text}</p>
-                  <div className="mt-2 space-y-1">
-                    {q.options.map((opt) => (
-                      <div
-                        key={opt.id}
-                        className={`text-sm flex items-center gap-2 ${
-                          opt.isCorrect ? "text-success font-medium" : "text-muted"
-                        }`}
-                      >
-                        {opt.isCorrect ? "✓" : "○"} {opt.text}
-                      </div>
-                    ))}
+
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => startEdit(q)}
+                      className="text-xs font-medium text-primary hover:bg-primary/8 px-3 py-1.5 rounded-lg transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      className="text-xs font-medium text-danger hover:bg-danger/8 px-3 py-1.5 rounded-lg transition"
+                    >
+                      Delete
+                    </button>
                   </div>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => startEdit(q)}
-                    className="text-sm text-primary hover:bg-primary/10 px-2 py-1 rounded"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteQuestion(q.id)}
-                    className="text-sm text-danger hover:bg-danger/10 px-2 py-1 rounded"
-                  >
-                    Delete
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </DashboardLayout>
   );

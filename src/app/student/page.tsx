@@ -1,34 +1,60 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 
+const RULES = [
+  { icon: "🖥️", title: "Fullscreen Required", desc: "The quiz will launch in fullscreen. Exiting will be logged." },
+  { icon: "🔄", title: "No Tab Switching", desc: "Switching to another tab or window is detected and reported." },
+  { icon: "📋", title: "Copy-Paste Disabled", desc: "Copy-paste shortcuts are blocked during the quiz." },
+  { icon: "🖱️", title: "No Right-Clicking", desc: "Right-click context menu is prevented throughout." },
+  { icon: "🔧", title: "DevTools Detection", desc: "Opening browser Developer Tools will be flagged." },
+];
+
 export default function StudentDashboard() {
+  const { data: session } = useSession();
+  const firstName = session?.user?.name?.split(" ")[0] || "Student";
+
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto text-center">
-        <h1 className="text-2xl font-bold mb-2">Welcome, Student!</h1>
-        <p className="text-muted mb-8">
-          Enter a quiz code from your teacher to start a quiz.
-        </p>
-
-        <Link
-          href="/student/join"
-          className="inline-block px-8 py-4 bg-primary text-white text-lg font-semibold rounded-xl hover:bg-primary-dark transition"
+      <div className="max-w-2xl">
+        {/* Welcome banner */}
+        <div
+          className="rounded-2xl p-8 mb-8 text-white"
+          style={{ background: "linear-gradient(135deg, var(--primary) 0%, #4834d4 100%)" }}
         >
-          🎯 Join a Quiz
-        </Link>
+          <p className="text-white/70 text-sm mb-1">Welcome back,</p>
+          <h1 className="text-3xl font-extrabold mb-2">{firstName} 👋</h1>
+          <p className="text-white/80 text-sm mb-6">
+            Ready to take a quiz? Enter the code your teacher gave you to get started.
+          </p>
+          <Link
+            href="/student/join"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white font-bold rounded-xl text-base shadow-md transition hover:bg-gray-50"
+            style={{ color: "var(--primary)" }}
+          >
+            🎯 Join a Quiz
+          </Link>
+        </div>
 
-        <div className="mt-12 bg-card border border-border rounded-xl p-6 text-left">
-          <h3 className="font-semibold mb-3">⚠️ Anti-Cheat Rules</h3>
-          <ul className="space-y-2 text-sm text-muted">
-            <li>• The quiz will open in <strong>fullscreen mode</strong>. Do not exit.</li>
-            <li>• <strong>Switching tabs</strong> will be detected and logged.</li>
-            <li>• <strong>Copy-paste</strong> is disabled during the quiz.</li>
-            <li>• <strong>Right-clicking</strong> is disabled during the quiz.</li>
-            <li>• <strong>DevTools</strong> usage will be detected.</li>
-            <li>• All violations are <strong>reported to your teacher in real-time</strong>.</li>
-          </ul>
+        {/* Anti-cheat rules */}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-base font-bold text-foreground">⚠️ Quiz Anti-Cheat Rules</h2>
+            <p className="text-xs text-muted mt-1">All violations are reported to your teacher in real-time.</p>
+          </div>
+          <div className="divide-y divide-border/50">
+            {RULES.map(({ icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-4 px-6 py-4">
+                <span className="text-2xl mt-0.5 flex-shrink-0">{icon}</span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{title}</p>
+                  <p className="text-xs text-muted mt-0.5">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </DashboardLayout>

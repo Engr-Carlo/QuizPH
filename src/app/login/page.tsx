@@ -26,11 +26,10 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res?.error) {
-      setError("Invalid email or password");
+      setError("Invalid email or password. Please try again.");
       return;
     }
 
-    // Fetch session to determine role-based redirect
     const sessionRes = await fetch("/api/auth/session");
     const session = await sessionRes.json();
     const role = session?.user?.role;
@@ -41,64 +40,123 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="text-3xl font-bold text-primary">
-            QuizPH
-          </Link>
-          <p className="text-muted mt-2">Sign in to your account</p>
+    <div className="min-h-screen flex">
+
+      {/* ── Left branding panel ── */}
+      <div
+        className="hidden lg:flex w-[45%] flex-col justify-between p-12 text-white"
+        style={{ background: "linear-gradient(145deg, var(--primary) 0%, #4834d4 100%)" }}
+      >
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+            <span className="font-black text-white text-sm">Q</span>
+          </div>
+          <span className="text-xl font-extrabold">QuizPH</span>
+        </Link>
+
+        {/* Main copy */}
+        <div>
+          <h2 className="text-4xl font-extrabold leading-tight mb-6">
+            Run fair, engaging assessments with confidence.
+          </h2>
+          <ul className="space-y-3">
+            {[
+              "Real-time anti-cheat monitoring",
+              "Live leaderboard & violation alerts",
+              "Instant auto-graded results",
+              "Easy quiz builder for any question type",
+            ].map((f) => (
+              <li key={f} className="flex items-center gap-3 text-white/85 text-sm">
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                  ✓
+                </span>
+                {f}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-card border border-border rounded-2xl p-8 space-y-5"
-        >
-          {error && (
-            <div className="bg-danger/10 text-danger text-sm p-3 rounded-lg">
-              {error}
+        <p className="text-white/40 text-xs">
+          © {new Date().getFullYear()} QuizPH. Built for Philippine educators.
+        </p>
+      </div>
+
+      {/* ── Right form panel ── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-white">
+        <div className="w-full max-w-[400px]">
+
+          {/* Mobile logo */}
+          <div className="lg:hidden flex justify-center mb-10">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
+                style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              >
+                <span className="text-white font-black text-sm">Q</span>
+              </div>
+              <span className="text-2xl font-extrabold text-foreground">QuizPH</span>
+            </Link>
+          </div>
+
+          {/* Heading */}
+          <h1 className="text-2xl font-extrabold text-foreground mb-1">Welcome back</h1>
+          <p className="text-muted text-sm mb-8">Sign in to your account to continue</p>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="flex items-start gap-2.5 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl">
+                <span className="mt-0.5 flex-shrink-0">⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">
+                Email address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
+                placeholder="you@example.com"
+              />
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              placeholder="you@example.com"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
+                placeholder="••••••••"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              placeholder="••••••••"
-            />
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm shadow-sm"
+              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+            >
+              {loading ? "Signing in…" : "Sign In →"}
+            </button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-
-          <p className="text-center text-sm text-muted">
+          <p className="text-center text-sm text-muted mt-6">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary font-medium hover:underline">
-              Sign Up
+            <Link href="/register" className="text-primary font-semibold hover:underline">
+              Create one free
             </Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );
