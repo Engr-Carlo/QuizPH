@@ -206,16 +206,16 @@ export default function QuizDetailPage() {
           {quiz.description && <p className="text-muted text-sm mb-3">{quiz.description}</p>}
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
-              â±ï¸ {quiz.timerType === "PER_QUIZ" ? "Per Quiz" : "Per Question"} Â· {formatDuration(quiz.duration)}
+              {quiz.timerType === "PER_QUIZ" ? "Per Quiz" : "Per Question"} · {formatDuration(quiz.duration)}
             </span>
             {quiz.randomizeQuestions && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
-                ðŸ”€ Random questions
+                Randomized questions
               </span>
             )}
             {quiz.randomizeAnswers && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
-                ðŸ”€ Random answers
+                Randomized answers
               </span>
             )}
           </div>
@@ -259,7 +259,7 @@ export default function QuizDetailPage() {
                     >
                       {s.code}
                       <span className="text-xs font-sans font-normal text-muted">
-                        {copiedCode === s.code ? "âœ“ Copied!" : "copy"}
+                        {copiedCode === s.code ? "✓ Copied!" : "copy"}
                       </span>
                     </button>
                     {/* Status badge */}
@@ -288,7 +288,7 @@ export default function QuizDetailPage() {
                           className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl transition hover:opacity-90"
                           style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
                         >
-                          ðŸ”´ Monitor Live
+                          Monitor Live
                         </Link>
                         <button
                           onClick={() => handleSessionAction(s.id, "ENDED")}
@@ -367,7 +367,7 @@ export default function QuizDetailPage() {
                   onChange={(e) => setQText(e.target.value)}
                   rows={2}
                   className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition placeholder:text-muted"
-                  placeholder="Enter your questionâ€¦"
+                  placeholder="Enter your question..."
                 />
               </div>
 
@@ -394,7 +394,7 @@ export default function QuizDetailPage() {
                         disabled={qType === "SHORT_ANSWER"}
                         title="Mark as correct"
                       >
-                        {opt.isCorrect && <span className="text-white text-[10px] font-black">âœ“</span>}
+                        {opt.isCorrect && <span className="text-white text-[10px] font-black">✓</span>}
                       </button>
 
                       <input
@@ -420,7 +420,7 @@ export default function QuizDetailPage() {
                           onClick={() => setQOptions(qOptions.filter((_, i) => i !== idx))}
                           className="text-muted hover:text-danger w-7 h-7 rounded-lg hover:bg-danger/8 flex items-center justify-center text-sm transition"
                         >
-                          Ã—
+                          ×
                         </button>
                       )}
                     </div>
@@ -490,7 +490,7 @@ export default function QuizDetailPage() {
                               : "bg-surface border-border text-muted"
                           }`}
                         >
-                          {opt.isCorrect ? "âœ“ " : ""}{opt.text}
+                          {opt.isCorrect ? "✓ " : ""}{opt.text}
                         </span>
                       ))}
                     </div>

@@ -74,7 +74,7 @@ export default function CreateQuizPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   required
                   className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
-                  placeholder="e.g., Philippine History â€” Chapter 5"
+                  placeholder="e.g., Philippine History - Chapter 5"
                 />
               </div>
               <div>
@@ -84,7 +84,7 @@ export default function CreateQuizPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition resize-none placeholder:text-muted"
-                  placeholder="Brief description for studentsâ€¦"
+                  placeholder="Brief description for students..."
                 />
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function CreateQuizPage() {
                           : "border-border text-muted hover:border-primary/40"
                       }`}
                     >
-                      {t === "PER_QUIZ" ? "â±ï¸ Per quiz (total time)" : "ðŸŽ¯ Per question"}
+                      {t === "PER_QUIZ" ? "Per quiz (total time)" : "Per question"}
                     </button>
                   ))}
                 </div>
@@ -150,7 +150,7 @@ export default function CreateQuizPage() {
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
                       checked ? "bg-primary border-primary" : "border-border group-hover:border-primary/50"
                     }`}>
-                      {checked && <span className="text-white text-xs font-black">âœ“</span>}
+                      {checked && <span className="text-white text-xs font-black">✓</span>}
                     </div>
                   </div>
                   <div>
@@ -170,7 +170,7 @@ export default function CreateQuizPage() {
               className="px-6 py-2.5 text-white font-semibold text-sm rounded-xl shadow-sm transition disabled:opacity-50 hover:opacity-90"
               style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
             >
-              {loading ? "Creatingâ€¦" : "Create Quiz â†’"}
+              {loading ? "Creating..." : "Create Quiz"}
             </button>
             <button
               type="button"

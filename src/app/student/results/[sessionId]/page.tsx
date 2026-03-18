@@ -213,11 +213,11 @@ export default function StudentResultsPage() {
                     </span>
                   ) : isCorrect ? (
                     <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/15 text-success">
-                      âœ“ Correct
+                      ✓ Correct
                     </span>
                   ) : (
                     <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-danger/15 text-danger">
-                      âœ• Incorrect
+                      ✗ Incorrect
                     </span>
                   )}
                 </div>
@@ -259,7 +259,7 @@ export default function StudentResultsPage() {
                           className={`flex items-center gap-2.5 text-sm px-4 py-2.5 rounded-xl border ${cls}`}
                         >
                           <span className="w-4 flex-shrink-0 text-center font-bold">
-                            {isCorrectOpt ? "âœ“" : isStudentChoice ? "âœ•" : "â—‹"}
+                            {isCorrectOpt ? "✓" : isStudentChoice ? "✗" : "○"}
                           </span>
                           <span className={`flex-1 ${isStudentChoice || isCorrectOpt ? "font-semibold" : ""}`}>
                             {opt.text}
@@ -287,7 +287,7 @@ export default function StudentResultsPage() {
             className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl shadow-sm transition hover:opacity-90"
             style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
           >
-            â† Back to Dashboard
+            Back to Dashboard
           </Link>
         </div>
       </div>

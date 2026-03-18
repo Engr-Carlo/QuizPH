@@ -1,20 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --primary: #6c5ce7;
-  --primary-dark: #5a4bd1;
-  --secondary: #00cec9;
-  --accent: #fd79a8;
-  --danger: #e74c3c;
-  --warning: #f39c12;
-  --success: #00b894;
-  --muted: #94a3b8;
-  --card: #ffffff;
-  --border: #e2e8f0;
-  --surface: #f1f5f9;
-  --text-secondary: #64748b;
+  /* One vibrant color — Indigo */
+  --primary: #4F46E5;
+  --primary-dark: #4338CA;
+  --primary-light: #EEF2FF;
+
+  /* Neutrals */
+  --background: #FFFFFF;
+  --foreground: #111827;
+  --surface: #F9FAFB;
+  --card: #FFFFFF;
+  --border: #E5E7EB;
+  --muted: #6B7280;
+
+  /* Semantic */
+  --success: #059669;
+  --danger: #DC2626;
+  --warning: #D97706;
+
+  /* Legacy aliases kept for other pages */
+  --secondary: #0891B2;
+  --accent: #7C3AED;
+  --text-secondary: #6B7280;
 }
 
 @theme inline {
@@ -22,6 +30,7 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
@@ -50,7 +59,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* Selection */
-::selection { background: rgba(108, 92, 231, 0.15); color: var(--foreground); }
+::selection { background: rgba(79, 70, 229, 0.12); color: var(--foreground); }
 
 /* Smooth focus rings */
 *:focus-visible {
@@ -87,7 +96,7 @@ body {
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: linear-gradient(135deg, var(--primary), #818CF8);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -98,9 +107,9 @@ body {
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 .card-hover:hover {
-  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.12);
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.10);
   transform: translateY(-1px);
-  border-color: rgba(108, 92, 231, 0.3);
+  border-color: rgba(79, 70, 229, 0.25);
 }
 
 /* Live indicator */

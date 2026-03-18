@@ -99,7 +99,7 @@ export default function MonitorPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-muted">Loading monitorâ€¦</p>
+          <p className="text-sm text-muted">Loading monitor...</p>
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export default function MonitorPage() {
             href={`/teacher/quiz/${quizId}`}
             className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition"
           >
-            â† Back
+            Back
           </Link>
           <div className="h-4 w-px bg-border" />
           <div>
@@ -194,7 +194,7 @@ export default function MonitorPage() {
                     : "border-transparent text-muted hover:text-foreground"
                 }`}
               >
-                {tab === "participants" ? `Participants (${sessionData.participants.length})` : "ðŸ† Leaderboard"}
+                {tab === "participants" ? `Participants (${sessionData.participants.length})` : "Leaderboard"}
               </button>
             ))}
           </div>
@@ -207,8 +207,10 @@ export default function MonitorPage() {
               sessionData.participants.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <div className="text-4xl mb-3">â³</div>
-                    <p className="text-muted text-sm">Waiting for students to joinâ€¦</p>
+                    <div className="w-10 h-10 border-2 border-border rounded-full mx-auto mb-3 flex items-center justify-center text-muted">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <p className="text-muted text-sm">Waiting for students to join...</p>
                     <p className="text-xs text-muted mt-1">
                       Share the code <span className="font-mono font-bold text-primary">{sessionData.code}</span>
                     </p>
@@ -240,7 +242,7 @@ export default function MonitorPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-foreground truncate">{p.user.name}</p>
                             {p.isFinished && (
-                              <span className="text-[10px] font-semibold text-success">âœ“ Done</span>
+                              <span className="text-[10px] font-semibold text-success">✓ Done</span>
                             )}
                           </div>
                         </div>
@@ -273,12 +275,12 @@ export default function MonitorPage() {
                                 className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${VIOLATION_META[type]?.bg} ${VIOLATION_META[type]?.color}`}
                                 title={VIOLATION_META[type]?.label}
                               >
-                                {VIOLATION_META[type]?.short} Ã—{cnt}
+                                {VIOLATION_META[type]?.short} x{cnt}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-[11px] text-success font-semibold">âœ“ Clean</span>
+                          <span className="text-[11px] text-success font-semibold">✓ Clean</span>
                         )}
                       </button>
                     );
@@ -296,7 +298,7 @@ export default function MonitorPage() {
                   </div>
                 ) : (
                   leaderboard.map((p, rank) => {
-                    const medals = ["ðŸ¥‡", "ðŸ¥ˆ", "ðŸ¥‰"];
+                    const medals = ["1st", "2nd", "3rd"];
                     const progress = totalQ > 0 ? (p.score / totalQ) * 100 : 0;
                     return (
                       <div
@@ -332,7 +334,7 @@ export default function MonitorPage() {
                           </span>
                         )}
                         {p.isFinished && (
-                          <span className="text-[10px] text-success font-bold flex-shrink-0">âœ“ Done</span>
+                          <span className="text-[10px] text-success font-bold flex-shrink-0">✓ Done</span>
                         )}
                       </div>
                     );
@@ -386,11 +388,11 @@ export default function MonitorPage() {
                     <span className={`font-medium text-xs ${VIOLATION_META[type]?.color}`}>
                       {VIOLATION_META[type]?.label || type}
                     </span>
-                    <span className="font-extrabold text-danger text-xs">{cnt}Ã—</span>
+                    <span className="font-extrabold text-danger text-xs">{cnt}x</span>
                   </div>
                 ))}
                 {selectedP.violations.length === 0 && (
-                  <p className="text-xs text-success font-semibold">âœ“ No violations recorded</p>
+                  <p className="text-xs text-success font-semibold">✓ No violations recorded</p>
                 )}
               </div>
 
@@ -420,8 +422,10 @@ export default function MonitorPage() {
           ) : (
             <div className="flex items-center justify-center h-full p-6">
               <div className="text-center">
-                <div className="text-3xl mb-2">ðŸ‘†</div>
-                <p className="text-sm text-muted">Click a participant card to see their details</p>
+                <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center mx-auto mb-2 text-muted">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <p className="text-sm text-muted">Select a participant to view details</p>
               </div>
             </div>
           )}
