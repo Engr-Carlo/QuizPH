@@ -110,6 +110,13 @@ function parseQuestionBlock(input: string) {
   };
 }
 
+function parseMultipleQuestionBlocks(input: string) {
+  return input
+    .split(/\n\s*\n+/)
+    .map((block) => parseQuestionBlock(block))
+    .filter((block): block is NonNullable<ReturnType<typeof parseQuestionBlock>> => Boolean(block));
+}
+
 export default function QuizDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -121,6 +128,8 @@ export default function QuizDetailPage() {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [bulkImportLoading, setBulkImportLoading] = useState(false);
+  const [topicFilter, setTopicFilter] = useState("ALL_TOPICS");
 
   const [settingsTitle, setSettingsTitle] = useState("");
   const [settingsDescription, setSettingsDescription] = useState("");
@@ -165,6 +174,21 @@ export default function QuizDetailPage() {
   }, [quizId]);
 
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
+
+  const topicOptions = quiz
+    ? ["ALL_TOPICS", ...Array.from(new Set(quiz.questions.map((question) => question.topic))).sort()]
+    : ["ALL_TOPICS"];
+
+  const filteredQuestions = quiz
+    ? quiz.questions.filter((question) => topicFilter === "ALL_TOPICS" || question.topic === topicFilter)
+    : [];
+
+  const groupedQuestions = filteredQuestions.reduce<Record<string, Question[]>>((acc, question) => {
+    const key = question.topic || "General";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(question);
+    return acc;
+  }, {});
 
   function resetForm() {
     setQType("MCQ");
@@ -276,6 +300,31 @@ export default function QuizDetailPage() {
     setQType(parsed.type);
     setQText(parsed.text);
     setQOptions(parsed.options);
+  }
+
+  async function handleImportBulkQuestions() {
+    const parsedBlocks = parseMultipleQuestionBlocks(bulkQuestionInput);
+    if (parsedBlocks.length === 0) return;
+
+    setBulkImportLoading(true);
+
+    for (const parsed of parsedBlocks) {
+      await fetch(`/api/quiz/${quizId}/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: parsed.type,
+          topic: qTopic,
+          text: parsed.text,
+          includedInQuiz: qIncludedInQuiz,
+          options: parsed.options,
+        }),
+      });
+    }
+
+    setBulkImportLoading(false);
+    setBulkQuestionInput("");
+    fetchQuiz();
   }
 
   async function handleCreateSession() {
@@ -628,13 +677,26 @@ export default function QuizDetailPage() {
               {quiz.questions.length} stored question{quiz.questions.length !== 1 ? "s" : ""} across {new Set(quiz.questions.map((question) => question.topic)).size} topic{new Set(quiz.questions.map((question) => question.topic)).size !== 1 ? "s" : ""}
             </p>
           </div>
-          <button
-            onClick={() => { resetForm(); setShowQuestionForm(true); }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl shadow-sm transition hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
-          >
-            + Add Question
-          </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={topicFilter}
+              onChange={(e) => setTopicFilter(e.target.value)}
+              className="px-3 py-2 border border-border rounded-xl text-xs bg-white text-foreground"
+            >
+              {topicOptions.map((topic) => (
+                <option key={topic} value={topic}>
+                  {topic === "ALL_TOPICS" ? "All topics" : topic}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => { resetForm(); setShowQuestionForm(true); }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl shadow-sm transition hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+            >
+              + Add Question
+            </button>
+          </div>
         </div>
 
         {/* â”€â”€ Question form â”€â”€ */}
@@ -656,15 +718,26 @@ export default function QuizDetailPage() {
                 />
                 <div className="flex items-center justify-between gap-3 mt-2">
                   <p className="text-xs text-muted">The system will split the question and options automatically. You can still choose the correct answer manually.</p>
-                  <button
-                    type="button"
-                    onClick={handleParseBulkQuestion}
-                    disabled={!bulkQuestionInput.trim()}
-                    className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-primary hover:bg-primary/8 transition disabled:opacity-40"
-                  >
-                    Parse Paste
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleParseBulkQuestion}
+                      disabled={!bulkQuestionInput.trim()}
+                      className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-primary hover:bg-primary/8 transition disabled:opacity-40"
+                    >
+                      Parse Single
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportBulkQuestions}
+                      disabled={!bulkQuestionInput.trim() || bulkImportLoading}
+                      className="px-3 py-1.5 rounded-lg border border-primary/25 bg-primary/8 text-xs font-semibold text-primary hover:bg-primary/12 transition disabled:opacity-40"
+                    >
+                      {bulkImportLoading ? "Importing..." : "Import Multiple"}
+                    </button>
+                  </div>
                 </div>
+                <p className="text-[11px] text-muted mt-2">Use a blank line between questions when importing multiple items. Manual encoding and single-question parsing still work.</p>
               </div>
 
               {/* Type selector */}
@@ -824,70 +897,81 @@ export default function QuizDetailPage() {
           <div className="text-center py-12 bg-card border border-dashed border-border rounded-2xl">
             <p className="text-muted text-sm">No questions yet. Add your first one above.</p>
           </div>
+        ) : filteredQuestions.length === 0 && !showQuestionForm ? (
+          <div className="text-center py-12 bg-card border border-dashed border-border rounded-2xl">
+            <p className="text-muted text-sm">No questions found for the selected topic filter.</p>
+          </div>
         ) : (
-          <div className="space-y-3">
-            {quiz.questions.map((q, idx) => (
-              <div key={q.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:border-primary/20 transition">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Type + number */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-bold text-muted/60">Q{idx + 1}</span>
-                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${Q_TYPE_COLORS[q.type] || "bg-muted/10 text-muted"}`}>
-                        {Q_TYPE_LABELS[q.type] || q.type}
-                      </span>
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-surface border border-border text-muted">
-                        {q.topic}
-                      </span>
-                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${q.includedInQuiz ? "bg-success/10 text-success border border-success/30" : "bg-muted/10 text-muted border border-border"}`}>
-                        {q.includedInQuiz ? "Included" : "Excluded"}
-                      </span>
-                    </div>
-                    {/* Question text */}
-                    <p className="font-semibold text-foreground text-sm mb-2">{q.text}</p>
-                    {/* Options preview */}
-                    <div className="flex flex-wrap gap-2">
-                      {q.options.map((opt) => (
-                        <span
-                          key={opt.id}
-                          className={`text-xs px-2.5 py-1 rounded-full border ${
-                            opt.isCorrect
-                              ? "bg-success/10 border-success/30 text-success font-semibold"
-                              : "bg-surface border-border text-muted"
-                          }`}
-                        >
-                          {opt.isCorrect && (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 -mt-0.5" aria-hidden="true">
-                              <polyline points="20 6 9 17 4 12"/>
-                            </svg>
-                          )}
-                          {opt.text}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => handleToggleIncluded(q)}
-                      className="text-xs font-medium text-secondary hover:bg-secondary/8 px-3 py-1.5 rounded-lg transition"
-                    >
-                      {q.includedInQuiz ? "Exclude" : "Include"}
-                    </button>
-                    <button
-                      onClick={() => startEdit(q)}
-                      className="text-xs font-medium text-primary hover:bg-primary/8 px-3 py-1.5 rounded-lg transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="text-xs font-medium text-danger hover:bg-danger/8 px-3 py-1.5 rounded-lg transition"
-                    >
-                      Delete
-                    </button>
+          <div className="space-y-5">
+            {Object.entries(groupedQuestions).map(([topic, questions]) => (
+              <div key={topic} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-foreground">{topic}</h3>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface border border-border text-muted">
+                      {questions.length} item{questions.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
                 </div>
+
+                {questions.map((q, idx) => (
+                  <div key={q.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:border-primary/20 transition">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="text-xs font-bold text-muted/60">Q{quiz.questions.findIndex((question) => question.id === q.id) + 1}</span>
+                          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${Q_TYPE_COLORS[q.type] || "bg-muted/10 text-muted"}`}>
+                            {Q_TYPE_LABELS[q.type] || q.type}
+                          </span>
+                          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${q.includedInQuiz ? "bg-success/10 text-success border border-success/30" : "bg-muted/10 text-muted border border-border"}`}>
+                            {q.includedInQuiz ? "Included" : "Excluded"}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-foreground text-sm mb-2">{q.text}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {q.options.map((opt) => (
+                            <span
+                              key={opt.id}
+                              className={`text-xs px-2.5 py-1 rounded-full border ${
+                                opt.isCorrect
+                                  ? "bg-success/10 border-success/30 text-success font-semibold"
+                                  : "bg-surface border-border text-muted"
+                              }`}
+                            >
+                              {opt.isCorrect && (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 -mt-0.5" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                              )}
+                              {opt.text}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleToggleIncluded(q)}
+                          className="text-xs font-medium text-secondary hover:bg-secondary/8 px-3 py-1.5 rounded-lg transition"
+                        >
+                          {q.includedInQuiz ? "Exclude" : "Include"}
+                        </button>
+                        <button
+                          onClick={() => startEdit(q)}
+                          className="text-xs font-medium text-primary hover:bg-primary/8 px-3 py-1.5 rounded-lg transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          className="text-xs font-medium text-danger hover:bg-danger/8 px-3 py-1.5 rounded-lg transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
