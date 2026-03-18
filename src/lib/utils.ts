@@ -16,6 +16,60 @@ export function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+function seededHash(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+export function seededShuffleArray<T>(array: T[], seed: string): T[] {
+  const shuffled = [...array];
+  let state = seededHash(seed) || 1;
+
+  function next() {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  }
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
+}
+
+type SelectableQuestion = {
+  id: string;
+  order: number;
+  includedInQuiz?: boolean;
+};
+
+export function selectQuestionsForSession<T extends SelectableQuestion>(params: {
+  questions: T[];
+  mode: "ALL" | "RANDOM" | "MANUAL";
+  drawCount?: number | null;
+  seed: string;
+}) {
+  const ordered = [...params.questions].sort((a, b) => a.order - b.order);
+
+  if (params.mode === "ALL") {
+    return ordered;
+  }
+
+  const eligible = ordered.filter((question) => question.includedInQuiz !== false);
+
+  if (params.mode === "MANUAL") {
+    return eligible;
+  }
+
+  const shuffled = seededShuffleArray(eligible, params.seed);
+  const limit = Math.max(1, Math.min(params.drawCount ?? eligible.length, eligible.length));
+  return shuffled.slice(0, limit);
+}
+
 export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;

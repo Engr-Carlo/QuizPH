@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
+import { selectQuestionsForSession } from "@/lib/utils";
 import { NextResponse } from "next/server";
 
 export async function PATCH(
@@ -85,5 +86,18 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(quizSession);
+  const selectedQuestions = selectQuestionsForSession({
+    questions: quizSession.quiz.questions,
+    mode: quizSession.quiz.questionSelectionMode,
+    drawCount: quizSession.quiz.questionDrawCount,
+    seed: quizSession.id,
+  });
+
+  return NextResponse.json({
+    ...quizSession,
+    quiz: {
+      ...quizSession.quiz,
+      questions: selectedQuestions,
+    },
+  });
 }

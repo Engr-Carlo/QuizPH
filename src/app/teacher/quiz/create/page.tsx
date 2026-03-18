@@ -13,19 +13,35 @@ export default function CreateQuizPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [timerType, setTimerType] = useState<"PER_QUIZ" | "PER_QUESTION">("PER_QUIZ");
-  const [duration, setDuration] = useState(300);
+  const [durationMinutes, setDurationMinutes] = useState(5);
+  const [durationSeconds, setDurationSeconds] = useState(0);
+  const [questionSelectionMode, setQuestionSelectionMode] = useState<"ALL" | "RANDOM" | "MANUAL">("ALL");
+  const [questionDrawCount, setQuestionDrawCount] = useState(10);
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
+  const [antiCheatEnabled, setAntiCheatEnabled] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    const duration = (durationMinutes * 60) + durationSeconds;
+
     const res = await fetch("/api/quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description: description || undefined, timerType, duration, randomizeQuestions, randomizeAnswers }),
+      body: JSON.stringify({
+        title,
+        description: description || undefined,
+        timerType,
+        duration,
+        questionSelectionMode,
+        questionDrawCount: questionSelectionMode === "RANDOM" ? questionDrawCount : null,
+        randomizeQuestions,
+        randomizeAnswers,
+        antiCheatEnabled,
+      }),
     });
 
     const data = await res.json();
@@ -39,7 +55,7 @@ export default function CreateQuizPage() {
     router.push(`/teacher/quiz/${data.id}`);
   }
 
-  const displayDuration = `${Math.floor(duration / 60)} min${duration % 60 ? ` ${duration % 60}s` : ""}`;
+  const displayDuration = `${durationMinutes} min${durationSeconds ? ` ${durationSeconds}s` : ""}`;
 
   return (
     <DashboardLayout>
@@ -57,7 +73,9 @@ export default function CreateQuizPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="flex items-start gap-2.5 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl">
-              <span className="mt-0.5">âš ï¸</span>
+              <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
               <span>{error}</span>
             </div>
           )}
@@ -118,51 +136,131 @@ export default function CreateQuizPage() {
                   Duration
                   <span className="ml-2 text-primary font-bold">{displayDuration}</span>
                 </label>
-                <input
-                  type="number"
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                  min={10}
-                  max={7200}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                />
-                <p className="text-xs text-muted mt-1">Enter duration in seconds</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      type="number"
+                      value={durationMinutes}
+                      onChange={(e) => setDurationMinutes(Math.max(0, Number(e.target.value) || 0))}
+                      min={0}
+                      max={120}
+                      className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                    />
+                    <p className="text-xs text-muted mt-1">Minutes</p>
+                  </div>
+                  <div>
+                    <input
+                      type="number"
+                      value={durationSeconds}
+                      onChange={(e) => setDurationSeconds(Math.min(59, Math.max(0, Number(e.target.value) || 0)))}
+                      min={0}
+                      max={59}
+                      className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                    />
+                    <p className="text-xs text-muted mt-1">Seconds</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted mt-2">Use minutes and seconds together instead of raw total seconds.</p>
               </div>
             </div>
           </div>
 
-          {/* Card: Options */}
+          {/* Card: Quiz settings */}
           <div className="bg-card border border-border rounded-2xl p-6">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-4">Quiz Options</h2>
-            <div className="space-y-3">
-              {[
-                { key: "randomizeQuestions", label: "Randomize question order", desc: "Each student gets questions in a different order", checked: randomizeQuestions, set: setRandomizeQuestions },
-                { key: "randomizeAnswers", label: "Randomize answer choices", desc: "Answer options appear in a random order", checked: randomizeAnswers, set: setRandomizeAnswers },
-              ].map(({ key, label, desc, checked, set }) => (
-                <label key={key} className="flex items-start gap-3 cursor-pointer group p-3 rounded-xl hover:bg-surface transition">
-                  <div className="relative mt-0.5">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => set(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
-                      checked ? "bg-primary border-primary" : "border-border group-hover:border-primary/50"
-                    }`}>
-                      {checked && (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white" aria-hidden="true">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                      )}
-                    </div>
-                  </div>
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-4">Quiz Settings</h2>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">Question Bank Mode</label>
+                <div className="grid md:grid-cols-3 gap-2">
+                  {([
+                    { value: "ALL", label: "Use all questions", desc: "Every bank item appears in the quiz" },
+                    { value: "RANDOM", label: "Random draw", desc: "Pick a random subset from the bank" },
+                    { value: "MANUAL", label: "Manual selection", desc: "Teacher chooses which bank items appear" },
+                  ] as const).map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setQuestionSelectionMode(item.value)}
+                      className={`p-3 rounded-xl border-2 text-left transition ${
+                        questionSelectionMode === item.value
+                          ? "border-primary bg-primary/6 text-primary"
+                          : "border-border text-muted hover:border-primary/40"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold">{item.label}</p>
+                      <p className="text-xs mt-1">{item.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {questionSelectionMode === "RANDOM" && (
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Questions to draw</label>
+                  <input
+                    type="number"
+                    value={questionDrawCount}
+                    onChange={(e) => setQuestionDrawCount(Math.max(1, Number(e.target.value) || 1))}
+                    min={1}
+                    max={500}
+                    className="w-full max-w-[200px] px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                  />
+                  <p className="text-xs text-muted mt-1">Example: if the bank has 20 questions, you can draw only 10.</p>
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-warning/25 bg-warning/6 p-4">
+                <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{label}</p>
-                    <p className="text-xs text-muted">{desc}</p>
+                    <p className="text-sm font-semibold text-foreground">Anti-cheat monitor</p>
+                    <p className="text-xs text-muted mt-1">Premium feature. Offer it as a limited-time upgrade teaser for teachers.</p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning">Premium trial</span>
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer group rounded-xl hover:bg-white/60 p-2 -m-2 transition">
+                  <input
+                    type="checkbox"
+                    checked={antiCheatEnabled}
+                    onChange={(e) => setAntiCheatEnabled(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Enable anti-cheat monitoring</p>
+                    <p className="text-xs text-muted">Fullscreen, tab-switch, right-click, clipboard, and devtools detection during quiz sessions.</p>
                   </div>
                 </label>
-              ))}
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { key: "randomizeQuestions", label: "Randomize delivered question order", desc: "Useful when the quiz uses all or randomly drawn bank items", checked: randomizeQuestions, set: setRandomizeQuestions },
+                  { key: "randomizeAnswers", label: "Randomize answer choices", desc: "Answer options appear in a different order for students", checked: randomizeAnswers, set: setRandomizeAnswers },
+                ].map(({ key, label, desc, checked, set }) => (
+                  <label key={key} className="flex items-start gap-3 cursor-pointer group p-3 rounded-xl hover:bg-surface transition">
+                    <div className="relative mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => set(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
+                        checked ? "bg-primary border-primary" : "border-border group-hover:border-primary/50"
+                      }`}>
+                        {checked && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{label}</p>
+                      <p className="text-xs text-muted">{desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 

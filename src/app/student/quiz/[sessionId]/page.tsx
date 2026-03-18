@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
 import { formatTime, shuffleArray } from "@/lib/utils";
 
@@ -27,15 +27,15 @@ interface SessionData {
     timerType: string;
     randomizeQuestions: boolean;
     randomizeAnswers: boolean;
+    antiCheatEnabled: boolean;
     questions: Question[];
   };
 }
 
 export default function StudentQuizPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const sessionId = params.sessionId as string;
-  const participantId = searchParams.get("participantId") || "";
+  const [participantId, setParticipantId] = useState("");
 
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +79,11 @@ export default function StudentQuizPage() {
     }
     setLoading(false);
   }, [sessionId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setParticipantId(params.get("participantId") || "");
+  }, []);
 
   useEffect(() => {
     fetchSession();
@@ -145,7 +150,7 @@ export default function StudentQuizPage() {
 
   // 1. Fullscreen enforcement
   useEffect(() => {
-    if (status !== "active") return;
+    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const enterFullscreen = async () => {
       try {
@@ -168,11 +173,11 @@ export default function StudentQuizPage() {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [status, logViolation]);
+  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
   // 2. Tab switch / visibility detection
   useEffect(() => {
-    if (status !== "active") return;
+    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const handleVisibility = () => {
       if (document.hidden) {
@@ -194,11 +199,11 @@ export default function StudentQuizPage() {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [status, logViolation]);
+  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
   // 3. Copy-paste prevention
   useEffect(() => {
-    if (status !== "active") return;
+    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const prevent = (e: ClipboardEvent) => {
       e.preventDefault();
@@ -213,11 +218,11 @@ export default function StudentQuizPage() {
       document.removeEventListener("paste", prevent);
       document.removeEventListener("cut", prevent);
     };
-  }, [status, logViolation]);
+  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
   // 4. Right-click prevention
   useEffect(() => {
-    if (status !== "active") return;
+    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const prevent = (e: MouseEvent) => {
       e.preventDefault();
@@ -226,11 +231,11 @@ export default function StudentQuizPage() {
 
     document.addEventListener("contextmenu", prevent);
     return () => document.removeEventListener("contextmenu", prevent);
-  }, [status, logViolation]);
+  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
   // 5. DevTools detection
   useEffect(() => {
-    if (status !== "active") return;
+    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const interval = setInterval(() => {
       const widthThreshold = window.outerWidth - window.innerWidth > 160;
@@ -241,7 +246,7 @@ export default function StudentQuizPage() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [status, logViolation]);
+  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
   // Handle answer selection
   async function handleAnswer(questionId: string, answerText: string) {
@@ -387,7 +392,7 @@ export default function StudentQuizPage() {
       onCut={(e) => e.preventDefault()}
     >
       {/* Warning Modal */}
-      {warningVisible && (
+      {sessionData.quiz.antiCheatEnabled && warningVisible && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-card rounded-2xl p-8 max-w-md mx-4 text-center">
             <div className="w-14 h-14 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
@@ -434,7 +439,7 @@ export default function StudentQuizPage() {
             </svg>
             {formatTime(timeLeft)}
           </div>
-          {warningCount > 0 && (
+          {sessionData.quiz.antiCheatEnabled && warningCount > 0 && (
             <span className="flex items-center gap-1 text-xs bg-danger/10 text-danger px-2 py-1 rounded-full">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>

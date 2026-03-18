@@ -24,6 +24,12 @@ enum TimerType {
   PER_QUESTION
 }
 
+enum QuestionSelectionMode {
+  ALL
+  RANDOM
+  MANUAL
+}
+
 enum SessionStatus {
   WAITING
   ACTIVE
@@ -74,8 +80,11 @@ model Quiz {
   description        String?
   timerType          TimerType @default(PER_QUIZ)
   duration           Int       @default(300) // seconds
+  questionSelectionMode QuestionSelectionMode @default(ALL)
+  questionDrawCount  Int?
   randomizeQuestions Boolean   @default(false)
   randomizeAnswers   Boolean   @default(false)
+  antiCheatEnabled   Boolean   @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -89,8 +98,10 @@ model Quiz {
 model Question {
   id    String       @id @default(cuid())
   type  QuestionType @default(MCQ)
+  topic String       @default("General")
   text  String
   order Int          @default(0)
+  includedInQuiz Boolean @default(true)
 
   quizId String
   quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)

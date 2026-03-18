@@ -64,8 +64,13 @@ export async function PUT(
       description: body.description,
       timerType: body.timerType,
       duration: body.duration,
+      questionSelectionMode: body.questionSelectionMode,
+      questionDrawCount: body.questionSelectionMode === "RANDOM"
+        ? body.questionDrawCount ?? null
+        : null,
       randomizeQuestions: body.randomizeQuestions,
       randomizeAnswers: body.randomizeAnswers,
+      antiCheatEnabled: Boolean(body.antiCheatEnabled),
     },
   });
 

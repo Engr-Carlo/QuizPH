@@ -40,6 +40,9 @@ export async function POST(req: Request) {
     const quiz = await prisma.quiz.create({
       data: {
         ...parsed.data,
+        questionDrawCount: parsed.data.questionSelectionMode === "RANDOM"
+          ? parsed.data.questionDrawCount ?? null
+          : null,
         teacherId: session.user.id,
       },
     });

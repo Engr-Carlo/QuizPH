@@ -95,6 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems =
     role === "SUPER_ADMIN" ? adminNav : role === "TEACHER" ? teacherNav : studentNav;
   const roleMeta = role ? ROLE_META[role] : null;
+  const homeHref = role === "SUPER_ADMIN" ? "/admin" : role === "TEACHER" ? "/teacher" : "/student";
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -103,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Logo */}
         <div className="px-5 py-5 border-b border-border">
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link href={homeHref} className="flex items-center gap-2.5 group">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
               style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}

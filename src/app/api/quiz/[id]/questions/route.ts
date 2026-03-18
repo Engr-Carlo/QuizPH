@@ -25,8 +25,10 @@ export async function POST(
     data: {
       quizId,
       type: body.type,
+      topic: body.topic ?? "General",
       text: body.text,
       order: body.order ?? questionCount,
+      includedInQuiz: body.includedInQuiz ?? true,
       options: {
         create: body.options?.map((opt: { text: string; isCorrect: boolean }) => ({
           text: opt.text,

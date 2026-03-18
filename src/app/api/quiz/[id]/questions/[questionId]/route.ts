@@ -26,8 +26,10 @@ export async function PUT(
     where: { id: questionId },
     data: {
       type: body.type,
+      topic: body.topic ?? "General",
       text: body.text,
       order: body.order,
+      includedInQuiz: body.includedInQuiz ?? true,
       options: {
         create: body.options?.map((opt: { text: string; isCorrect: boolean }) => ({
           text: opt.text,

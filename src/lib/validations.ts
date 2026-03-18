@@ -17,14 +17,19 @@ export const quizSchema = z.object({
   description: z.string().optional(),
   timerType: z.enum(["PER_QUIZ", "PER_QUESTION"]),
   duration: z.number().min(10).max(7200),
+  questionSelectionMode: z.enum(["ALL", "RANDOM", "MANUAL"]),
+  questionDrawCount: z.number().int().min(1).max(500).nullable().optional(),
   randomizeQuestions: z.boolean(),
   randomizeAnswers: z.boolean(),
+  antiCheatEnabled: z.boolean(),
 });
 
 export const questionSchema = z.object({
   type: z.enum(["MCQ", "TRUE_FALSE", "SHORT_ANSWER"]),
+  topic: z.string().min(1, "Topic is required").max(100),
   text: z.string().min(1, "Question text is required"),
   order: z.number(),
+  includedInQuiz: z.boolean().optional(),
   options: z.array(
     z.object({
       text: z.string().min(1),
