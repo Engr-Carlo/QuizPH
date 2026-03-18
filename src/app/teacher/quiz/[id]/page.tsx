@@ -77,28 +77,71 @@ function parseQuestionBlock(input: string) {
   if (lines.length === 0) return null;
 
   const text = lines[0];
-  const rawOptions = lines.slice(1).map((line) =>
-    line.replace(/^[A-Ha-h][\).:-]\s*/, "").replace(/^[-*]\s*/, "").trim()
-  ).filter(Boolean);
+  let answerRef = "";
 
-  if (rawOptions.length === 2 && rawOptions.every((option) => ["true", "false"].includes(option.toLowerCase()))) {
+  const rawOptions = lines
+    .slice(1)
+    .map((line) => {
+      const answerMatch = line.match(/^(answer|correct answer)\s*:\s*(.+)$/i);
+      if (answerMatch) {
+        answerRef = answerMatch[2].trim();
+        return null;
+      }
+
+      const labelMatch = line.match(/^([A-Ha-h])[\).:-]\s*(.*)$/);
+      const label = labelMatch?.[1]?.toUpperCase() || "";
+      let optionText = labelMatch?.[2] || line.replace(/^[-*]\s*/, "");
+
+      const isMarkedCorrect = /^\*\s*/.test(optionText)
+        || /\*\s*$/.test(optionText)
+        || /\((correct|answer)\)\s*$/i.test(optionText)
+        || /\[(correct|answer)\]\s*$/i.test(optionText);
+
+      optionText = optionText
+        .replace(/^\*\s*/, "")
+        .replace(/\s*\*\s*$/, "")
+        .replace(/\s*\((correct|answer)\)\s*$/i, "")
+        .replace(/\s*\[(correct|answer)\]\s*$/i, "")
+        .trim();
+
+      if (!optionText) return null;
+
+      return {
+        label,
+        text: optionText,
+        isMarkedCorrect,
+      };
+    })
+    .filter((option): option is { label: string; text: string; isMarkedCorrect: boolean } => Boolean(option));
+
+  const normalizedAnswerRef = answerRef.toLowerCase().trim();
+  const matchesAnswerRef = (option: { label: string; text: string }) => {
+    if (!normalizedAnswerRef) return false;
+    return option.label.toLowerCase() === normalizedAnswerRef
+      || option.text.toLowerCase().trim() === normalizedAnswerRef;
+  };
+
+  if (rawOptions.length === 2 && rawOptions.every((option) => ["true", "false"].includes(option.text.toLowerCase()))) {
+    const trueFalseOptions = rawOptions.map((option, index) => ({
+      text: option.text,
+      isCorrect: option.isMarkedCorrect || matchesAnswerRef(option) || (!normalizedAnswerRef && !rawOptions.some((item) => item.isMarkedCorrect) && index === 0),
+    }));
+
     return {
       type: "TRUE_FALSE" as const,
       text,
-      options: [
-        { text: rawOptions[0], isCorrect: true },
-        { text: rawOptions[1], isCorrect: false },
-      ],
+      options: trueFalseOptions,
     };
   }
 
   if (rawOptions.length >= 2) {
+    const hasMarkedAnswer = rawOptions.some((option) => option.isMarkedCorrect) || Boolean(normalizedAnswerRef);
     return {
       type: "MCQ" as const,
       text,
       options: rawOptions.map((option, index) => ({
-        text: option,
-        isCorrect: index === 0,
+        text: option.text,
+        isCorrect: option.isMarkedCorrect || matchesAnswerRef(option) || (!hasMarkedAnswer && index === 0),
       })),
     };
   }
@@ -106,7 +149,7 @@ function parseQuestionBlock(input: string) {
   return {
     type: "SHORT_ANSWER" as const,
     text,
-    options: [{ text: rawOptions[0] || "", isCorrect: true }],
+    options: [{ text: rawOptions[0]?.text || answerRef || "", isCorrect: true }],
   };
 }
 
