@@ -1,23 +1,24 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const defaultEmail = useMemo(() => searchParams.get("email") || "", [searchParams]);
-  const initialPreviewCode = useMemo(() => searchParams.get("previewCode") || "", [searchParams]);
-
-  const [email, setEmail] = useState(defaultEmail);
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [previewCode, setPreviewCode] = useState(initialPreviewCode);
+  const [previewCode, setPreviewCode] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setEmail(params.get("email") || "");
+    setPreviewCode(params.get("previewCode") || "");
+  }, []);
 
   async function handleVerify(e: FormEvent) {
     e.preventDefault();

@@ -1,27 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [info, setInfo] = useState(
-    searchParams.get("verified") === "true"
-      ? "Email verified successfully. You can sign in now."
-      : searchParams.get("registered") === "true"
-      ? "Account created. Please verify your email before signing in."
-      : ""
-  );
+  const [info, setInfo] = useState("");
   const [showResend, setShowResend] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [previewCode, setPreviewCode] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailFromQuery = params.get("email");
+    if (emailFromQuery) setEmail(emailFromQuery);
+
+    if (params.get("verified") === "true") {
+      setInfo("Email verified successfully. You can sign in now.");
+      return;
+    }
+
+    if (params.get("registered") === "true") {
+      setInfo("Account created. Please verify your email before signing in.");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
