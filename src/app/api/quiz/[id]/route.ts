@@ -65,6 +65,9 @@ export async function PUT(
       timerType: body.timerType,
       duration: body.duration,
       questionSelectionMode: body.questionSelectionMode,
+      randomQuestionScope: body.questionSelectionMode === "RANDOM"
+        ? body.randomQuestionScope
+        : "SESSION",
       questionDrawCount: body.questionSelectionMode === "RANDOM"
         ? body.questionDrawCount ?? null
         : null,

@@ -37,6 +37,7 @@ interface Quiz {
   timerType: string;
   duration: number;
   questionSelectionMode: "ALL" | "RANDOM" | "MANUAL";
+  randomQuestionScope: "SESSION" | "PARTICIPANT";
   questionDrawCount: number | null;
   randomizeQuestions: boolean;
   randomizeAnswers: boolean;
@@ -180,6 +181,7 @@ export default function QuizDetailPage() {
   const [settingsDurationMinutes, setSettingsDurationMinutes] = useState(5);
   const [settingsDurationSeconds, setSettingsDurationSeconds] = useState(0);
   const [settingsSelectionMode, setSettingsSelectionMode] = useState<"ALL" | "RANDOM" | "MANUAL">("ALL");
+  const [settingsRandomQuestionScope, setSettingsRandomQuestionScope] = useState<"SESSION" | "PARTICIPANT">("SESSION");
   const [settingsDrawCount, setSettingsDrawCount] = useState(10);
   const [settingsRandomizeQuestions, setSettingsRandomizeQuestions] = useState(false);
   const [settingsRandomizeAnswers, setSettingsRandomizeAnswers] = useState(false);
@@ -208,6 +210,7 @@ export default function QuizDetailPage() {
       setSettingsDurationMinutes(Math.floor(data.duration / 60));
       setSettingsDurationSeconds(data.duration % 60);
       setSettingsSelectionMode(data.questionSelectionMode);
+      setSettingsRandomQuestionScope(data.randomQuestionScope);
       setSettingsDrawCount(data.questionDrawCount ?? Math.min(10, Math.max(1, data.questions.length || 1)));
       setSettingsRandomizeQuestions(data.randomizeQuestions);
       setSettingsRandomizeAnswers(data.randomizeAnswers);
@@ -295,6 +298,7 @@ export default function QuizDetailPage() {
         timerType: settingsTimerType,
         duration,
         questionSelectionMode: settingsSelectionMode,
+        randomQuestionScope: settingsRandomQuestionScope,
         questionDrawCount: settingsSelectionMode === "RANDOM" ? settingsDrawCount : null,
         randomizeQuestions: settingsRandomizeQuestions,
         randomizeAnswers: settingsRandomizeAnswers,
@@ -439,6 +443,11 @@ export default function QuizDetailPage() {
                 ? `Random draw (${quiz.questionDrawCount ?? quiz.questions.length})`
                 : `Manual selection (${quiz.questions.filter((question) => question.includedInQuiz).length})`}
             </span>
+            {quiz.questionSelectionMode === "RANDOM" && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
+                {quiz.randomQuestionScope === "PARTICIPANT" ? "Per-student random set" : "Per-session random set"}
+              </span>
+            )}
             {quiz.randomizeQuestions && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-surface border border-border text-muted">
                 Randomized questions
@@ -587,6 +596,29 @@ export default function QuizDetailPage() {
                     max={Math.max(1, quiz.questions.length)}
                     className="w-full max-w-[220px] px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
                   />
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-foreground mb-2">Random draw scope</label>
+                    <div className="grid md:grid-cols-2 gap-2">
+                      {([
+                        { value: "SESSION", label: "Same set per session", desc: "All students in a session share one random subset" },
+                        { value: "PARTICIPANT", label: "Different set per student", desc: "Every student gets their own random subset" },
+                      ] as const).map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setSettingsRandomQuestionScope(item.value)}
+                          className={`px-4 py-2.5 text-sm font-medium rounded-xl border-2 text-left transition ${
+                            settingsRandomQuestionScope === item.value
+                              ? "border-primary bg-primary/6 text-primary"
+                              : "border-border text-muted hover:border-primary/40"
+                          }`}
+                        >
+                          <p className="font-semibold">{item.label}</p>
+                          <p className="text-xs mt-1">{item.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 

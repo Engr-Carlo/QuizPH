@@ -25,12 +25,19 @@ interface SessionData {
     title: string;
     duration: number;
     timerType: string;
+    activeQuestionCount: number;
     randomizeQuestions: boolean;
     randomizeAnswers: boolean;
     antiCheatEnabled: boolean;
     questions: Question[];
   };
 }
+
+const QUESTION_TYPE_LABELS: Record<string, string> = {
+  MCQ: "Multiple Choice",
+  TRUE_FALSE: "True or False",
+  SHORT_ANSWER: "Short Answer",
+};
 
 export default function StudentQuizPage() {
   const params = useParams();
@@ -51,7 +58,8 @@ export default function StudentQuizPage() {
 
   // Fetch session data
   const fetchSession = useCallback(async () => {
-    const res = await fetch(`/api/sessions/${sessionId}`);
+    const query = participantId ? `?participantId=${encodeURIComponent(participantId)}` : "";
+    const res = await fetch(`/api/sessions/${sessionId}${query}`);
     if (res.ok) {
       const data: SessionData = await res.json();
       setSessionData(data);
@@ -78,7 +86,7 @@ export default function StudentQuizPage() {
       }
     }
     setLoading(false);
-  }, [sessionId]);
+  }, [participantId, sessionId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -259,6 +267,14 @@ export default function StudentQuizPage() {
     });
   }
 
+  async function persistCurrentAnswer(question: Question | undefined) {
+    if (!question) return;
+    const rawAnswer = answers[question.id];
+    const answerText = question.type === "SHORT_ANSWER" ? rawAnswer?.trim() : rawAnswer;
+    if (!answerText) return;
+    await handleAnswer(question.id, answerText);
+  }
+
   // Submit quiz
   async function handleSubmitQuiz() {
     if (isSubmittingRef.current) return;
@@ -312,25 +328,46 @@ export default function StudentQuizPage() {
   // WAITING state
   if (status === "waiting") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">{sessionData.quiz.title}</h1>
-          <p className="text-muted mb-4">
-            Session Code:{" "}
-            <span className="font-mono font-bold text-primary text-xl">
-              {sessionData.code}
-            </span>
-          </p>
-          <div className="animate-pulse text-lg text-primary font-medium flex items-center justify-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            Waiting for teacher to start the quiz...
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eef2ff_34%,#ffffff_100%)] px-4 py-6 sm:px-6">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-4xl items-center justify-center">
+          <div className="w-full overflow-hidden rounded-[32px] bg-[linear-gradient(145deg,#0f172a_0%,#1d4ed8_52%,#06b6d4_120%)] p-6 text-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] sm:p-8">
+            <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Queued and ready</p>
+                <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">{sessionData.quiz.title}</h1>
+                <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/88 backdrop-blur">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-300 animate-pulse" />
+                  Waiting for your teacher to start the quiz
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3 text-sm">
+                  <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-white/60">Session code</div>
+                    <div className="mt-1 font-mono text-2xl font-black tracking-[0.2em]">{sessionData.code}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-white/60">Question set</div>
+                    <div className="mt-1 text-lg font-black">{sessionData.quiz.activeQuestionCount} questions</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-white/60">Duration</div>
+                    <div className="mt-1 text-lg font-black">{Math.max(1, Math.floor(sessionData.quiz.duration / 60))} min</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-white/15 bg-white/10 p-5 backdrop-blur">
+                <div className="w-14 h-14 rounded-2xl bg-white/12 flex items-center justify-center mb-4">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <h2 className="text-lg font-black">Stay on this screen</h2>
+                <p className="mt-2 text-sm leading-6 text-white/76">
+                  Once the teacher starts, your mobile-friendly fullscreen quiz launches immediately with your assigned question set.
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted mt-4">
-            {sessionData.quiz.questions.length} questions •{" "}
-            {Math.floor(sessionData.quiz.duration / 60)} min
-          </p>
         </div>
       </div>
     );
@@ -339,21 +376,23 @@ export default function StudentQuizPage() {
   // FINISHED state
   if (status === "finished") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <div className="text-center max-w-md">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfccb_0%,#eff6ff_35%,#ffffff_100%)] px-4 py-6 sm:px-6">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl items-center justify-center">
+          <div className="w-full rounded-[32px] border border-emerald-200/80 bg-white/92 p-6 text-center shadow-[0_28px_70px_rgba(16,185,129,0.14)] backdrop-blur sm:p-8">
           <div className="w-16 h-16 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Quiz Complete!</h1>
-          <p className="text-muted mb-6">{sessionData.quiz.title}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-success/70">Completed</p>
+          <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl">Quiz Complete</h1>
+          <p className="mt-2 text-sm text-muted sm:text-base">{sessionData.quiz.title}</p>
           {score !== null && (
-            <div className="bg-card border border-border rounded-2xl p-8 mb-6">
-              <div className="text-5xl font-bold text-primary mb-2">
+            <div className="mb-6 mt-6 rounded-[28px] bg-[linear-gradient(145deg,#eef2ff_0%,#ecfeff_100%)] p-8">
+              <div className="text-5xl font-black text-primary mb-2">
                 {score}/{questions.length}
               </div>
-              <div className="text-muted">
+              <div className="text-muted font-medium">
                 {questions.length > 0
                   ? Math.round((score / questions.length) * 100)
                   : 0}
@@ -362,7 +401,7 @@ export default function StudentQuizPage() {
             </div>
           )}
           {warningCount > 0 && (
-            <p className="text-sm text-danger mb-4 flex items-center justify-center gap-1.5">
+            <p className="text-sm text-danger mb-4 flex items-center justify-center gap-1.5 rounded-2xl bg-danger/6 px-4 py-3">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
@@ -371,10 +410,12 @@ export default function StudentQuizPage() {
           )}
           <a
             href="/student"
-            className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+            className="inline-flex items-center justify-center rounded-2xl px-6 py-3.5 text-sm font-black text-white shadow-[0_16px_35px_rgba(79,70,229,0.24)] transition hover:-translate-y-0.5"
+            style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
           >
             Back to Dashboard
           </a>
+          </div>
         </div>
       </div>
     );
@@ -384,17 +425,27 @@ export default function StudentQuizPage() {
   const currentQuestion = questions[currentIndex];
   if (!currentQuestion) return null;
 
+  const currentAnswer = answers[currentQuestion.id] || "";
+  const answeredCount = questions.filter((question) => {
+    const value = answers[question.id];
+    return typeof value === "string" && value.trim().length > 0;
+  }).length;
+  const questionProgress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
+  const answerProgress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+  const canGoNext = currentIndex < questions.length - 1;
+  const questionTypeLabel = QUESTION_TYPE_LABELS[currentQuestion.type] || currentQuestion.type;
+
   return (
     <div
-      className="min-h-screen bg-background flex flex-col select-none"
+      className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eef2ff_26%,#ffffff_70%)] select-none"
       onCopy={(e) => e.preventDefault()}
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
       {/* Warning Modal */}
       {sessionData.quiz.antiCheatEnabled && warningVisible && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-card rounded-2xl p-8 max-w-md mx-4 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/72 px-4 backdrop-blur-sm">
+          <div className="mx-4 max-w-md rounded-[28px] bg-white p-7 text-center shadow-2xl">
             <div className="w-14 h-14 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -412,153 +463,219 @@ export default function StudentQuizPage() {
             </p>
             <button
               onClick={handleReenterFullscreen}
-              className="px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition"
+              className="px-6 py-3 bg-primary text-white font-semibold rounded-2xl hover:bg-primary-dark transition"
             >
               Return to Fullscreen & Continue
             </button>
           </div>
         </div>
       )}
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 pb-28 pt-3 sm:px-5 sm:pb-8 sm:pt-5 lg:px-8">
+        <header className="sticky top-3 z-20 rounded-[28px] border border-white/80 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Live quiz</p>
+              <h1 className="mt-1 truncate text-lg font-black text-foreground sm:text-2xl">{sessionData.quiz.title}</h1>
+              <p className="mt-2 text-xs text-muted sm:text-sm">
+                Question {currentIndex + 1} of {questions.length} • {answeredCount} answered
+              </p>
+            </div>
 
-      {/* Top bar */}
-      <header className="bg-card border-b border-border px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="font-bold">{sessionData.quiz.title}</h1>
-          <span className="text-xs text-muted">
-            Question {currentIndex + 1} of {questions.length}
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div
-            className={`font-mono font-bold text-lg flex items-center gap-1.5 ${
-              timeLeft < 60 ? "text-danger animate-pulse" : "text-primary"
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            {formatTime(timeLeft)}
-          </div>
-          {sessionData.quiz.antiCheatEnabled && warningCount > 0 && (
-            <span className="flex items-center gap-1 text-xs bg-danger/10 text-danger px-2 py-1 rounded-full">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              {warningCount}
-            </span>
-          )}
-        </div>
-      </header>
-
-      {/* Progress bar */}
-      <div className="h-1 bg-border">
-        <div
-          className="h-full bg-primary transition-all duration-300"
-          style={{
-            width: `${((currentIndex + 1) / questions.length) * 100}%`,
-          }}
-        />
-      </div>
-
-      {/* Question */}
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full">
-          <div className="mb-2 text-xs font-medium text-primary uppercase">
-            {currentQuestion.type === "MCQ"
-              ? "Multiple Choice"
-              : currentQuestion.type === "TRUE_FALSE"
-              ? "True or False"
-              : "Short Answer"}
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-muted">Progress</div>
+                <div className="mt-1 text-base font-black text-foreground">{Math.round(questionProgress)}%</div>
+              </div>
+              <div className={`rounded-2xl px-4 py-3 ${timeLeft < 60 ? "bg-danger/10 text-danger" : "bg-primary/8 text-primary"}`}>
+                <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Time left</div>
+                <div className={`mt-1 flex items-center gap-2 text-base font-black ${timeLeft < 60 ? "animate-pulse" : ""}`}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  {formatTime(timeLeft)}
+                </div>
+              </div>
+              {sessionData.quiz.antiCheatEnabled && (
+                <div className={`rounded-2xl px-4 py-3 ${warningCount > 0 ? "bg-danger/10 text-danger" : "bg-emerald-50 text-emerald-700"}`}>
+                  <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Monitor</div>
+                  <div className="mt-1 text-base font-black">{warningCount > 0 ? `${warningCount} warning${warningCount > 1 ? "s" : ""}` : "Clean run"}</div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <h2 className="text-2xl font-bold mb-8">{currentQuestion.text}</h2>
-
-          {/* Options */}
-          {currentQuestion.type === "SHORT_ANSWER" ? (
-            <div>
-              <input
-                type="text"
-                value={answers[currentQuestion.id] || ""}
-                onChange={(e) =>
-                  setAnswers((prev) => ({
-                    ...prev,
-                    [currentQuestion.id]: e.target.value,
-                  }))
-                }
-                className="w-full px-6 py-4 border-2 border-border rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                placeholder="Type your answer..."
-                autoComplete="off"
+          <div className="mt-4 space-y-3">
+            <div className="h-2 rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#4F46E5,#0EA5E9)] transition-all duration-300"
+                style={{ width: `${questionProgress}%` }}
               />
             </div>
-          ) : (
-            <div className="grid gap-3">
-              {currentQuestion.options.map((opt) => {
-                const isSelected = answers[currentQuestion.id] === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() =>
-                      setAnswers((prev) => ({
-                        ...prev,
-                        [currentQuestion.id]: opt.id,
-                      }))
-                    }
-                    className={`w-full text-left px-6 py-4 rounded-xl border-2 transition text-lg ${
-                      isSelected
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {opt.text}
-                  </button>
-                );
-              })}
+            <div className="h-2 rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#22c55e,#06b6d4)] transition-all duration-300"
+                style={{ width: `${answerProgress}%` }}
+              />
             </div>
-          )}
+          </div>
+        </header>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8">
+        <main className="mt-4 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+          <section className="rounded-[30px] border border-white/80 bg-white/90 p-4 shadow-[0_22px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                {questionTypeLabel}
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-muted">
+                Session {sessionData.code}
+              </span>
+            </div>
+
+            <h2 className="mt-4 text-2xl font-black leading-tight text-foreground sm:text-3xl">
+              {currentQuestion.text}
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Tap your answer below. The layout is optimized for quick reading and comfortable mobile navigation.
+            </p>
+
+            {currentQuestion.type === "SHORT_ANSWER" ? (
+              <div className="mt-6 rounded-[26px] border border-border/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 sm:p-5">
+                <label className="mb-2 block text-sm font-bold text-foreground">Your answer</label>
+                <textarea
+                  value={currentAnswer}
+                  onChange={(e) =>
+                    setAnswers((prev) => ({
+                      ...prev,
+                      [currentQuestion.id]: e.target.value,
+                    }))
+                  }
+                  className="min-h-36 w-full rounded-2xl border border-border bg-white px-4 py-3 text-base text-foreground shadow-inner focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="Type your answer here..."
+                  autoComplete="off"
+                />
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-3">
+                {currentQuestion.options.map((opt, optionIndex) => {
+                  const isSelected = currentAnswer === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleAnswer(currentQuestion.id, opt.id)}
+                      className={`group w-full rounded-[24px] border px-4 py-4 text-left transition-all sm:px-5 sm:py-5 ${
+                        isSelected
+                          ? "border-primary bg-[linear-gradient(145deg,rgba(79,70,229,0.12),rgba(14,165,233,0.14))] shadow-[0_16px_32px_rgba(79,70,229,0.16)]"
+                          : "border-border bg-white hover:border-primary/35 hover:bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className={`inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-sm font-black ${isSelected ? "bg-primary text-white" : "bg-slate-100 text-slate-600 group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                          {String.fromCharCode(65 + optionIndex)}
+                        </span>
+                        <div className="flex-1">
+                          <div className={`text-base font-semibold leading-6 ${isSelected ? "text-primary" : "text-foreground"}`}>
+                            {opt.text}
+                          </div>
+                          <div className="mt-1 text-xs text-muted">
+                            {isSelected ? "Selected answer" : "Tap to choose this option"}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <aside className="space-y-4 lg:sticky lg:top-32">
+            <div className="rounded-[28px] border border-white/80 bg-white/90 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Question rail</p>
+                  <h3 className="mt-1 text-base font-black text-foreground">Jump around</h3>
+                </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-muted">
+                  {answeredCount}/{questions.length}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-4">
+                {questions.map((question, idx) => {
+                  const isCurrent = idx === currentIndex;
+                  const hasAnswer = Boolean(answers[question.id]?.trim());
+                  return (
+                    <button
+                      key={question.id}
+                      onClick={async () => {
+                        await persistCurrentAnswer(currentQuestion);
+                        setCurrentIndex(idx);
+                      }}
+                      className={`h-11 rounded-2xl text-sm font-black transition ${
+                        isCurrent
+                          ? "bg-[linear-gradient(145deg,#4F46E5,#0EA5E9)] text-white shadow-[0_10px_24px_rgba(79,70,229,0.22)]"
+                          : hasAnswer
+                          ? "bg-primary/10 text-primary"
+                          : "bg-slate-100 text-muted"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,#eff6ff_0%,#ffffff_100%)] p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Focus status</p>
+              <div className="mt-3 space-y-3 text-sm text-slate-700">
+                <div className="rounded-2xl bg-white/85 px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted">Current item</div>
+                  <div className="mt-1 font-bold">Question {currentIndex + 1}</div>
+                </div>
+                <div className="rounded-2xl bg-white/85 px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted">Saved answer</div>
+                  <div className="mt-1 font-bold">{currentAnswer.trim() ? "Ready" : "Not yet answered"}</div>
+                </div>
+                {sessionData.quiz.antiCheatEnabled && (
+                  <div className={`rounded-2xl px-4 py-3 ${warningCount > 0 ? "bg-danger/8 text-danger" : "bg-emerald-50 text-emerald-700"}`}>
+                    <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">Anti-cheat</div>
+                    <div className="mt-1 font-bold">{warningCount > 0 ? `${warningCount} event${warningCount > 1 ? "s" : ""} logged` : "No violations"}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+        </main>
+
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-white/92 px-3 py-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:static sm:mt-4 sm:rounded-[28px] sm:border sm:p-4 sm:shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <div className="mx-auto flex max-w-6xl items-center gap-3">
             <button
-              onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+              onClick={async () => {
+                await persistCurrentAnswer(currentQuestion);
+                setCurrentIndex((i) => Math.max(0, i - 1));
+              }}
               disabled={currentIndex === 0}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm border border-border rounded-lg disabled:opacity-30 hover:bg-primary/5 transition"
+              className="inline-flex min-w-[92px] items-center justify-center gap-1.5 rounded-2xl border border-border bg-white px-4 py-3 text-sm font-bold text-foreground transition disabled:opacity-35"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
-              Previous
+              Prev
             </button>
 
-            <div className="flex gap-1.5">
-              {questions.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`w-8 h-8 rounded-full text-xs font-medium transition ${
-                    idx === currentIndex
-                      ? "bg-primary text-white"
-                      : answers[questions[idx].id]
-                      ? "bg-primary/20 text-primary"
-                      : "bg-border text-muted"
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
+            <div className="min-w-0 flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-center text-xs font-semibold text-muted sm:text-sm">
+              {currentAnswer.trim() ? "Answer captured" : "Select or type an answer before moving on"}
             </div>
 
-            {currentIndex < questions.length - 1 ? (
+            {canGoNext ? (
               <button
-                onClick={() => {
-                  // Submit current answer if exists
-                  const currentQ = questions[currentIndex];
-                  const ans = answers[currentQ.id];
-                  if (ans && !isSubmittingRef.current) {
-                    handleAnswer(currentQ.id, ans);
-                  }
+                onClick={async () => {
+                  await persistCurrentAnswer(currentQuestion);
                   setCurrentIndex((i) => i + 1);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                className="inline-flex min-w-[110px] items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-black text-white shadow-[0_16px_32px_rgba(79,70,229,0.22)] transition hover:-translate-y-0.5"
+                style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
               >
                 Next
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -567,16 +684,13 @@ export default function StudentQuizPage() {
               </button>
             ) : (
               <button
-                onClick={() => {
-                  // Submit last answer
-                  const currentQ = questions[currentIndex];
-                  const ans = answers[currentQ.id];
-                  if (ans) handleAnswer(currentQ.id, ans);
+                onClick={async () => {
+                  await persistCurrentAnswer(currentQuestion);
                   handleSubmitQuiz();
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-success text-white rounded-lg hover:opacity-90 transition"
+                className="inline-flex min-w-[124px] items-center justify-center gap-1.5 rounded-2xl bg-success px-4 py-3 text-sm font-black text-white shadow-[0_16px_32px_rgba(5,150,105,0.2)] transition hover:-translate-y-0.5"
               >
-                Submit Quiz
+                Submit
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
@@ -584,7 +698,7 @@ export default function StudentQuizPage() {
             )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

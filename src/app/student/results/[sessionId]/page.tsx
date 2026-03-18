@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 
@@ -36,6 +36,7 @@ interface SessionData {
   code: string;
   quiz: {
     title: string;
+    activeQuestionCount: number;
     questions: Question[];
   };
   participants: ParticipantData[];
@@ -49,20 +50,29 @@ const Q_TYPE_LABELS: Record<string, string> = {
 
 export default function StudentResultsPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const sessionId = params.sessionId as string;
-  const participantId = searchParams.get("participantId") || "";
+  const [participantId, setParticipantId] = useState<string | null>(null);
 
   const [data, setData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchResults = useCallback(async () => {
-    const res = await fetch(`/api/sessions/${sessionId}`);
+    const query = participantId ? `?participantId=${encodeURIComponent(participantId)}` : "";
+    const res = await fetch(`/api/sessions/${sessionId}${query}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
-  }, [sessionId]);
+  }, [participantId, sessionId]);
 
-  useEffect(() => { fetchResults(); }, [fetchResults]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setParticipantId(params.get("participantId") || "");
+  }, []);
+
+  useEffect(() => {
+    if (participantId !== null) {
+      fetchResults();
+    }
+  }, [fetchResults, participantId]);
 
   if (loading) {
     return (
@@ -82,7 +92,7 @@ export default function StudentResultsPage() {
     );
   }
 
-  const participant = data.participants.find((p) => p.id === participantId);
+  const participant = data.participants.find((p) => p.id === (participantId || ""));
   if (!participant) {
     return (
       <DashboardLayout>
@@ -91,7 +101,7 @@ export default function StudentResultsPage() {
     );
   }
 
-  const totalQuestions = data.quiz.questions.length;
+  const totalQuestions = data.quiz.activeQuestionCount;
   const correctCount = participant.answers.filter((a) => a.isCorrect).length;
   const wrongCount = participant.answers.filter((a) => !a.isCorrect).length;
   const skippedCount = totalQuestions - participant.answers.length;

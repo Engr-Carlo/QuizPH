@@ -43,6 +43,9 @@ export async function POST(req: Request) {
         questionDrawCount: parsed.data.questionSelectionMode === "RANDOM"
           ? parsed.data.questionDrawCount ?? null
           : null,
+        randomQuestionScope: parsed.data.questionSelectionMode === "RANDOM"
+          ? parsed.data.randomQuestionScope
+          : "SESSION",
         teacherId: session.user.id,
       },
     });

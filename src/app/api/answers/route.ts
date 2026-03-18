@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 import type { Option } from "@prisma/client";
+import { selectQuestionsForSession } from "@/lib/utils";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -20,6 +21,20 @@ export async function POST(req: Request) {
     // Verify participant
     const participant = await prisma.participant.findUnique({
       where: { id: participantId },
+      include: {
+        session: {
+          include: {
+            quiz: {
+              include: {
+                questions: {
+                  orderBy: { order: "asc" },
+                  include: { options: true },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!participant || participant.userId !== session.user.id) {
@@ -28,6 +43,20 @@ export async function POST(req: Request) {
 
     if (participant.isFinished) {
       return NextResponse.json({ error: "Quiz already submitted" }, { status: 400 });
+    }
+
+    const allowedQuestions = selectQuestionsForSession({
+      questions: participant.session.quiz.questions,
+      mode: participant.session.quiz.questionSelectionMode,
+      drawCount: participant.session.quiz.questionDrawCount,
+      seed: participant.session.quiz.questionSelectionMode === "RANDOM"
+        && participant.session.quiz.randomQuestionScope === "PARTICIPANT"
+          ? `${participant.sessionId}:${participant.id}`
+          : participant.sessionId,
+    });
+
+    if (!allowedQuestions.some((question) => question.id === questionId)) {
+      return NextResponse.json({ error: "Question is not assigned to this participant" }, { status: 403 });
     }
 
     // Check if already answered this question

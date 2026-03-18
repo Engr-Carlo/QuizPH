@@ -18,6 +18,7 @@ export const quizSchema = z.object({
   timerType: z.enum(["PER_QUIZ", "PER_QUESTION"]),
   duration: z.number().min(10).max(7200),
   questionSelectionMode: z.enum(["ALL", "RANDOM", "MANUAL"]),
+  randomQuestionScope: z.enum(["SESSION", "PARTICIPANT"]),
   questionDrawCount: z.number().int().min(1).max(500).nullable().optional(),
   randomizeQuestions: z.boolean(),
   randomizeAnswers: z.boolean(),

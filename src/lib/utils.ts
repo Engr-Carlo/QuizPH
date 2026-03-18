@@ -70,6 +70,18 @@ export function selectQuestionsForSession<T extends SelectableQuestion>(params: 
   return shuffled.slice(0, limit);
 }
 
+export function getQuizActiveQuestionCount(params: {
+  questions: SelectableQuestion[];
+  mode: "ALL" | "RANDOM" | "MANUAL";
+  drawCount?: number | null;
+}) {
+  if (params.mode === "ALL") return params.questions.length;
+  if (params.mode === "MANUAL") return params.questions.filter((question) => question.includedInQuiz !== false).length;
+
+  const eligibleCount = params.questions.filter((question) => question.includedInQuiz !== false).length;
+  return Math.max(1, Math.min(params.drawCount ?? eligibleCount, eligibleCount));
+}
+
 export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;

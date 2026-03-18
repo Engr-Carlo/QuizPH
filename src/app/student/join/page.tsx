@@ -61,19 +61,16 @@ export default function JoinQuizPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-md mx-auto">
-        {/* Page heading */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-          </div>
-          <h1 className="text-2xl font-extrabold text-foreground mb-2">Join a Quiz</h1>
-          <p className="text-muted text-sm">Enter the 6-character code from your teacher</p>
+      <div className="mx-auto max-w-3xl space-y-5">
+        <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,#0f172a_0%,#1d4ed8_52%,#22c55e_130%)] px-5 py-6 text-white shadow-[0_25px_65px_rgba(29,78,216,0.24)] sm:px-7 sm:py-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Join session</p>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">Enter your code and jump straight in.</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/78 sm:text-base">
+            Built for phones first: bigger inputs, cleaner spacing, and faster one-hand entry before fullscreen starts.
+          </p>
         </div>
 
-        <form onSubmit={handleJoin} className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+        <form onSubmit={handleJoin} className="rounded-[28px] border border-border/70 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur sm:p-7">
           {error && (
             <div className="flex items-start gap-2 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl mb-5">
               <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,8 +80,18 @@ export default function JoinQuizPage() {
             </div>
           )}
 
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Quiz access</p>
+              <h2 className="mt-1 text-xl font-black text-foreground">Use the 6-character session code</h2>
+            </div>
+            <div className="hidden rounded-2xl bg-primary/8 px-3 py-2 text-xs font-bold text-primary sm:block">
+              Fast join
+            </div>
+          </div>
+
           {/* Character boxes */}
-          <div className="flex gap-2.5 justify-center mb-6" onPaste={handlePaste}>
+          <div className="grid grid-cols-3 gap-3 sm:flex sm:justify-center mb-6" onPaste={handlePaste}>
             {chars.map((c, i) => (
               <input
                 key={i}
@@ -95,7 +102,7 @@ export default function JoinQuizPage() {
                 onChange={(e) => handleChar(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 maxLength={2}
-                className={`w-12 h-14 text-center text-2xl font-extrabold font-mono uppercase rounded-xl border-2 transition focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                className={`h-15 w-full text-center text-2xl font-extrabold font-mono uppercase rounded-2xl border-2 transition focus:outline-none focus:ring-2 focus:ring-primary/30 sm:h-16 sm:w-14 ${
                   c
                     ? "border-primary bg-primary/6 text-primary"
                     : "border-border bg-surface text-foreground"
@@ -109,15 +116,23 @@ export default function JoinQuizPage() {
           <button
             type="submit"
             disabled={loading || code.length < 6}
-            className="w-full py-3 text-white font-bold rounded-xl transition disabled:opacity-40 text-base hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+            className="w-full rounded-2xl py-3.5 text-base font-black text-white shadow-[0_16px_35px_rgba(79,70,229,0.28)] transition disabled:opacity-40 hover:-translate-y-0.5 hover:opacity-95"
+            style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
           >
-            {loading ? "Joining…" : "Join Quiz →"}
+            {loading ? "Joining..." : "Join Quiz"}
           </button>
 
-          <p className="text-center text-xs text-muted mt-4">
-            The quiz will open in fullscreen once you join.
-          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {[
+              "Fullscreen starts when the quiz begins.",
+              "Tap-friendly layout is optimized for phones.",
+              "Your teacher can monitor violations live.",
+            ].map((item) => (
+              <div key={item} className="rounded-2xl bg-slate-50 px-3 py-3 text-xs leading-5 text-muted">
+                {item}
+              </div>
+            ))}
+          </div>
         </form>
       </div>
     </DashboardLayout>

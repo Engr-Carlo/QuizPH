@@ -19,6 +19,7 @@ interface SessionData {
   status: string;
   quiz: {
     title: string;
+    activeQuestionCount: number;
     questions: { id: string; text: string; options: { id: string; text: string; isCorrect: boolean }[] }[];
   };
   participants: Participant[];
@@ -56,7 +57,7 @@ export default function ResultsPage() {
     );
   }
 
-  const totalQuestions = data.quiz.questions.length;
+  const totalQuestions = data.quiz.activeQuestionCount;
   const sorted = [...data.participants].sort((a, b) => b.score - a.score);
 
   return (

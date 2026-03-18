@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -52,6 +53,23 @@ function IconLogOut() {
     </svg>
   );
 }
+function IconMenu() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
 
 // ── Nav config ──────────────────────────────────────────────────────────────
 const teacherNav = [
@@ -91,27 +109,79 @@ function getInitials(name?: string | null) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const role = session?.user?.role;
   const navItems =
     role === "SUPER_ADMIN" ? adminNav : role === "TEACHER" ? teacherNav : studentNav;
   const roleMeta = role ? ROLE_META[role] : null;
   const homeHref = role === "SUPER_ADMIN" ? "/admin" : role === "TEACHER" ? "/teacher" : "/student";
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* ── Sidebar ── */}
-      <aside className="w-64 bg-card border-r border-border flex flex-col fixed h-full z-20 shadow-sm">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef2ff_0%,#ffffff_42%,#f8fafc_100%)] lg:flex">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-white/88 backdrop-blur lg:hidden">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href={homeHref} className="flex items-center gap-2.5 group">
+            <div
+              className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-[0_10px_30px_rgba(79,70,229,0.22)]"
+              style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
+            >
+              <span className="text-white font-black text-sm">Q</span>
+            </div>
+            <div>
+              <span className="block text-sm font-extrabold text-foreground tracking-tight">QuizPH</span>
+              {roleMeta && (
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  {roleMeta.label}
+                </span>
+              )}
+            </div>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((open) => !open)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-white text-foreground shadow-sm transition hover:border-primary/30 hover:text-primary"
+            aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+          >
+            {mobileNavOpen ? <IconClose /> : <IconMenu />}
+          </button>
+        </div>
+      </header>
+
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-slate-950/35 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+          aria-label="Close navigation overlay"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-[86vw] max-w-[320px] flex-col border-r border-border bg-card/96 shadow-2xl backdrop-blur transition-transform duration-300 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-sm",
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:flex"
+        )}
+      >
 
         {/* Logo */}
         <div className="px-5 py-5 border-b border-border">
           <Link href={homeHref} className="flex items-center gap-2.5 group">
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-[0_10px_30px_rgba(79,70,229,0.2)]"
+              style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
             >
-              <span className="text-white font-black text-[13px]">Q</span>
+              <span className="text-white font-black text-sm">Q</span>
             </div>
-            <span className="text-lg font-extrabold text-foreground tracking-tight">QuizPH</span>
+            <div>
+              <span className="block text-lg font-extrabold text-foreground tracking-tight">QuizPH</span>
+              <span className="block text-[11px] font-medium text-muted">Quiz sessions built for focus</span>
+            </div>
           </Link>
         </div>
 
@@ -125,7 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }, i) => {
             const isActive = pathname === href || (i === 0 && pathname.startsWith(href) && href !== "/");
             return (
@@ -133,9 +203,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 key={`${href}-${i}`}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                  "flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-[linear-gradient(135deg,var(--primary),#0EA5E9)] text-white shadow-[0_12px_28px_rgba(79,70,229,0.24)]"
                     : "text-muted hover:bg-surface hover:text-foreground"
                 )}
               >
@@ -177,8 +247,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 ml-64 min-h-screen overflow-auto">
-        <div className="p-8">{children}</div>
+      <main className="min-h-screen flex-1 overflow-auto lg:ml-64">
+        <div className="px-4 pb-6 pt-5 sm:px-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

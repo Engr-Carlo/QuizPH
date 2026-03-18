@@ -16,6 +16,7 @@ export default function CreateQuizPage() {
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [questionSelectionMode, setQuestionSelectionMode] = useState<"ALL" | "RANDOM" | "MANUAL">("ALL");
+  const [randomQuestionScope, setRandomQuestionScope] = useState<"SESSION" | "PARTICIPANT">("SESSION");
   const [questionDrawCount, setQuestionDrawCount] = useState(10);
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
@@ -37,6 +38,7 @@ export default function CreateQuizPage() {
         timerType,
         duration,
         questionSelectionMode,
+        randomQuestionScope,
         questionDrawCount: questionSelectionMode === "RANDOM" ? questionDrawCount : null,
         randomizeQuestions,
         randomizeAnswers,
@@ -195,17 +197,42 @@ export default function CreateQuizPage() {
               </div>
 
               {questionSelectionMode === "RANDOM" && (
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Questions to draw</label>
-                  <input
-                    type="number"
-                    value={questionDrawCount}
-                    onChange={(e) => setQuestionDrawCount(Math.max(1, Number(e.target.value) || 1))}
-                    min={1}
-                    max={500}
-                    className="w-full max-w-[200px] px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                  />
-                  <p className="text-xs text-muted mt-1">Example: if the bank has 20 questions, you can draw only 10.</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Questions to draw</label>
+                    <input
+                      type="number"
+                      value={questionDrawCount}
+                      onChange={(e) => setQuestionDrawCount(Math.max(1, Number(e.target.value) || 1))}
+                      min={1}
+                      max={500}
+                      className="w-full max-w-[200px] px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                    />
+                    <p className="text-xs text-muted mt-1">Example: if the bank has 20 questions, you can draw only 10.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Random draw scope</label>
+                    <div className="grid md:grid-cols-2 gap-2">
+                      {([
+                        { value: "SESSION", label: "Same set per session", desc: "All students in one session get the same random subset" },
+                        { value: "PARTICIPANT", label: "Different set per student", desc: "Each student gets their own random subset" },
+                      ] as const).map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setRandomQuestionScope(item.value)}
+                          className={`p-3 rounded-xl border-2 text-left transition ${
+                            randomQuestionScope === item.value
+                              ? "border-primary bg-primary/6 text-primary"
+                              : "border-border text-muted hover:border-primary/40"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold">{item.label}</p>
+                          <p className="text-xs mt-1">{item.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 

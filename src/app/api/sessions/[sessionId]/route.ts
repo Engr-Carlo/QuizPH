@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
-import { selectQuestionsForSession } from "@/lib/utils";
+import { getQuizActiveQuestionCount, selectQuestionsForSession } from "@/lib/utils";
 import { NextResponse } from "next/server";
 
 export async function PATCH(
@@ -50,7 +50,7 @@ export async function PATCH(
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const session = await auth();
@@ -86,17 +86,31 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const participantId = new URL(req.url).searchParams.get("participantId") || "";
+  const seed = quizSession.quiz.questionSelectionMode === "RANDOM"
+    && quizSession.quiz.randomQuestionScope === "PARTICIPANT"
+    && participantId
+      ? `${quizSession.id}:${participantId}`
+      : quizSession.id;
+
   const selectedQuestions = selectQuestionsForSession({
     questions: quizSession.quiz.questions,
     mode: quizSession.quiz.questionSelectionMode,
     drawCount: quizSession.quiz.questionDrawCount,
-    seed: quizSession.id,
+    seed,
+  });
+
+  const activeQuestionCount = getQuizActiveQuestionCount({
+    questions: quizSession.quiz.questions,
+    mode: quizSession.quiz.questionSelectionMode,
+    drawCount: quizSession.quiz.questionDrawCount,
   });
 
   return NextResponse.json({
     ...quizSession,
     quiz: {
       ...quizSession.quiz,
+      activeQuestionCount,
       questions: selectedQuestions,
     },
   });

@@ -30,6 +30,11 @@ enum QuestionSelectionMode {
   MANUAL
 }
 
+enum RandomQuestionScope {
+  SESSION
+  PARTICIPANT
+}
+
 enum SessionStatus {
   WAITING
   ACTIVE
@@ -81,6 +86,7 @@ model Quiz {
   timerType          TimerType @default(PER_QUIZ)
   duration           Int       @default(300) // seconds
   questionSelectionMode QuestionSelectionMode @default(ALL)
+  randomQuestionScope RandomQuestionScope @default(SESSION)
   questionDrawCount  Int?
   randomizeQuestions Boolean   @default(false)
   randomizeAnswers   Boolean   @default(false)

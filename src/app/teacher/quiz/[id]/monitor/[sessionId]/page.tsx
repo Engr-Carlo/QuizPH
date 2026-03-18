@@ -30,6 +30,7 @@ interface SessionData {
   status: string;
   quiz: {
     title: string;
+    activeQuestionCount: number;
     questions: { id: string }[];
     duration: number;
     timerType: string;
@@ -113,7 +114,7 @@ export default function MonitorPage() {
     );
   }
 
-  const totalQ = sessionData.quiz.questions.length;
+  const totalQ = sessionData.quiz.activeQuestionCount;
   const selectedP = sessionData.participants.find((p) => p.id === selectedId);
   const finished = sessionData.participants.filter((p) => p.isFinished).length;
   const withViolations = sessionData.participants.filter((p) => p.violations.length > 0).length;
@@ -479,36 +480,4 @@ export default function MonitorPage() {
       </div>
     </div>
   );
-}
-
-
-interface ViolationEvent {
-  participantId: string;
-  participantName: string;
-  type: string;
-  totalCount: number;
-  typeCounts: { type: string; count: number }[];
-  timestamp: string;
-}
-
-interface Participant {
-  id: string;
-  score: number;
-  isFinished: boolean;
-  user: { name: string; email: string };
-  violations: { type: string; timestamp: string }[];
-  answers: { isCorrect: boolean }[];
-}
-
-interface SessionData {
-  id: string;
-  code: string;
-  status: string;
-  quiz: {
-    title: string;
-    questions: { id: string }[];
-    duration: number;
-    timerType: string;
-  };
-  participants: Participant[];
 }
