@@ -212,12 +212,19 @@ export default function StudentResultsPage() {
                       Skipped
                     </span>
                   ) : isCorrect ? (
-                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/15 text-success">
-                      ✓ Correct
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/15 text-success">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Correct
                     </span>
                   ) : (
-                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-danger/15 text-danger">
-                      ✗ Incorrect
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-danger/15 text-danger">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                      Incorrect
                     </span>
                   )}
                 </div>
@@ -258,8 +265,21 @@ export default function StudentResultsPage() {
                           key={opt.id}
                           className={`flex items-center gap-2.5 text-sm px-4 py-2.5 rounded-xl border ${cls}`}
                         >
-                          <span className="w-4 flex-shrink-0 text-center font-bold">
-                            {isCorrectOpt ? "✓" : isStudentChoice ? "✗" : "○"}
+                          <span className="w-4 h-4 flex-shrink-0 text-center font-bold inline-flex items-center justify-center">
+                            {isCorrectOpt ? (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            ) : isStudentChoice ? (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            ) : (
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <circle cx="12" cy="12" r="5"/>
+                              </svg>
+                            )}
                           </span>
                           <span className={`flex-1 ${isStudentChoice || isCorrectOpt ? "font-semibold" : ""}`}>
                             {opt.text}

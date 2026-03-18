@@ -316,8 +316,11 @@ export default function StudentQuizPage() {
               {sessionData.code}
             </span>
           </p>
-          <div className="animate-pulse text-lg text-primary font-medium">
-            ⏳ Waiting for teacher to start the quiz...
+          <div className="animate-pulse text-lg text-primary font-medium flex items-center justify-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Waiting for teacher to start the quiz...
           </div>
           <p className="text-sm text-muted mt-4">
             {sessionData.quiz.questions.length} questions •{" "}
@@ -333,7 +336,11 @@ export default function StudentQuizPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🎉</div>
+          <div className="w-16 h-16 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
           <h1 className="text-3xl font-bold mb-2">Quiz Complete!</h1>
           <p className="text-muted mb-6">{sessionData.quiz.title}</p>
           {score !== null && (
@@ -350,8 +357,11 @@ export default function StudentQuizPage() {
             </div>
           )}
           {warningCount > 0 && (
-            <p className="text-sm text-danger mb-4">
-              ⚠️ {warningCount} anti-cheat warning(s) recorded
+            <p className="text-sm text-danger mb-4 flex items-center justify-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              {warningCount} anti-cheat warning(s) recorded
             </p>
           )}
           <a
@@ -380,7 +390,11 @@ export default function StudentQuizPage() {
       {warningVisible && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-card rounded-2xl p-8 max-w-md mx-4 text-center">
-            <div className="text-5xl mb-4">⚠️</div>
+            <div className="w-14 h-14 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
             <h2 className="text-xl font-bold text-danger mb-2">
               Warning: Cheating Detected!
             </h2>
@@ -411,15 +425,21 @@ export default function StudentQuizPage() {
         </div>
         <div className="flex items-center gap-4">
           <div
-            className={`font-mono font-bold text-lg ${
+            className={`font-mono font-bold text-lg flex items-center gap-1.5 ${
               timeLeft < 60 ? "text-danger animate-pulse" : "text-primary"
             }`}
           >
-            ⏱️ {formatTime(timeLeft)}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {formatTime(timeLeft)}
           </div>
           {warningCount > 0 && (
-            <span className="text-xs bg-danger/10 text-danger px-2 py-1 rounded-full">
-              ⚠️ {warningCount}
+            <span className="flex items-center gap-1 text-xs bg-danger/10 text-danger px-2 py-1 rounded-full">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              {warningCount}
             </span>
           )}
         </div>
@@ -496,9 +516,12 @@ export default function StudentQuizPage() {
             <button
               onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
               disabled={currentIndex === 0}
-              className="px-4 py-2 text-sm border border-border rounded-lg disabled:opacity-30 hover:bg-primary/5 transition"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm border border-border rounded-lg disabled:opacity-30 hover:bg-primary/5 transition"
             >
-              ← Previous
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Previous
             </button>
 
             <div className="flex gap-1.5">
@@ -530,9 +553,12 @@ export default function StudentQuizPage() {
                   }
                   setCurrentIndex((i) => i + 1);
                 }}
-                className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition"
               >
-                Next →
+                Next
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
               </button>
             ) : (
               <button
@@ -543,9 +569,12 @@ export default function StudentQuizPage() {
                   if (ans) handleAnswer(currentQ.id, ans);
                   handleSubmitQuiz();
                 }}
-                className="px-4 py-2 text-sm bg-success text-white rounded-lg hover:opacity-90 transition"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-success text-white rounded-lg hover:opacity-90 transition"
               >
-                Submit Quiz ✓
+                Submit Quiz
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
               </button>
             )}
           </div>

@@ -150,7 +150,11 @@ export default function CreateQuizPage() {
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
                       checked ? "bg-primary border-primary" : "border-border group-hover:border-primary/50"
                     }`}>
-                      {checked && <span className="text-white text-xs font-black">✓</span>}
+                      {checked && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
                     </div>
                   </div>
                   <div>

@@ -242,7 +242,12 @@ export default function MonitorPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-foreground truncate">{p.user.name}</p>
                             {p.isFinished && (
-                              <span className="text-[10px] font-semibold text-success">✓ Done</span>
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-success">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                Done
+                              </span>
                             )}
                           </div>
                         </div>
@@ -280,7 +285,12 @@ export default function MonitorPage() {
                             ))}
                           </div>
                         ) : (
-                          <span className="text-[11px] text-success font-semibold">✓ Clean</span>
+                          <span className="inline-flex items-center gap-1 text-[11px] text-success font-semibold">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Clean
+                          </span>
                         )}
                       </button>
                     );
@@ -329,12 +339,22 @@ export default function MonitorPage() {
                           </div>
                         </div>
                         {p.violations.length > 0 && (
-                          <span className="text-xs text-danger font-semibold flex-shrink-0">
-                            âš  {p.violations.length}
+                          <span className="inline-flex items-center gap-1 text-xs text-danger font-semibold flex-shrink-0">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                              <line x1="12" y1="9" x2="12" y2="13"/>
+                              <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            {p.violations.length}
                           </span>
                         )}
                         {p.isFinished && (
-                          <span className="text-[10px] text-success font-bold flex-shrink-0">✓ Done</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] text-success font-bold flex-shrink-0">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Done
+                          </span>
                         )}
                       </div>
                     );
@@ -392,7 +412,12 @@ export default function MonitorPage() {
                   </div>
                 ))}
                 {selectedP.violations.length === 0 && (
-                  <p className="text-xs text-success font-semibold">✓ No violations recorded</p>
+                  <p className="inline-flex items-center gap-1 text-xs text-success font-semibold">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    No violations recorded
+                  </p>
                 )}
               </div>
 

@@ -59,13 +59,21 @@ export default function RegisterPage() {
           </p>
           <div className="mt-6 grid grid-cols-2 gap-3">
             {[
-              { icon: "🛡️", label: "Anti-cheat engine" },
-              { icon: "📊", label: "Live monitoring" },
-              { icon: "⚡", label: "Instant results" },
-              { icon: "🎯", label: "Easy quiz builder" },
+              { label: "Anti-cheat engine", icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              )},
+              { label: "Live monitoring", icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              )},
+              { label: "Instant results", icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              )},
+              { label: "Easy quiz builder", icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              )},
             ].map(({ icon, label }) => (
               <div key={label} className="flex items-center gap-2 text-white/80 text-xs">
-                <span>{icon}</span>
+                <span className="flex-shrink-0">{icon}</span>
                 <span>{label}</span>
               </div>
             ))}
@@ -100,7 +108,9 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="flex items-start gap-2.5 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl">
-                <span className="mt-0.5 flex-shrink-0">⚠️</span>
+                <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
                 <span>{error}</span>
               </div>
             )}
@@ -120,7 +130,7 @@ export default function RegisterPage() {
                         : "border-border text-muted hover:border-primary/40"
                     }`}
                   >
-                    {r === "STUDENT" ? "🎓 Student" : "👨‍🏫 Teacher"}
+                    {r === "STUDENT" ? "Student" : "Teacher"}
                   </button>
                 ))}
               </div>

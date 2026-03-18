@@ -259,7 +259,7 @@ export default function QuizDetailPage() {
                     >
                       {s.code}
                       <span className="text-xs font-sans font-normal text-muted">
-                        {copiedCode === s.code ? "✓ Copied!" : "copy"}
+                        {copiedCode === s.code ? "Copied!" : "copy"}
                       </span>
                     </button>
                     {/* Status badge */}
@@ -394,7 +394,11 @@ export default function QuizDetailPage() {
                         disabled={qType === "SHORT_ANSWER"}
                         title="Mark as correct"
                       >
-                        {opt.isCorrect && <span className="text-white text-[10px] font-black">✓</span>}
+                        {opt.isCorrect && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
                       </button>
 
                       <input
@@ -420,7 +424,10 @@ export default function QuizDetailPage() {
                           onClick={() => setQOptions(qOptions.filter((_, i) => i !== idx))}
                           className="text-muted hover:text-danger w-7 h-7 rounded-lg hover:bg-danger/8 flex items-center justify-center text-sm transition"
                         >
-                          ×
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
                         </button>
                       )}
                     </div>
@@ -490,7 +497,12 @@ export default function QuizDetailPage() {
                               : "bg-surface border-border text-muted"
                           }`}
                         >
-                          {opt.isCorrect ? "✓ " : ""}{opt.text}
+                          {opt.isCorrect && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 -mt-0.5" aria-hidden="true">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          )}
+                          {opt.text}
                         </span>
                       ))}
                     </div>

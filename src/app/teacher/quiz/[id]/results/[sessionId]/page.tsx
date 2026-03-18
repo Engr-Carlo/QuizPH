@@ -86,7 +86,12 @@ export default function ResultsPage() {
               {sorted.map((p, idx) => (
                 <tr key={p.id} className="border-t border-border hover:bg-primary/5">
                   <td className="px-4 py-3">
-                    {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : idx + 1}
+                    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                      idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                      idx === 1 ? "bg-gray-100 text-gray-500" :
+                      idx === 2 ? "bg-orange-100 text-orange-600" :
+                      "text-muted"
+                    }`}>{idx + 1}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{p.user.name}</div>
@@ -103,11 +108,19 @@ export default function ResultsPage() {
                   </td>
                   <td className="text-center px-4 py-3">
                     {p.violations.length > 0 ? (
-                      <span className="text-danger font-medium">
-                        ⚠️ {p.violations.length}
+                      <span className="inline-flex items-center gap-1 text-danger font-medium">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        {p.violations.length}
                       </span>
                     ) : (
-                      <span className="text-success">✓ Clean</span>
+                      <span className="inline-flex items-center gap-1 text-success">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Clean
+                      </span>
                     )}
                   </td>
                   <td className="text-center px-4 py-3">

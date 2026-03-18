@@ -64,7 +64,11 @@ export default function JoinQuizPage() {
       <div className="max-w-md mx-auto">
         {/* Page heading */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-4">🎯</div>
+          <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </div>
           <h1 className="text-2xl font-extrabold text-foreground mb-2">Join a Quiz</h1>
           <p className="text-muted text-sm">Enter the 6-character code from your teacher</p>
         </div>
@@ -72,7 +76,9 @@ export default function JoinQuizPage() {
         <form onSubmit={handleJoin} className="bg-card border border-border rounded-2xl p-8 shadow-sm">
           {error && (
             <div className="flex items-start gap-2 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl mb-5">
-              <span className="mt-0.5">⚠️</span>
+              <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
               <span>{error}</span>
             </div>
           )}
