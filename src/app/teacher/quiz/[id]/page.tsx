@@ -42,6 +42,7 @@ interface Quiz {
   randomizeQuestions: boolean;
   randomizeAnswers: boolean;
   antiCheatEnabled: boolean;
+  preventScreenshots: boolean;
   questions: Question[];
   sessions: Session[];
 }
@@ -187,6 +188,7 @@ export default function QuizDetailPage() {
   const [settingsRandomizeQuestions, setSettingsRandomizeQuestions] = useState(false);
   const [settingsRandomizeAnswers, setSettingsRandomizeAnswers] = useState(false);
   const [settingsAntiCheatEnabled, setSettingsAntiCheatEnabled] = useState(false);
+  const [settingsPreventScreenshots, setSettingsPreventScreenshots] = useState(false);
 
   const [qType, setQType] = useState<"MCQ" | "TRUE_FALSE" | "SHORT_ANSWER">("MCQ");
   const [qTopic, setQTopic] = useState("General");
@@ -225,6 +227,7 @@ export default function QuizDetailPage() {
       setSettingsRandomizeQuestions(data.randomizeQuestions);
       setSettingsRandomizeAnswers(data.randomizeAnswers);
       setSettingsAntiCheatEnabled(data.antiCheatEnabled);
+      setSettingsPreventScreenshots(data.preventScreenshots);
     } catch {
       setError("Failed to load quiz");
       setQuiz(null);
@@ -317,6 +320,7 @@ export default function QuizDetailPage() {
         randomizeQuestions: settingsRandomizeQuestions,
         randomizeAnswers: settingsRandomizeAnswers,
         antiCheatEnabled: settingsAntiCheatEnabled,
+        preventScreenshots: settingsPreventScreenshots,
       }),
     });
     setSettingsLoading(false);
@@ -649,6 +653,13 @@ export default function QuizDetailPage() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">Randomize answer choices</p>
                     <p className="text-xs text-muted">Shuffle MCQ and true/false option order.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={settingsPreventScreenshots} onChange={(e) => setSettingsPreventScreenshots(e.target.checked)} className="mt-1" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Prevent screenshots</p>
+                    <p className="text-xs text-muted">Detect screenshot key presses and briefly black out the screen, logging each attempt as a violation.</p>
                   </div>
                 </label>
               </div>

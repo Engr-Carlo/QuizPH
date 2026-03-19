@@ -100,6 +100,7 @@ export async function PUT(
         randomizeQuestions: body.randomizeQuestions,
         randomizeAnswers: body.randomizeAnswers,
         antiCheatEnabled: Boolean(body.antiCheatEnabled),
+        preventScreenshots: Boolean(body.preventScreenshots),
       },
     });
 

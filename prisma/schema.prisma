@@ -47,6 +47,7 @@ enum ViolationType {
   RIGHT_CLICK
   DEVTOOLS
   COPY_PASTE
+  SCREENSHOT_ATTEMPT
 }
 
 model User {
@@ -91,6 +92,7 @@ model Quiz {
   randomizeQuestions Boolean   @default(false)
   randomizeAnswers   Boolean   @default(false)
   antiCheatEnabled   Boolean   @default(false)
+  preventScreenshots Boolean   @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

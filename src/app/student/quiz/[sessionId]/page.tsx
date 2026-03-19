@@ -29,6 +29,7 @@ interface SessionData {
     randomizeQuestions: boolean;
     randomizeAnswers: boolean;
     antiCheatEnabled: boolean;
+    preventScreenshots: boolean;
     questions: Question[];
   };
 }
@@ -54,6 +55,7 @@ export default function StudentQuizPage() {
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
+  const [screenshotBlocked, setScreenshotBlocked] = useState(false);
   const isSubmittingRef = useRef(false);
 
   // Fetch session data
@@ -256,6 +258,31 @@ export default function StudentQuizPage() {
     return () => clearInterval(interval);
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
+  // 6. Screenshot prevention
+  useEffect(() => {
+    if (status !== "active" || !sessionData?.quiz.preventScreenshots) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isScreenshot =
+        e.key === "PrintScreen" ||
+        // Win+Shift+S (Snipping Tool)
+        (e.shiftKey && e.metaKey && (e.key === "s" || e.key === "S")) ||
+        // Mac Cmd+Shift+3/4/5
+        (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key));
+
+      if (isScreenshot) {
+        e.preventDefault();
+        setScreenshotBlocked(true);
+        setWarningCount((c) => c + 1);
+        logViolation("SCREENSHOT_ATTEMPT");
+        setTimeout(() => setScreenshotBlocked(false), 2000);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [status, logViolation, sessionData?.quiz.preventScreenshots]);
+
   // Handle answer selection
   async function handleAnswer(questionId: string, answerText: string) {
     setAnswers((prev) => ({ ...prev, [questionId]: answerText }));
@@ -442,6 +469,11 @@ export default function StudentQuizPage() {
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
+      {/* Screenshot block overlay */}
+      {screenshotBlocked && (
+        <div className="fixed inset-0 z-[9999] bg-black" aria-hidden="true" />
+      )}
+
       {/* Warning Modal */}
       {sessionData.quiz.antiCheatEnabled && warningVisible && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/72 px-4 backdrop-blur-sm">
