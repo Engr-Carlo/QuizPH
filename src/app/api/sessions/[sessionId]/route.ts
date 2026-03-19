@@ -106,6 +106,38 @@ export async function GET(
     drawCount: quizSession.quiz.questionDrawCount,
   });
 
+  // --- Quiz resume: find participant, stamp quizStartedAt on first load while ACTIVE ---
+  let resumeData: { timeLeft: number; lastQuestionIndex: number } | null = null;
+
+  if (participantId && quizSession.status === "ACTIVE") {
+    const participant = await prisma.participant.findFirst({
+      where: { id: participantId, sessionId },
+    });
+
+    if (participant && !participant.isFinished) {
+      let startedAt = participant.quizStartedAt;
+
+      // First time this student opens the quiz while session is ACTIVE — stamp the clock
+      if (!startedAt) {
+        const updated = await prisma.participant.update({
+          where: { id: participantId },
+          data: { quizStartedAt: new Date() },
+        });
+        startedAt = updated.quizStartedAt;
+      }
+
+      const elapsedSeconds = startedAt
+        ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
+        : 0;
+      const timeLeft = Math.max(0, quizSession.quiz.duration - elapsedSeconds);
+
+      resumeData = {
+        timeLeft,
+        lastQuestionIndex: participant.lastQuestionIndex,
+      };
+    }
+  }
+
   return NextResponse.json({
     ...quizSession,
     quiz: {
@@ -113,5 +145,6 @@ export async function GET(
       activeQuestionCount,
       questions: selectedQuestions,
     },
+    resumeData,
   });
 }

@@ -63,8 +63,7 @@ export default function RegisterPage() {
 
       {/* ── Left branding panel ── */}
       <div
-        className="hidden lg:flex w-[42%] flex-col justify-between p-12 text-white"
-        style={{ background: "linear-gradient(145deg, var(--primary) 0%, #4834d4 100%)" }}
+        className="hidden lg:flex w-[42%] flex-col justify-between p-12 text-white bg-primary"
       >
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
@@ -116,8 +115,7 @@ export default function RegisterPage() {
           <div className="lg:hidden flex justify-center mb-10">
             <Link href="/" className="flex items-center gap-2.5">
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
-                style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary shadow-sm"
               >
                 <span className="text-white font-black text-sm">Q</span>
               </div>
@@ -199,8 +197,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm shadow-sm"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              className="w-full py-2.5 text-white font-semibold rounded-xl bg-primary transition disabled:opacity-50 text-sm shadow-sm hover:bg-primary/90"
             >
               {loading ? "Creating account…" : "Create Account →"}
             </button>

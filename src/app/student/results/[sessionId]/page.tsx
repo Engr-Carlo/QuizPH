@@ -314,8 +314,7 @@ export default function StudentResultsPage() {
         <div className="mt-8">
           <Link
             href="/student"
-            className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl shadow-sm transition hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+            className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl bg-primary shadow-sm transition hover:bg-primary/90"
           >
             Back to Dashboard
           </Link>

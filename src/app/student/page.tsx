@@ -59,7 +59,7 @@ export default function StudentDashboard() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-5xl space-y-5">
-        <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,#1d4ed8_0%,#4f46e5_45%,#0ea5e9_100%)] px-5 py-6 text-white shadow-[0_22px_70px_rgba(37,99,235,0.28)] sm:px-7 sm:py-8">
+        <section className="relative overflow-hidden rounded-[28px] bg-primary px-5 py-6 text-white shadow-lg sm:px-7 sm:py-8">
           <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/12 blur-2xl" />
           <div className="absolute bottom-0 right-0 h-28 w-28 rounded-full bg-cyan-200/20 blur-2xl" />
           <div className="relative grid gap-5 lg:grid-cols-[1.5fr_1fr] lg:items-end">
@@ -116,7 +116,7 @@ export default function StudentDashboard() {
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {RULES.map(({ icon, title, desc }) => (
-                <div key={title} className="rounded-2xl border border-border/70 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-sm">
+                <div key={title} className="rounded-2xl border border-border/70 bg-white p-4 shadow-sm">
                   <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     {icon}
                   </span>
@@ -127,7 +127,7 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-border/70 bg-[linear-gradient(180deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-6">
+          <div className="rounded-[28px] border border-border/70 bg-surface p-5 shadow-sm sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Fast checklist</p>
             <h2 className="mt-1 text-xl font-black text-foreground">What to expect on mobile</h2>
             <div className="mt-5 space-y-3">

@@ -92,7 +92,6 @@ model Quiz {
   randomizeQuestions Boolean   @default(false)
   randomizeAnswers   Boolean   @default(false)
   antiCheatEnabled   Boolean   @default(false)
-  preventScreenshots Boolean   @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -143,10 +142,12 @@ model QuizSession {
 }
 
 model Participant {
-  id         String   @id @default(cuid())
-  score      Int      @default(0)
-  isFinished Boolean  @default(false)
-  joinedAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  score             Int      @default(0)
+  isFinished        Boolean  @default(false)
+  joinedAt          DateTime @default(now())
+  quizStartedAt     DateTime?  // wall-clock moment the student first entered ACTIVE state
+  lastQuestionIndex Int      @default(0) // last question index they were on
 
   sessionId String
   session   QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)

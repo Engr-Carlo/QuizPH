@@ -105,8 +105,7 @@ export default function LoginPage() {
 
       {/* ── Left branding panel ── */}
       <div
-        className="hidden lg:flex w-[45%] flex-col justify-between p-12 text-white"
-        style={{ background: "linear-gradient(145deg, var(--primary) 0%, #4834d4 100%)" }}
+        className="hidden lg:flex w-[45%] flex-col justify-between p-12 text-white bg-primary"
       >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
@@ -153,8 +152,7 @@ export default function LoginPage() {
           <div className="lg:hidden flex justify-center mb-10">
             <Link href="/" className="flex items-center gap-2.5">
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
-                style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary shadow-sm"
               >
                 <span className="text-white font-black text-sm">Q</span>
               </div>
@@ -220,8 +218,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm shadow-sm"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              className="w-full py-2.5 text-white font-semibold rounded-xl bg-primary transition disabled:opacity-50 text-sm shadow-sm hover:bg-primary/90"
             >
               {loading ? "Signing in..." : "Sign In ->"}
             </button>

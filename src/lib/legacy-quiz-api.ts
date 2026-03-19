@@ -23,7 +23,6 @@ type LegacyQuizDetailRow = {
   randomizeQuestions: boolean;
   randomizeAnswers: boolean;
   antiCheatEnabled: boolean;
-  preventScreenshots: boolean;
   teacherId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -136,9 +135,6 @@ export async function getQuizWithLegacyFallback(quizId: string) {
     quizColumns.has("antiCheatEnabled")
       ? `q."antiCheatEnabled" AS "antiCheatEnabled"`
       : `false AS "antiCheatEnabled"`,
-    quizColumns.has("preventScreenshots")
-      ? `q."preventScreenshots" AS "preventScreenshots"`
-      : `false AS "preventScreenshots"`,
     `q."teacherId" AS "teacherId"`,
     `q."createdAt" AS "createdAt"`,
     `q."updatedAt" AS "updatedAt"`,

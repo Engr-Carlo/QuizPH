@@ -9,6 +9,7 @@ export default function JoinQuizPage() {
   const [chars, setChars] = useState(Array(6).fill(""));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const code = chars.join("");
@@ -56,13 +57,60 @@ export default function JoinQuizPage() {
       return;
     }
 
-    router.push(`/student/quiz/${data.session.id}?participantId=${data.participant.id}`);
+    // Show violation warning before entering quiz
+    setPendingUrl(`/student/quiz/${data.session.id}?participantId=${data.participant.id}`);
   }
 
   return (
     <DashboardLayout>
+      {/* Violation warning modal — shown after successful join, before entering quiz */}
+      {pendingUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-md rounded-[28px] bg-white p-7 shadow-2xl">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-warning/10 text-warning mx-auto mb-4">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h2 className="text-center text-xl font-black text-foreground mb-1">Academic Integrity Notice</h2>
+            <p className="text-center text-sm text-muted mb-5">
+              Read carefully before entering the quiz.
+            </p>
+            <ul className="space-y-2.5 mb-6 text-sm text-foreground">
+              {[
+                "Leaving fullscreen or switching tabs will be logged as a violation.",
+                "Copying, pasting, or right-clicking is disabled during the quiz.",
+                "Your teacher is notified in real time of any suspicious activity.",
+                "Violations are permanently recorded and visible on your result.",
+                "Any attempt to cheat may result in disqualification.",
+              ].map((rule) => (
+                <li key={rule} className="flex items-start gap-2.5 rounded-2xl bg-surface px-3.5 py-2.5">
+                  <svg className="mt-0.5 flex-shrink-0 text-danger" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>{rule}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => router.push(pendingUrl)}
+              className="w-full rounded-2xl bg-primary py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-primary/90"
+            >
+              I Understand — Enter Quiz
+            </button>
+            <button
+              onClick={() => setPendingUrl(null)}
+              className="mt-3 w-full rounded-2xl border border-border py-3 text-sm font-semibold text-muted transition hover:bg-surface"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      )}
       <div className="mx-auto max-w-3xl space-y-5">
-        <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,#0f172a_0%,#1d4ed8_52%,#22c55e_130%)] px-5 py-6 text-white shadow-[0_25px_65px_rgba(29,78,216,0.24)] sm:px-7 sm:py-8">
+        <div className="overflow-hidden rounded-[28px] bg-primary px-5 py-6 text-white shadow-lg sm:px-7 sm:py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Join session</p>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Enter your code and jump straight in.</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/78 sm:text-base">
@@ -116,8 +164,7 @@ export default function JoinQuizPage() {
           <button
             type="submit"
             disabled={loading || code.length < 6}
-            className="w-full rounded-2xl py-3.5 text-base font-black text-white shadow-[0_16px_35px_rgba(79,70,229,0.28)] transition disabled:opacity-40 hover:-translate-y-0.5 hover:opacity-95"
-            style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
+            className="w-full rounded-2xl py-3.5 text-base font-black text-white bg-primary shadow-sm transition disabled:opacity-40 hover:-translate-y-0.5 hover:bg-primary/90"
           >
             {loading ? "Joining..." : "Join Quiz"}
           </button>

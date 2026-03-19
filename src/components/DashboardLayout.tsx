@@ -71,10 +71,19 @@ function IconClose() {
   );
 }
 
+function IconBook() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+  );
+}
+
 // ── Nav config ──────────────────────────────────────────────────────────────
 const teacherNav = [
   { href: "/teacher", label: "My Quizzes", icon: IconGrid },
   { href: "/teacher/quiz/create", label: "Create Quiz", icon: IconPlusCircle },
+  { href: "/guide", label: "Guide", icon: IconBook },
 ];
 const adminNav = [
   { href: "/admin", label: "Dashboard", icon: IconHome },
@@ -83,6 +92,7 @@ const adminNav = [
 const studentNav = [
   { href: "/student", label: "Dashboard", icon: IconHome },
   { href: "/student/join", label: "Join a Quiz", icon: IconTarget },
+  { href: "/guide", label: "Guide", icon: IconBook },
 ];
 
 const ROLE_META: Record<string, { label: string; color: string }> = {
@@ -121,13 +131,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef2ff_0%,#ffffff_42%,#f8fafc_100%)] lg:flex">
+    <div className="min-h-screen bg-surface lg:flex">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-white/88 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href={homeHref} className="flex items-center gap-2.5 group">
             <div
-              className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-[0_10px_30px_rgba(79,70,229,0.22)]"
-              style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
+              className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 bg-primary shadow-sm"
             >
               <span className="text-white font-black text-sm">Q</span>
             </div>
@@ -173,8 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="px-5 py-5 border-b border-border">
           <Link href={homeHref} className="flex items-center gap-2.5 group">
             <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-[0_10px_30px_rgba(79,70,229,0.2)]"
-              style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-primary shadow-sm"
             >
               <span className="text-white font-black text-sm">Q</span>
             </div>
@@ -205,7 +213,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-[linear-gradient(135deg,var(--primary),#0EA5E9)] text-white shadow-[0_12px_28px_rgba(79,70,229,0.24)]"
+                    ? "bg-primary text-white shadow-sm"
                     : "text-muted hover:bg-surface hover:text-foreground"
                 )}
               >

@@ -21,6 +21,7 @@ interface SessionData {
   id: string;
   code: string;
   status: string;
+  resumeData: { timeLeft: number; lastQuestionIndex: number } | null;
   quiz: {
     title: string;
     duration: number;
@@ -29,7 +30,6 @@ interface SessionData {
     randomizeQuestions: boolean;
     randomizeAnswers: boolean;
     antiCheatEnabled: boolean;
-    preventScreenshots: boolean;
     questions: Question[];
   };
 }
@@ -55,7 +55,6 @@ export default function StudentQuizPage() {
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
-  const screenshotOverlayRef = useRef<HTMLDivElement>(null);
   const isSubmittingRef = useRef(false);
 
   // Fetch session data
@@ -82,7 +81,14 @@ export default function StudentQuizPage() {
         }));
         setQuestions(qs);
         setStatus("active");
-        setTimeLeft(data.quiz.duration);
+
+        // Resume: use server-computed timeLeft (accounts for elapsed time since first open)
+        const serverTimeLeft = data.resumeData?.timeLeft ?? data.quiz.duration;
+        setTimeLeft(serverTimeLeft);
+
+        // Resume: jump back to where the student left off
+        const resumeIndex = data.resumeData?.lastQuestionIndex ?? 0;
+        setCurrentIndex(Math.min(resumeIndex, qs.length - 1));
       } else if (data.status === "ENDED") {
         setStatus("finished");
       }
@@ -258,49 +264,25 @@ export default function StudentQuizPage() {
     return () => clearInterval(interval);
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
-  // 6. Screenshot prevention
-  useEffect(() => {
-    if (status !== "active" || !sessionData?.quiz.preventScreenshots) return;
+  // 6. Screenshot prevention — removed (browser APIs cannot block OS-level screenshots)
+  // SCREENSHOT_ATTEMPT violations from keyboard are still logged where possible.
 
-    const showOverlay = () => {
-      const el = screenshotOverlayRef.current;
-      if (!el) return;
-      el.style.display = "block";
-      setTimeout(() => { el.style.display = "none"; }, 2000);
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isScreenshot =
-        e.key === "PrintScreen" ||
-        // Win+Shift+S (Snipping Tool)
-        (e.shiftKey && e.metaKey && (e.key === "s" || e.key === "S")) ||
-        // Mac Cmd+Shift+3/4/5
-        (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key));
-
-      if (isScreenshot) {
-        e.preventDefault();
-        // Direct DOM mutation — no React re-render cycle, fires synchronously
-        showOverlay();
-        setWarningCount((c) => c + 1);
-        logViolation("SCREENSHOT_ATTEMPT");
+  // Persist lastQuestionIndex to server so student can resume if they close the browser
+  const persistQuestionIndex = useCallback(
+    async (index: number) => {
+      if (!participantId) return;
+      try {
+        await fetch(`/api/participants/${participantId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lastQuestionIndex: index }),
+        });
+      } catch {
+        // non-critical
       }
-    };
-
-    // After PrintScreen key is released the screenshot is in the clipboard;
-    // overwrite it immediately with empty text.
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "PrintScreen") {
-        navigator.clipboard?.writeText("").catch(() => {});
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [status, logViolation, sessionData?.quiz.preventScreenshots]);
+    },
+    [participantId]
+  );
 
   // Handle answer selection
   async function handleAnswer(questionId: string, answerText: string) {
@@ -374,9 +356,9 @@ export default function StudentQuizPage() {
   // WAITING state
   if (status === "waiting") {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eef2ff_34%,#ffffff_100%)] px-4 py-6 sm:px-6">
+      <div className="min-h-screen bg-surface px-4 py-6 sm:px-6">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-4xl items-center justify-center">
-          <div className="w-full overflow-hidden rounded-[32px] bg-[linear-gradient(145deg,#0f172a_0%,#1d4ed8_52%,#06b6d4_120%)] p-6 text-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] sm:p-8">
+          <div className="w-full overflow-hidden rounded-[32px] bg-primary p-6 text-white shadow-lg sm:p-8">
             <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Queued and ready</p>
@@ -422,7 +404,7 @@ export default function StudentQuizPage() {
   // FINISHED state
   if (status === "finished") {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfccb_0%,#eff6ff_35%,#ffffff_100%)] px-4 py-6 sm:px-6">
+      <div className="min-h-screen bg-surface px-4 py-6 sm:px-6">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl items-center justify-center">
           <div className="w-full rounded-[32px] border border-emerald-200/80 bg-white/92 p-6 text-center shadow-[0_28px_70px_rgba(16,185,129,0.14)] backdrop-blur sm:p-8">
           <div className="w-16 h-16 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto mb-4">
@@ -434,7 +416,7 @@ export default function StudentQuizPage() {
           <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl">Quiz Complete</h1>
           <p className="mt-2 text-sm text-muted sm:text-base">{sessionData.quiz.title}</p>
           {score !== null && (
-            <div className="mb-6 mt-6 rounded-[28px] bg-[linear-gradient(145deg,#eef2ff_0%,#ecfeff_100%)] p-8">
+            <div className="mb-6 mt-6 rounded-[28px] bg-surface border border-border p-8">
               <div className="text-5xl font-black text-primary mb-2">
                 {score}/{questions.length}
               </div>
@@ -456,8 +438,7 @@ export default function StudentQuizPage() {
           )}
           <a
             href="/student"
-            className="inline-flex items-center justify-center rounded-2xl px-6 py-3.5 text-sm font-black text-white shadow-[0_16px_35px_rgba(79,70,229,0.24)] transition hover:-translate-y-0.5"
-            style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
+            className="inline-flex items-center justify-center rounded-2xl px-6 py-3.5 text-sm font-black text-white bg-primary shadow-sm transition hover:-translate-y-0.5"
           >
             Back to Dashboard
           </a>
@@ -483,19 +464,11 @@ export default function StudentQuizPage() {
 
   return (
     <div
-      className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eef2ff_26%,#ffffff_70%)] select-none"
+      className="min-h-screen bg-surface select-none"
       onCopy={(e) => e.preventDefault()}
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
-      {/* Screenshot block overlay — always in DOM, shown synchronously via ref */}
-      <div
-        ref={screenshotOverlayRef}
-        style={{ display: "none" }}
-        className="fixed inset-0 z-[9999] bg-black"
-        aria-hidden="true"
-      />
-
       {/* Warning Modal */}
       {sessionData.quiz.antiCheatEnabled && warningVisible && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/72 px-4 backdrop-blur-sm">
@@ -561,13 +534,13 @@ export default function StudentQuizPage() {
           <div className="mt-4 space-y-3">
             <div className="h-2 rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-[linear-gradient(90deg,#4F46E5,#0EA5E9)] transition-all duration-300"
+                className="h-full rounded-full bg-primary transition-all duration-300"
                 style={{ width: `${questionProgress}%` }}
               />
             </div>
             <div className="h-2 rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-[linear-gradient(90deg,#22c55e,#06b6d4)] transition-all duration-300"
+                className="h-full rounded-full bg-success transition-all duration-300"
                 style={{ width: `${answerProgress}%` }}
               />
             </div>
@@ -594,7 +567,7 @@ export default function StudentQuizPage() {
             </p>
 
             {currentQuestion.type === "SHORT_ANSWER" ? (
-              <div className="mt-6 rounded-[26px] border border-border/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 sm:p-5">
+              <div className="mt-6 rounded-[26px] border border-border/80 bg-surface p-4 sm:p-5">
                 <label className="mb-2 block text-sm font-bold text-foreground">Your answer</label>
                 <textarea
                   value={currentAnswer}
@@ -619,7 +592,7 @@ export default function StudentQuizPage() {
                       onClick={() => handleAnswer(currentQuestion.id, opt.id)}
                       className={`group w-full rounded-[24px] border px-4 py-4 text-left transition-all sm:px-5 sm:py-5 ${
                         isSelected
-                          ? "border-primary bg-[linear-gradient(145deg,rgba(79,70,229,0.12),rgba(14,165,233,0.14))] shadow-[0_16px_32px_rgba(79,70,229,0.16)]"
+                          ? "border-primary bg-primary/8 shadow-sm"
                           : "border-border bg-white hover:border-primary/35 hover:bg-primary/5"
                       }`}
                     >
@@ -664,10 +637,11 @@ export default function StudentQuizPage() {
                       onClick={async () => {
                         await persistCurrentAnswer(currentQuestion);
                         setCurrentIndex(idx);
+                        persistQuestionIndex(idx);
                       }}
                       className={`h-11 rounded-2xl text-sm font-black transition ${
                         isCurrent
-                          ? "bg-[linear-gradient(145deg,#4F46E5,#0EA5E9)] text-white shadow-[0_10px_24px_rgba(79,70,229,0.22)]"
+                          ? "bg-primary text-white shadow-sm"
                           : hasAnswer
                           ? "bg-primary/10 text-primary"
                           : "bg-slate-100 text-muted"
@@ -680,7 +654,7 @@ export default function StudentQuizPage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,#eff6ff_0%,#ffffff_100%)] p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <div className="rounded-[28px] border border-white/80 bg-surface p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Focus status</p>
               <div className="mt-3 space-y-3 text-sm text-slate-700">
                 <div className="rounded-2xl bg-white/85 px-4 py-3">
@@ -707,7 +681,9 @@ export default function StudentQuizPage() {
             <button
               onClick={async () => {
                 await persistCurrentAnswer(currentQuestion);
-                setCurrentIndex((i) => Math.max(0, i - 1));
+                const newIdx = Math.max(0, currentIndex - 1);
+                setCurrentIndex(newIdx);
+                persistQuestionIndex(newIdx);
               }}
               disabled={currentIndex === 0}
               className="inline-flex min-w-[92px] items-center justify-center gap-1.5 rounded-2xl border border-border bg-white px-4 py-3 text-sm font-bold text-foreground transition disabled:opacity-35"
@@ -726,10 +702,11 @@ export default function StudentQuizPage() {
               <button
                 onClick={async () => {
                   await persistCurrentAnswer(currentQuestion);
-                  setCurrentIndex((i) => i + 1);
+                  const newIdx = currentIndex + 1;
+                  setCurrentIndex(newIdx);
+                  persistQuestionIndex(newIdx);
                 }}
-                className="inline-flex min-w-[110px] items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-black text-white shadow-[0_16px_32px_rgba(79,70,229,0.22)] transition hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(145deg, #4F46E5, #0EA5E9)" }}
+                className="inline-flex min-w-[110px] items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-black text-white bg-primary shadow-sm transition hover:-translate-y-0.5"
               >
                 Next
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

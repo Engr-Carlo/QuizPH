@@ -133,8 +133,7 @@ export default function VerifyEmailPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 text-white font-semibold rounded-xl transition disabled:opacity-50 text-sm shadow-sm"
-            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+            className="w-full py-2.5 text-white font-semibold rounded-xl bg-primary transition disabled:opacity-50 text-sm shadow-sm hover:bg-primary/90"
           >
             {loading ? "Verifying..." : "Verify Email"}
           </button>

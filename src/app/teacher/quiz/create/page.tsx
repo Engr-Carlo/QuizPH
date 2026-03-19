@@ -21,7 +21,6 @@ export default function CreateQuizPage() {
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(false);
-  const [preventScreenshots, setPreventScreenshots] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +43,6 @@ export default function CreateQuizPage() {
         randomizeQuestions,
         randomizeAnswers,
         antiCheatEnabled,
-        preventScreenshots,
       }),
     });
 
@@ -264,7 +262,6 @@ export default function CreateQuizPage() {
                 {[
                   { key: "randomizeQuestions", label: "Randomize delivered question order", desc: "Useful when the quiz uses all or randomly drawn bank items", checked: randomizeQuestions, set: setRandomizeQuestions },
                   { key: "randomizeAnswers", label: "Randomize answer choices", desc: "Answer options appear in a different order for students", checked: randomizeAnswers, set: setRandomizeAnswers },
-                  { key: "preventScreenshots", label: "Prevent screenshots", desc: "Detect screenshot key presses and black out the screen, logging each attempt as a violation.", checked: preventScreenshots, set: setPreventScreenshots },
                 ].map(({ key, label, desc, checked, set }) => (
                   <label key={key} className="flex items-start gap-3 cursor-pointer group p-3 rounded-xl hover:bg-surface transition">
                     <div className="relative mt-0.5">
@@ -299,8 +296,7 @@ export default function CreateQuizPage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 text-white font-semibold text-sm rounded-xl shadow-sm transition disabled:opacity-50 hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              className="px-6 py-2.5 text-white font-semibold text-sm rounded-xl bg-primary shadow-sm transition disabled:opacity-50 hover:bg-primary/90"
             >
               {loading ? "Creating..." : "Create Quiz"}
             </button>

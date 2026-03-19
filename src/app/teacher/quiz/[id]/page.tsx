@@ -42,7 +42,6 @@ interface Quiz {
   randomizeQuestions: boolean;
   randomizeAnswers: boolean;
   antiCheatEnabled: boolean;
-  preventScreenshots: boolean;
   questions: Question[];
   sessions: Session[];
 }
@@ -188,7 +187,6 @@ export default function QuizDetailPage() {
   const [settingsRandomizeQuestions, setSettingsRandomizeQuestions] = useState(false);
   const [settingsRandomizeAnswers, setSettingsRandomizeAnswers] = useState(false);
   const [settingsAntiCheatEnabled, setSettingsAntiCheatEnabled] = useState(false);
-  const [settingsPreventScreenshots, setSettingsPreventScreenshots] = useState(false);
 
   const [qType, setQType] = useState<"MCQ" | "TRUE_FALSE" | "SHORT_ANSWER">("MCQ");
   const [qTopic, setQTopic] = useState("General");
@@ -227,7 +225,6 @@ export default function QuizDetailPage() {
       setSettingsRandomizeQuestions(data.randomizeQuestions);
       setSettingsRandomizeAnswers(data.randomizeAnswers);
       setSettingsAntiCheatEnabled(data.antiCheatEnabled);
-      setSettingsPreventScreenshots(data.preventScreenshots);
     } catch {
       setError("Failed to load quiz");
       setQuiz(null);
@@ -320,7 +317,6 @@ export default function QuizDetailPage() {
         randomizeQuestions: settingsRandomizeQuestions,
         randomizeAnswers: settingsRandomizeAnswers,
         antiCheatEnabled: settingsAntiCheatEnabled,
-        preventScreenshots: settingsPreventScreenshots,
       }),
     });
     setSettingsLoading(false);
@@ -503,8 +499,7 @@ export default function QuizDetailPage() {
             <button
               onClick={handleSaveSettings}
               disabled={settingsLoading}
-              className="px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-sm transition disabled:opacity-50 hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              className="px-4 py-2 text-xs font-semibold text-white rounded-xl bg-primary shadow-sm transition disabled:opacity-50 hover:bg-primary/90"
             >
               {settingsLoading ? "Saving..." : "Save Settings"}
             </button>
@@ -655,13 +650,6 @@ export default function QuizDetailPage() {
                     <p className="text-xs text-muted">Shuffle MCQ and true/false option order.</p>
                   </div>
                 </label>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" checked={settingsPreventScreenshots} onChange={(e) => setSettingsPreventScreenshots(e.target.checked)} className="mt-1" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Prevent screenshots</p>
-                    <p className="text-xs text-muted">Detect screenshot key presses and briefly black out the screen, logging each attempt as a violation.</p>
-                  </div>
-                </label>
               </div>
 
               <div className="rounded-2xl border border-warning/25 bg-warning/6 p-4">
@@ -689,8 +677,7 @@ export default function QuizDetailPage() {
             <h2 className="text-base font-bold text-foreground">Sessions</h2>
             <button
               onClick={handleCreateSession}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl shadow-sm transition hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, var(--secondary), #00a8a5)" }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl bg-secondary shadow-sm transition hover:bg-secondary/90"
             >
               + New Session
             </button>
@@ -739,8 +726,7 @@ export default function QuizDetailPage() {
                       <>
                         <Link
                           href={`/teacher/quiz/${quizId}/monitor/${s.id}`}
-                          className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl transition hover:opacity-90"
-                          style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl bg-primary transition hover:bg-primary/90"
                         >
                           Monitor Live
                         </Link>
@@ -791,8 +777,7 @@ export default function QuizDetailPage() {
             </select>
             <button
               onClick={() => { resetForm(); setShowQuestionForm(true); }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl shadow-sm transition hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl bg-primary shadow-sm transition hover:bg-primary/90"
             >
               + Add Question
             </button>
@@ -976,8 +961,7 @@ export default function QuizDetailPage() {
                 <button
                   onClick={handleSaveQuestion}
                   disabled={!qText.trim()}
-                  className="px-5 py-2 text-white text-sm font-semibold rounded-xl transition disabled:opacity-40 hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+                  className="px-5 py-2 text-white text-sm font-semibold rounded-xl bg-primary transition disabled:opacity-40 hover:bg-primary/90"
                 >
                   {editingQuestion ? "Update Question" : "Add Question"}
                 </button>
