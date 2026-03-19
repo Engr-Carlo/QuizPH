@@ -64,7 +64,7 @@ export default function VerifyEmailPage() {
     const data = await res.json();
     setResending(false);
 
-    if (!res.ok) {
+    if (!res.ok || data.deliveryFailed) {
       setError(data.error || "Failed to resend code");
       if (data.previewCode) {
         setPreviewCode(data.previewCode);

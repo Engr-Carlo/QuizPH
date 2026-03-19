@@ -37,8 +37,9 @@ export async function POST(req: Request) {
         {
           error: result.error || "We could not send the verification email right now. Please try again shortly.",
           previewCode: result.previewCode,
+          deliveryFailed: true,
         },
-        { status: 503 }
+        { status: 200 }
       );
     }
 
