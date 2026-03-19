@@ -13,11 +13,15 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [previewCode, setPreviewCode] = useState("");
+  const [deliveryWarning, setDeliveryWarning] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setEmail(params.get("email") || "");
     setPreviewCode(params.get("previewCode") || "");
+    if (params.get("deliveryFailed") === "true") {
+      setDeliveryWarning("We could not send the verification email right now. Please try resending the code in a moment.");
+    }
   }, []);
 
   async function handleVerify(e: FormEvent) {
@@ -62,10 +66,14 @@ export default function VerifyEmailPage() {
 
     if (!res.ok) {
       setError(data.error || "Failed to resend code");
+      if (data.previewCode) {
+        setPreviewCode(data.previewCode);
+      }
       return;
     }
 
     setSuccess(data.message || "Verification code sent");
+    setDeliveryWarning("");
     if (data.previewCode) {
       setPreviewCode(data.previewCode);
     }
@@ -80,6 +88,12 @@ export default function VerifyEmailPage() {
         {(error || success) && (
           <div className={`mb-4 rounded-xl border px-3.5 py-2.5 text-sm ${error ? "border-danger/25 bg-danger/6 text-danger" : "border-success/25 bg-success/6 text-success"}`}>
             {error || success}
+          </div>
+        )}
+
+        {deliveryWarning && (
+          <div className="mb-4 rounded-xl border border-warning/30 bg-warning/8 px-3.5 py-2.5 text-sm text-warning">
+            {deliveryWarning}
           </div>
         )}
 

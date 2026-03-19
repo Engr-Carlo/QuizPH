@@ -41,21 +41,11 @@ export async function createAndSendVerificationCode(user: {
     }
   }
 
-  await prisma.emailVerificationCode.updateMany({
-    where: {
-      userId: user.id,
-      consumedAt: null,
-    },
-    data: {
-      consumedAt: new Date(),
-    },
-  });
-
   const code = generateCode();
   const codeHash = hashCode(user.email, code);
   const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
 
-  await prisma.emailVerificationCode.create({
+  const createdCode = await prisma.emailVerificationCode.create({
     data: {
       userId: user.id,
       codeHash,
@@ -83,8 +73,31 @@ export async function createAndSendVerificationCode(user: {
     html,
   });
 
+  if (!result.delivered && !result.previewMode) {
+    await prisma.emailVerificationCode.delete({
+      where: { id: createdCode.id },
+    });
+
+    return {
+      sent: false,
+      error: result.error || "Verification email could not be sent",
+    };
+  }
+
+  await prisma.emailVerificationCode.updateMany({
+    where: {
+      userId: user.id,
+      consumedAt: null,
+      id: { not: createdCode.id },
+    },
+    data: {
+      consumedAt: new Date(),
+    },
+  });
+
   return {
-    sent: result.delivered,
+    sent: result.delivered || Boolean(result.previewMode),
+    error: result.error,
     previewCode: process.env.NODE_ENV !== "production" ? code : undefined,
   };
 }

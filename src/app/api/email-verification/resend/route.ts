@@ -32,6 +32,16 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!result.sent) {
+      return NextResponse.json(
+        {
+          error: result.error || "We could not send the verification email right now. Please try again shortly.",
+          previewCode: result.previewCode,
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json({
       message: "Verification code sent",
       previewCode: result.previewCode,

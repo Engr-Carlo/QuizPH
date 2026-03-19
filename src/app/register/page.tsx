@@ -27,6 +27,21 @@ export default function RegisterPage() {
     const data = await res.json();
     setLoading(false);
 
+    if (data.requiresVerification) {
+      const target = new URLSearchParams({
+        email,
+        registered: "true",
+      });
+      if (data.previewCode) {
+        target.set("previewCode", data.previewCode);
+      }
+      if (data.deliveryFailed) {
+        target.set("deliveryFailed", "true");
+      }
+      router.push(`/verify-email?${target.toString()}`);
+      return;
+    }
+
     if (!res.ok) {
       setError(data.error || "Registration failed");
       return;

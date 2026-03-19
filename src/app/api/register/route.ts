@@ -22,13 +22,32 @@ export async function POST(req: Request) {
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       if (!existing.emailVerifiedAt) {
-        await createAndSendVerificationCode({
+        const resendResult = await createAndSendVerificationCode({
           id: existing.id,
           email: existing.email,
           name: existing.name,
         });
+
+        if (!resendResult.sent && !resendResult.waitForSeconds) {
+          return NextResponse.json(
+            {
+              error: resendResult.error || "Account exists, but we could not send a verification email right now",
+              requiresVerification: true,
+              deliveryFailed: true,
+              email: normalizedEmail,
+              previewCode: resendResult.previewCode,
+            },
+            { status: 503 }
+          );
+        }
+
         return NextResponse.json(
-          { message: "Account exists but email is not verified", requiresVerification: true, email: normalizedEmail },
+          {
+            message: "Account exists but email is not verified",
+            requiresVerification: true,
+            email: normalizedEmail,
+            previewCode: resendResult.previewCode,
+          },
           { status: 200 }
         );
       }
@@ -50,6 +69,20 @@ export async function POST(req: Request) {
       email: user.email,
       name: user.name,
     });
+
+    if (!verificationResult.sent && !verificationResult.waitForSeconds) {
+      return NextResponse.json(
+        {
+          error: verificationResult.error || "Account created, but we could not send the verification email",
+          userId: user.id,
+          requiresVerification: true,
+          deliveryFailed: true,
+          email: user.email,
+          previewCode: verificationResult.previewCode,
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json(
       {
