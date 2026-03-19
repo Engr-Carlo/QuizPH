@@ -55,7 +55,7 @@ export default function StudentQuizPage() {
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
-  const [screenshotBlocked, setScreenshotBlocked] = useState(false);
+  const screenshotOverlayRef = useRef<HTMLDivElement>(null);
   const isSubmittingRef = useRef(false);
 
   // Fetch session data
@@ -262,6 +262,13 @@ export default function StudentQuizPage() {
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.preventScreenshots) return;
 
+    const showOverlay = () => {
+      const el = screenshotOverlayRef.current;
+      if (!el) return;
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 2000);
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const isScreenshot =
         e.key === "PrintScreen" ||
@@ -272,15 +279,27 @@ export default function StudentQuizPage() {
 
       if (isScreenshot) {
         e.preventDefault();
-        setScreenshotBlocked(true);
+        // Direct DOM mutation — no React re-render cycle, fires synchronously
+        showOverlay();
         setWarningCount((c) => c + 1);
         logViolation("SCREENSHOT_ATTEMPT");
-        setTimeout(() => setScreenshotBlocked(false), 2000);
+      }
+    };
+
+    // After PrintScreen key is released the screenshot is in the clipboard;
+    // overwrite it immediately with empty text.
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "PrintScreen") {
+        navigator.clipboard?.writeText("").catch(() => {});
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
   }, [status, logViolation, sessionData?.quiz.preventScreenshots]);
 
   // Handle answer selection
@@ -469,10 +488,13 @@ export default function StudentQuizPage() {
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
-      {/* Screenshot block overlay */}
-      {screenshotBlocked && (
-        <div className="fixed inset-0 z-[9999] bg-black" aria-hidden="true" />
-      )}
+      {/* Screenshot block overlay — always in DOM, shown synchronously via ref */}
+      <div
+        ref={screenshotOverlayRef}
+        style={{ display: "none" }}
+        className="fixed inset-0 z-[9999] bg-black"
+        aria-hidden="true"
+      />
 
       {/* Warning Modal */}
       {sessionData.quiz.antiCheatEnabled && warningVisible && (
