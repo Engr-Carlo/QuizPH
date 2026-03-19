@@ -37,7 +37,7 @@ export async function POST(req: Request) {
               email: normalizedEmail,
               previewCode: resendResult.previewCode,
             },
-            { status: 503 }
+            { status: 200 }
           );
         }
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
           email: user.email,
           previewCode: verificationResult.previewCode,
         },
-        { status: 503 }
+        { status: 201 }
       );
     }
 
