@@ -40,11 +40,12 @@ interface SessionData {
 
 // â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const VIOLATION_META: Record<string, { label: string; short: string; color: string; bg: string }> = {
-  FULLSCREEN_EXIT: { label: "Fullscreen Exit", short: "Fullscrn", color: "text-danger", bg: "bg-danger/10" },
-  TAB_SWITCH:      { label: "Tab Switch",      short: "Tab Sw",  color: "text-warning", bg: "bg-warning/10" },
-  RIGHT_CLICK:     { label: "Right Click",     short: "R-Click", color: "text-accent",  bg: "bg-accent/10" },
-  DEVTOOLS:        { label: "DevTools",         short: "DevTool", color: "text-danger",  bg: "bg-danger/10" },
-  COPY_PASTE:      { label: "Copy / Paste",    short: "C/Paste", color: "text-warning", bg: "bg-warning/10" },
+  FULLSCREEN_EXIT:    { label: "Fullscreen Exit",    short: "Fullscrn",  color: "text-danger",  bg: "bg-danger/10" },
+  TAB_SWITCH:         { label: "Tab Switch",         short: "Tab Sw",    color: "text-warning", bg: "bg-warning/10" },
+  RIGHT_CLICK:        { label: "Right Click",        short: "R-Click",   color: "text-accent",  bg: "bg-accent/10" },
+  DEVTOOLS:           { label: "DevTools",            short: "DevTool",   color: "text-danger",  bg: "bg-danger/10" },
+  COPY_PASTE:         { label: "Copy / Paste",       short: "C/Paste",   color: "text-warning", bg: "bg-warning/10" },
+  SCREENSHOT_ATTEMPT: { label: "Screenshot Attempt", short: "Scrnshot",  color: "text-danger",  bg: "bg-danger/10" },
 };
 
 const AVATAR_COLORS = ["bg-primary", "bg-secondary", "bg-accent", "bg-success", "bg-warning"];

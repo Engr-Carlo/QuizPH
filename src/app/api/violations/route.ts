@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       data: {
         participantId,
         sessionId,
-        type: type as "FULLSCREEN_EXIT" | "TAB_SWITCH" | "RIGHT_CLICK" | "DEVTOOLS" | "COPY_PASTE",
+        type: type as "FULLSCREEN_EXIT" | "TAB_SWITCH" | "RIGHT_CLICK" | "DEVTOOLS" | "COPY_PASTE" | "SCREENSHOT_ATTEMPT",
       },
     });
 

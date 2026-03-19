@@ -49,6 +49,7 @@ export const violationSchema = z.object({
     "RIGHT_CLICK",
     "DEVTOOLS",
     "COPY_PASTE",
+    "SCREENSHOT_ATTEMPT",
   ]),
 });
 
