@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
+import { formatTime } from "@/lib/utils";
 import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -19,6 +20,8 @@ interface Participant {
   id: string;
   score: number;
   isFinished: boolean;
+  timeLeft: number;
+  timerEndsAt: string | null;
   user: { name: string; email: string };
   violations: { type: string; timestamp: string }[];
   answers: { isCorrect: boolean }[];
@@ -56,6 +59,18 @@ function getInitials(name: string) {
   return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
 }
 
+function getLiveTimeLeft(participant: Participant) {
+  if (participant.isFinished) {
+    return 0;
+  }
+
+  if (!participant.timerEndsAt) {
+    return participant.timeLeft;
+  }
+
+  return Math.max(0, Math.ceil((new Date(participant.timerEndsAt).getTime() - Date.now()) / 1000));
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 export default function MonitorPage() {
   const params = useParams();
@@ -67,6 +82,7 @@ export default function MonitorPage() {
   const [toasts, setToasts] = useState<ViolationEvent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"participants" | "leaderboard">("participants");
+  const [, setNow] = useState(() => Date.now());
 
   const fetchSession = useCallback(async () => {
     const res = await fetch(`/api/sessions/${sessionId}`);
@@ -94,6 +110,11 @@ export default function MonitorPage() {
     const t = setTimeout(() => setToasts((p) => p.slice(0, -1)), 5000);
     return () => clearTimeout(t);
   }, [toasts]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ── Loading / not found ──────────────────────────────────────────────────
   if (loading) {
@@ -223,6 +244,7 @@ export default function MonitorPage() {
                   {sessionData.participants.map((p) => {
                     const vCount = p.violations.length;
                     const progress = totalQ > 0 ? (p.answers.length / totalQ) * 100 : 0;
+                    const timeLeft = getLiveTimeLeft(p);
 
                     return (
                       <button
@@ -266,6 +288,13 @@ export default function MonitorPage() {
                               style={{ width: `${progress}%` }}
                             />
                           </div>
+                        </div>
+
+                        <div className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-semibold text-muted">
+                          <span>Time left</span>
+                          <span className={timeLeft <= 60 && !p.isFinished ? "text-danger" : "text-foreground"}>
+                            {p.isFinished ? "Done" : formatTime(timeLeft)}
+                          </span>
                         </div>
 
                         {/* Violation badges */}
@@ -312,6 +341,7 @@ export default function MonitorPage() {
                   leaderboard.map((p, rank) => {
                     const medals = ["1st", "2nd", "3rd"];
                     const progress = totalQ > 0 ? (p.score / totalQ) * 100 : 0;
+                    const timeLeft = getLiveTimeLeft(p);
                     return (
                       <div
                         key={p.id}
@@ -340,6 +370,9 @@ export default function MonitorPage() {
                             />
                           </div>
                         </div>
+                        <span className={`text-xs font-bold flex-shrink-0 ${timeLeft <= 60 && !p.isFinished ? "text-danger" : "text-muted"}`}>
+                          {p.isFinished ? "Done" : formatTime(timeLeft)}
+                        </span>
                         {p.violations.length > 0 && (
                           <span className="inline-flex items-center gap-1 text-xs text-danger font-semibold flex-shrink-0">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -388,6 +421,7 @@ export default function MonitorPage() {
                   { label: "Score", value: selectedP.score, color: "text-primary", bg: "bg-primary/8" },
                   { label: "Answers", value: `${selectedP.answers.length}/${totalQ}`, color: "text-foreground", bg: "bg-surface" },
                   { label: "Violations", value: selectedP.violations.length, color: "text-danger", bg: "bg-danger/8" },
+                  { label: "Time Left", value: selectedP.isFinished ? "Done" : formatTime(getLiveTimeLeft(selectedP)), color: getLiveTimeLeft(selectedP) <= 60 && !selectedP.isFinished ? "text-danger" : "text-foreground", bg: getLiveTimeLeft(selectedP) <= 60 && !selectedP.isFinished ? "bg-danger/8" : "bg-surface" },
                   { label: "Status", value: selectedP.isFinished ? "Done" : "Active", color: selectedP.isFinished ? "text-success" : "text-warning", bg: selectedP.isFinished ? "bg-success/8" : "bg-warning/8" },
                 ].map(({ label, value, color, bg }) => (
                   <div key={label} className={`${bg} rounded-xl p-3 text-center`}>

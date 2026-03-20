@@ -4,6 +4,23 @@ import { pusherServer } from "@/lib/pusher-server";
 import { getQuizActiveQuestionCount, selectQuestionsForSession } from "@/lib/utils";
 import { NextResponse } from "next/server";
 
+function buildTimerState(startedAt: Date | null, durationSeconds: number) {
+  if (!startedAt) {
+    return {
+      timeLeft: durationSeconds,
+      timerEndsAt: null as string | null,
+    };
+  }
+
+  const timerEndsAt = new Date(startedAt.getTime() + durationSeconds * 1000);
+  const timeLeft = Math.max(0, Math.ceil((timerEndsAt.getTime() - Date.now()) / 1000));
+
+  return {
+    timeLeft,
+    timerEndsAt: timerEndsAt.toISOString(),
+  };
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ sessionId: string }> }
@@ -106,8 +123,18 @@ export async function GET(
     drawCount: quizSession.quiz.questionDrawCount,
   });
 
+  const participants = quizSession.participants.map((participant: (typeof quizSession.participants)[number]) => {
+    const timerState = buildTimerState(participant.quizStartedAt, quizSession.quiz.duration);
+
+    return {
+      ...participant,
+      timeLeft: participant.isFinished ? 0 : timerState.timeLeft,
+      timerEndsAt: participant.isFinished ? null : timerState.timerEndsAt,
+    };
+  });
+
   // --- Quiz resume: find participant, stamp quizStartedAt on first load while ACTIVE ---
-  let resumeData: { timeLeft: number; lastQuestionIndex: number } | null = null;
+  let resumeData: { timeLeft: number; lastQuestionIndex: number; timerEndsAt: string | null } | null = null;
 
   if (participantId && quizSession.status === "ACTIVE") {
     const participant = await prisma.participant.findFirst({
@@ -126,20 +153,19 @@ export async function GET(
         startedAt = updated.quizStartedAt;
       }
 
-      const elapsedSeconds = startedAt
-        ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-        : 0;
-      const timeLeft = Math.max(0, quizSession.quiz.duration - elapsedSeconds);
+      const timerState = buildTimerState(startedAt, quizSession.quiz.duration);
 
       resumeData = {
-        timeLeft,
+        timeLeft: timerState.timeLeft,
         lastQuestionIndex: participant.lastQuestionIndex,
+        timerEndsAt: timerState.timerEndsAt,
       };
     }
   }
 
   return NextResponse.json({
     ...quizSession,
+    participants,
     quiz: {
       ...quizSession.quiz,
       activeQuestionCount,

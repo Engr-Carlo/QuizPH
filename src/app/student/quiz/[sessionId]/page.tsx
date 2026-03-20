@@ -22,7 +22,7 @@ interface SessionData {
   id: string;
   code: string;
   status: string;
-  resumeData: { timeLeft: number; lastQuestionIndex: number } | null;
+  resumeData: { timeLeft: number; lastQuestionIndex: number; timerEndsAt: string | null } | null;
   quiz: {
     title: string;
     duration: number;
@@ -41,6 +41,14 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   SHORT_ANSWER: "Short Answer",
 };
 
+function getTimeLeftFromEndsAt(timerEndsAt: string | null, fallback: number) {
+  if (!timerEndsAt) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.ceil((new Date(timerEndsAt).getTime() - Date.now()) / 1000));
+}
+
 function StudentQuizContent() {
   const params = useParams();
   const sessionId = params.sessionId as string;
@@ -54,6 +62,7 @@ function StudentQuizContent() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [timerEndsAt, setTimerEndsAt] = useState<string | null>(null);
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
@@ -86,7 +95,9 @@ function StudentQuizContent() {
 
         // Resume: use server-computed timeLeft (accounts for elapsed time since first open)
         const serverTimeLeft = data.resumeData?.timeLeft ?? data.quiz.duration;
-        setTimeLeft(serverTimeLeft);
+        const nextTimerEndsAt = data.resumeData?.timerEndsAt ?? null;
+        setTimerEndsAt(nextTimerEndsAt);
+        setTimeLeft(getTimeLeftFromEndsAt(nextTimerEndsAt, serverTimeLeft));
 
         // Resume: jump back to where the student left off
         const resumeIndex = data.resumeData?.lastQuestionIndex ?? 0;
@@ -100,6 +111,22 @@ function StudentQuizContent() {
 
   useEffect(() => {
     fetchSession();
+  }, [fetchSession]);
+
+  useEffect(() => {
+    const syncFromServer = () => {
+      if (!document.hidden) {
+        fetchSession();
+      }
+    };
+
+    document.addEventListener("visibilitychange", syncFromServer);
+    window.addEventListener("focus", syncFromServer);
+
+    return () => {
+      document.removeEventListener("visibilitychange", syncFromServer);
+      window.removeEventListener("focus", syncFromServer);
+    };
   }, [fetchSession]);
 
   // Listen for session status changes
@@ -124,22 +151,43 @@ function StudentQuizContent() {
 
   // Timer
   useEffect(() => {
-    if (status !== "active" || timeLeft <= 0) return;
+    if (status !== "active") return;
+
+    if (!timerEndsAt) {
+      if (timeLeft <= 0) return;
+
+      const interval = setInterval(() => {
+        setTimeLeft((t) => {
+          if (t <= 1) {
+            clearInterval(interval);
+            handleSubmitQuiz();
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+
+    const syncCountdown = () => {
+      const nextTimeLeft = getTimeLeftFromEndsAt(timerEndsAt, 0);
+      setTimeLeft(nextTimeLeft);
+
+      if (nextTimeLeft <= 0) {
+        handleSubmitQuiz();
+      }
+    };
+
+    syncCountdown();
 
     const interval = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(interval);
-          handleSubmitQuiz();
-          return 0;
-        }
-        return t - 1;
-      });
+      syncCountdown();
     }, 1000);
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [status, timerEndsAt]);
 
   // ========================
   // ANTI-CHEAT ENGINE
