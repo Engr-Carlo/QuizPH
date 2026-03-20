@@ -67,6 +67,7 @@ function StudentQuizContent() {
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
   const isSubmittingRef = useRef(false);
+  const devToolsOpenRef = useRef(false);
 
   // Fetch session data
   const fetchSession = useCallback(async () => {
@@ -224,7 +225,7 @@ function StudentQuizContent() {
     enterFullscreen();
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && status === "active") {
+      if (!document.fullscreenElement && status === "active" && !isSubmittingRef.current) {
         setWarningVisible(true);
         setWarningCount((c) => c + 1);
         logViolation("FULLSCREEN_EXIT");
@@ -241,24 +242,16 @@ function StudentQuizContent() {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const handleVisibility = () => {
-      if (document.hidden) {
+      if (document.hidden && !isSubmittingRef.current) {
         logViolation("TAB_SWITCH");
         setWarningVisible(true);
         setWarningCount((c) => c + 1);
       }
     };
 
-    const handleBlur = () => {
-      logViolation("TAB_SWITCH");
-      setWarningVisible(true);
-      setWarningCount((c) => c + 1);
-    };
-
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleBlur);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleBlur);
     };
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
@@ -301,8 +294,12 @@ function StudentQuizContent() {
     const interval = setInterval(() => {
       const widthThreshold = window.outerWidth - window.innerWidth > 160;
       const heightThreshold = window.outerHeight - window.innerHeight > 160;
-      if (widthThreshold || heightThreshold) {
+      const isOpen = widthThreshold || heightThreshold;
+      if (isOpen && !devToolsOpenRef.current) {
+        devToolsOpenRef.current = true;
         logViolation("DEVTOOLS");
+      } else if (!isOpen) {
+        devToolsOpenRef.current = false;
       }
     }, 2000);
 
