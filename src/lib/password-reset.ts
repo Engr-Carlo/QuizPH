@@ -44,8 +44,15 @@ export async function createAndSendResetToken(user: {
     data: { userId: user.id, tokenHash, expiresAt },
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  // NEXTAUTH_URL takes priority (set this in Vercel env vars to your production domain).
+  // VERCEL_PROJECT_PRODUCTION_URL is the stable production domain Vercel auto-sets.
+  // VERCEL_URL is the deployment-specific preview URL — never use it for password reset links
+  // because preview URLs are only accessible to the Vercel team, not the public.
+  const baseUrl =
+    process.env.NEXTAUTH_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000");
   const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
 
   const subject = "QuizPH Password Reset";
