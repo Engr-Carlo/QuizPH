@@ -5,8 +5,8 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const user = req.auth?.user;
 
-  // Public routes
-  const publicRoutes = ["/login", "/register", "/verify-email", "/"];
+  // Public routes — accessible without authentication
+  const publicRoutes = ["/login", "/register", "/verify-email", "/", "/forgot-password", "/reset-password"];
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
@@ -16,7 +16,12 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/register") || pathname.startsWith("/api/email-verification")) {
+  if (
+    pathname.startsWith("/api/register") ||
+    pathname.startsWith("/api/email-verification") ||
+    pathname.startsWith("/api/forgot-password") ||
+    pathname.startsWith("/api/reset-password")
+  ) {
     return NextResponse.next();
   }
 
