@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
 import Link from "next/link";
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ──────────────────────────────────────────────────────────────────
 interface ViolationEvent {
   participantId: string;
   participantName: string;
@@ -38,7 +38,7 @@ interface SessionData {
   participants: Participant[];
 }
 
-// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Constants ──────────────────────────────────────────────────────────────
 const VIOLATION_META: Record<string, { label: string; short: string; color: string; bg: string }> = {
   FULLSCREEN_EXIT:    { label: "Fullscreen Exit",    short: "Fullscrn",  color: "text-danger",  bg: "bg-danger/10" },
   TAB_SWITCH:         { label: "Tab Switch",         short: "Tab Sw",    color: "text-warning", bg: "bg-warning/10" },
@@ -56,7 +56,7 @@ function getInitials(name: string) {
   return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
 }
 
-// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Component ──────────────────────────────────────────────────────────────
 export default function MonitorPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
@@ -95,7 +95,7 @@ export default function MonitorPage() {
     return () => clearTimeout(t);
   }, [toasts]);
 
-  // â”€â”€ Loading / not found â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Loading / not found ──────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -129,7 +129,7 @@ export default function MonitorPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
 
-      {/* â”€â”€ Top header â”€â”€ */}
+      {/* ── Top header ── */}
       <header className="bg-card border-b border-border px-6 py-3.5 flex items-center justify-between flex-shrink-0 shadow-sm">
         <div className="flex items-center gap-4">
           <Link
@@ -179,10 +179,10 @@ export default function MonitorPage() {
         </div>
       </header>
 
-      {/* â”€â”€ Body â”€â”€ */}
+      {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* â”€â”€ Main panel â”€â”€ */}
+        {/* ── Main panel ── */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Tab bar */}
           <div className="flex border-b border-border bg-card px-6 gap-6 flex-shrink-0">
@@ -204,7 +204,7 @@ export default function MonitorPage() {
           {/* Tab content */}
           <div className="flex-1 overflow-auto p-5">
 
-            {/* â”€â”€ Participants tab â”€â”€ */}
+            {/* ── Participants tab ── */}
             {activeTab === "participants" && (
               sessionData.participants.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
@@ -301,7 +301,7 @@ export default function MonitorPage() {
               )
             )}
 
-            {/* â”€â”€ Leaderboard tab â”€â”€ */}
+            {/* ── Leaderboard tab ── */}
             {activeTab === "leaderboard" && (
               <div className="max-w-2xl mx-auto space-y-2">
                 {leaderboard.length === 0 ? (
@@ -367,7 +367,7 @@ export default function MonitorPage() {
           </div>
         </div>
 
-        {/* â”€â”€ Detail sidebar â”€â”€ */}
+        {/* ── Detail sidebar ── */}
         <aside className="w-72 border-l border-border bg-card overflow-y-auto flex-shrink-0">
           {selectedP ? (
             <div className="p-5">
@@ -459,7 +459,7 @@ export default function MonitorPage() {
         </aside>
       </div>
 
-      {/* â”€â”€ Toast notifications â”€â”€ */}
+      {/* ── Toast notifications ── */}
       <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
         {toasts.map((toast, i) => (
           <div
@@ -467,7 +467,7 @@ export default function MonitorPage() {
             className="toast-enter bg-card border border-danger/40 rounded-xl p-3.5 shadow-lg max-w-[280px]"
           >
             <div className="flex items-start gap-2.5">
-              <span className="text-danger text-lg flex-shrink-0">âš ï¸</span>
+              <span className="text-danger text-lg flex-shrink-0">⚠️</span>
               <div>
                 <p className="text-sm font-semibold text-foreground">{toast.participantName}</p>
                 <p className="text-xs text-muted mt-0.5">
