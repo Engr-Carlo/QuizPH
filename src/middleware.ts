@@ -1,0 +1,51 @@
+import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
+
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+  const user = req.auth?.user;
+
+  // Public routes — accessible without authentication
+  const publicRoutes = ["/login", "/register", "/verify-email", "/", "/forgot-password", "/reset-password"];
+  if (publicRoutes.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // API auth routes are public
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  if (
+    pathname.startsWith("/api/register") ||
+    pathname.startsWith("/api/email-verification") ||
+    pathname.startsWith("/api/forgot-password") ||
+    pathname.startsWith("/api/reset-password")
+  ) {
+    return NextResponse.next();
+  }
+
+  // Not logged in → redirect to login
+  if (!user) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // Role-based route protection
+  if (pathname.startsWith("/admin") && user.role !== "SUPER_ADMIN") {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (pathname.startsWith("/teacher") && user.role !== "TEACHER" && user.role !== "SUPER_ADMIN") {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (pathname.startsWith("/student") && user.role !== "STUDENT") {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  return NextResponse.next();
+});
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

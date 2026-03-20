@@ -68,9 +68,13 @@ function StudentQuizContent() {
   const [score, setScore] = useState<number | null>(null);
   const isSubmittingRef = useRef(false);
   const devToolsOpenRef = useRef(false);
+  const hasFinishedRef = useRef(false);
 
   // Fetch session data
   const fetchSession = useCallback(async () => {
+    // Never reset the UI once the student has submitted
+    if (hasFinishedRef.current) return;
+
     const query = participantId ? `?participantId=${encodeURIComponent(participantId)}` : "";
     const res = await fetch(`/api/sessions/${sessionId}${query}`);
     if (res.ok) {
@@ -104,6 +108,7 @@ function StudentQuizContent() {
         const resumeIndex = data.resumeData?.lastQuestionIndex ?? 0;
         setCurrentIndex(Math.min(resumeIndex, qs.length - 1));
       } else if (data.status === "ENDED") {
+        hasFinishedRef.current = true;
         setStatus("finished");
       }
     }
@@ -347,8 +352,9 @@ function StudentQuizContent() {
 
   // Submit quiz
   async function handleSubmitQuiz() {
-    if (isSubmittingRef.current) return;
+    if (isSubmittingRef.current || hasFinishedRef.current) return;
     isSubmittingRef.current = true;
+    hasFinishedRef.current = true;
 
     try {
       const res = await fetch("/api/answers/submit", {
