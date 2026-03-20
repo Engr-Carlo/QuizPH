@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
 import { formatTime, shuffleArray } from "@/lib/utils";
 
@@ -40,10 +41,11 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   SHORT_ANSWER: "Short Answer",
 };
 
-export default function StudentQuizPage() {
+function StudentQuizContent() {
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const [participantId, setParticipantId] = useState("");
+  const searchParams = useSearchParams();
+  const participantId = searchParams.get("participantId") ?? "";
 
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,11 +97,6 @@ export default function StudentQuizPage() {
     }
     setLoading(false);
   }, [participantId, sessionId]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setParticipantId(params.get("participantId") || "");
-  }, []);
 
   useEffect(() => {
     fetchSession();
@@ -731,5 +728,13 @@ export default function StudentQuizPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StudentQuizPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Loading...</div>}>
+      <StudentQuizContent />
+    </Suspense>
   );
 }

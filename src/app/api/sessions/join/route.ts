@@ -37,6 +37,9 @@ export async function POST(req: Request) {
   });
 
   if (existing) {
+    if (existing.isFinished) {
+      return NextResponse.json({ error: "You have already completed this quiz." }, { status: 400 });
+    }
     return NextResponse.json({
       participant: existing,
       session: quizSession,
