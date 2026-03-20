@@ -2,15 +2,35 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import type { Role, SessionStatus } from "@prisma/client";
 
 const ONLINE_WINDOW_MS = 2 * 60 * 1000;
 const CHART_DAYS = 7;
+
+type UserRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  lastSeenAt: Date | null;
+  createdAt: Date;
+  _count: { quizzes: number; participants: number };
+};
+
+type UserWithPresence = UserRow & { isOnline: boolean };
+
+type SessionRow = {
+  createdAt: Date;
+  status: SessionStatus;
+  archivedAt: Date | null;
+};
 
 function isOnline(lastSeenAt: Date | null) {
   return Boolean(lastSeenAt && Date.now() - lastSeenAt.getTime() <= ONLINE_WINDOW_MS);
 }
 
-function buildDailySeries<T extends Record<string, Date | string | undefined>>(
+function buildDailySeries<T extends Record<string, unknown>>(
   items: T[],
   dateKey: keyof T,
   roleFilter?: string
@@ -27,7 +47,7 @@ function buildDailySeries<T extends Record<string, Date | string | undefined>>(
       const itemDate = item[dateKey];
       if (!(itemDate instanceof Date)) return false;
       const sameDay = itemDate.toDateString() === date.toDateString();
-      const sameRole = roleFilter ? item.role === roleFilter : true;
+      const sameRole = roleFilter ? (item as Record<string, unknown>).role === roleFilter : true;
       return sameDay && sameRole;
     }).length;
 
@@ -48,32 +68,35 @@ export async function GET() {
   since.setHours(0, 0, 0, 0);
   since.setDate(since.getDate() - (CHART_DAYS - 1));
 
-  const [users, quizCount, sessionCount, participantCount, sessions, participants] = await Promise.all([
-    prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        lastSeenAt: true,
-        createdAt: true,
-        _count: { select: { quizzes: true, participants: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
+  const users: UserRow[] = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+      lastSeenAt: true,
+      createdAt: true,
+      _count: { select: { quizzes: true, participants: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const [quizCount, sessionCount, participantCount] = await Promise.all([
     prisma.quiz.count(),
     prisma.quizSession.count(),
     prisma.participant.count(),
-    prisma.quizSession.findMany({
-      where: { createdAt: { gte: since } },
-      select: { createdAt: true, status: true, archivedAt: true },
-    }),
-    prisma.participant.findMany({
-      where: { joinedAt: { gte: since } },
-      select: { joinedAt: true },
-    }),
   ]);
+
+  const sessions: SessionRow[] = await prisma.quizSession.findMany({
+    where: { createdAt: { gte: since } },
+    select: { createdAt: true, status: true, archivedAt: true },
+  });
+
+  const participants: { joinedAt: Date }[] = await prisma.participant.findMany({
+    where: { joinedAt: { gte: since } },
+    select: { joinedAt: true },
+  });
 
   const usersWithPresence = users.map((user) => ({
     ...user,

@@ -66,6 +66,7 @@ model User {
   quizzes      Quiz[]
   participants Participant[]
   verificationCodes EmailVerificationCode[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model EmailVerificationCode {
@@ -80,6 +81,20 @@ model EmailVerificationCode {
 
   @@index([userId, createdAt])
   @@index([userId, codeHash])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([tokenHash])
 }
 
 model Quiz {
