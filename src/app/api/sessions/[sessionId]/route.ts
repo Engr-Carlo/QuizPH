@@ -32,10 +32,10 @@ export async function PATCH(
 
   const { sessionId } = await params;
   const body = await req.json();
-  const { status } = body;
+  const { status, archived } = body;
 
-  if (!["ACTIVE", "ENDED"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  if (typeof archived !== "boolean" && !["ACTIVE", "ENDED"].includes(status)) {
+    return NextResponse.json({ error: "Invalid session update" }, { status: 400 });
   }
 
   const quizSession = await prisma.quizSession.findUnique({
@@ -47,10 +47,24 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (typeof archived === "boolean") {
+    if (quizSession.status !== "ENDED") {
+      return NextResponse.json({ error: "Only ended sessions can be archived" }, { status: 400 });
+    }
+
+    const updated = await prisma.quizSession.update({
+      where: { id: sessionId },
+      data: { archivedAt: archived ? new Date() : null },
+    });
+
+    return NextResponse.json(updated);
+  }
+
   const updated = await prisma.quizSession.update({
     where: { id: sessionId },
     data: {
       status,
+      archivedAt: status === "ACTIVE" ? null : quizSession.archivedAt,
       ...(status === "ACTIVE" ? { startedAt: new Date() } : {}),
       ...(status === "ENDED" ? { endedAt: new Date() } : {}),
     },
@@ -64,6 +78,35 @@ export async function PATCH(
   });
 
   return NextResponse.json(updated);
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ sessionId: string }> }
+) {
+  const session = await auth();
+  if (!session?.user || (session.user.role !== "TEACHER" && session.user.role !== "SUPER_ADMIN")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { sessionId } = await params;
+
+  const quizSession = await prisma.quizSession.findUnique({
+    where: { id: sessionId },
+    include: { quiz: true },
+  });
+
+  if (!quizSession || quizSession.quiz.teacherId !== session.user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (quizSession.status !== "ENDED") {
+    return NextResponse.json({ error: "Only ended sessions can be deleted" }, { status: 400 });
+  }
+
+  await prisma.quizSession.delete({ where: { id: sessionId } });
+
+  return NextResponse.json({ message: "Session deleted" });
 }
 
 export async function GET(

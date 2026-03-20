@@ -27,6 +27,7 @@ interface Session {
   status: string;
   startedAt: string | null;
   endedAt: string | null;
+  archivedAt: string | null;
   _count: { participants: number };
 }
 
@@ -243,6 +244,9 @@ export default function QuizDetailPage() {
     ? quiz.questions.filter((question) => topicFilter === "ALL_TOPICS" || question.topic === topicFilter)
     : [];
 
+  const visibleSessions = quiz ? quiz.sessions.filter((session) => !session.archivedAt) : [];
+  const archivedSessions = quiz ? quiz.sessions.filter((session) => Boolean(session.archivedAt)) : [];
+
   const groupedQuestions = filteredQuestions.reduce<Record<string, Question[]>>((acc, question) => {
     const key = question.topic || "General";
     if (!acc[key]) acc[key] = [];
@@ -400,6 +404,22 @@ export default function QuizDetailPage() {
       body: JSON.stringify({ status }),
     });
     fetchQuiz();
+  }
+
+  async function handleArchiveSession(sessionId: string, archived: boolean) {
+    await fetch(`/api/sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    });
+    fetchQuiz();
+  }
+
+  async function handleDeleteSession(sessionId: string) {
+    if (!confirm("Delete this ended session and all participant records? This cannot be undone.")) return;
+
+    const res = await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
+    if (res.ok) fetchQuiz();
   }
 
   async function handleDeleteQuiz() {
@@ -689,7 +709,7 @@ export default function QuizDetailPage() {
             </div>
           ) : (
             <div className="divide-y divide-border/50">
-              {quiz.sessions.map((s) => (
+              {visibleSessions.map((s) => (
                 <div key={s.id} className="px-6 py-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     {/* Join code */}
@@ -739,20 +759,90 @@ export default function QuizDetailPage() {
                       </>
                     )}
                     {s.status === "ENDED" && (
-                      <Link
-                        href={`/teacher/quiz/${quizId}/results/${s.id}`}
-                        className="px-3.5 py-1.5 text-xs font-semibold border border-primary/30 text-primary rounded-xl hover:bg-primary/8 transition"
-                      >
-                        View Results
-                      </Link>
+                      <>
+                        <Link
+                          href={`/teacher/quiz/${quizId}/results/${s.id}`}
+                          className="px-3.5 py-1.5 text-xs font-semibold border border-primary/30 text-primary rounded-xl hover:bg-primary/8 transition"
+                        >
+                          View Results
+                        </Link>
+                        <button
+                          onClick={() => handleArchiveSession(s.id, true)}
+                          className="px-3.5 py-1.5 text-xs font-semibold border border-warning/30 text-warning rounded-xl hover:bg-warning/8 transition"
+                        >
+                          Archive
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSession(s.id)}
+                          className="px-3.5 py-1.5 text-xs font-semibold border border-danger/30 text-danger rounded-xl hover:bg-danger/8 transition"
+                        >
+                          Delete
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
               ))}
+              {visibleSessions.length === 0 && (
+                <div className="px-6 py-10 text-center text-sm text-muted">
+                  No active or unarchived sessions. Archived sessions are shown below.
+                </div>
+              )}
             </div>
           )}
         </div>
       </section>
+
+      {archivedSessions.length > 0 && (
+        <section className="mb-8">
+          <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div>
+                <h2 className="text-base font-bold text-foreground">Archived Sessions</h2>
+                <p className="text-xs text-muted mt-0.5">Ended sessions that were archived instead of deleted.</p>
+              </div>
+              <span className="text-xs font-semibold text-muted">{archivedSessions.length} archived</span>
+            </div>
+
+            <div className="divide-y divide-border/50">
+              {archivedSessions.map((s) => (
+                <div key={s.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-xl font-extrabold tracking-[0.25em] text-muted">{s.code}</span>
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${SESSION_STATUS_STYLE[s.status] || ""}`}>
+                      {s.status}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {s._count.participants} participant{s._count.participants !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/teacher/quiz/${quizId}/results/${s.id}`}
+                      className="px-3.5 py-1.5 text-xs font-semibold border border-primary/30 text-primary rounded-xl hover:bg-primary/8 transition"
+                    >
+                      View Results
+                    </Link>
+                    <button
+                      onClick={() => handleArchiveSession(s.id, false)}
+                      className="px-3.5 py-1.5 text-xs font-semibold border border-secondary/30 text-secondary rounded-xl hover:bg-secondary/8 transition"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSession(s.id)}
+                      className="px-3.5 py-1.5 text-xs font-semibold border border-danger/30 text-danger rounded-xl hover:bg-danger/8 transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* â”€â”€ Questions â”€â”€ */}
       <section>
