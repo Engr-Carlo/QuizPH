@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -174,6 +174,7 @@ export default function QuizDetailPage() {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<"sessions" | "questions" | "settings">("sessions");
   const [bulkImportLoading, setBulkImportLoading] = useState(false);
   const [topicFilter, setTopicFilter] = useState("ALL_TOPICS");
 
@@ -509,6 +510,37 @@ export default function QuizDetailPage() {
         </button>
       </div>
 
+      {/* -- Tab bar -- */}
+      <div className="flex gap-1 border-b border-border mb-6">
+        {([
+          { key: "sessions", label: "Sessions", count: quiz.sessions.filter((s) => !s.archivedAt).length },
+          { key: "questions", label: "Questions", count: quiz.questions.length },
+          { key: "settings", label: "Settings", count: null },
+        ] as const).map(({ key, label, count }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveDetailTab(key)}
+            className={`px-4 py-2.5 text-sm font-semibold rounded-t-xl border-b-2 transition-all ${
+              activeDetailTab === key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            {label}
+            {count !== null && (
+              <span className={`ml-1.5 text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                activeDetailTab === key ? "bg-primary/10 text-primary" : "bg-surface text-muted"
+              }`}>
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* -- Settings tab -- */}
+      {activeDetailTab === "settings" && (
       <section className="mb-8">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4 mb-5">
@@ -689,8 +721,11 @@ export default function QuizDetailPage() {
           </div>
         </div>
       </section>
+      )}
 
-      {/* â”€â”€ Sessions â”€â”€ */}
+      {activeDetailTab === "sessions" && (
+      <>
+      {/* ── Sessions ── */}
       <section className="mb-8">
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -844,7 +879,11 @@ export default function QuizDetailPage() {
         </section>
       )}
 
-      {/* â”€â”€ Questions â”€â”€ */}
+      </>
+      )}
+
+      {/* ── Questions ── */}
+      {activeDetailTab === "questions" && (
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -874,7 +913,7 @@ export default function QuizDetailPage() {
           </div>
         </div>
 
-        {/* â”€â”€ Question form â”€â”€ */}
+        {/* ── Question form ── */}
         {showQuestionForm && (
           <div className="bg-card border-2 border-primary/25 rounded-2xl p-6 mb-5 shadow-sm fade-in">
             <h3 className="font-bold text-foreground mb-5">
@@ -1151,6 +1190,7 @@ export default function QuizDetailPage() {
           </div>
         )}
       </section>
+      )}
     </DashboardLayout>
   );
 }

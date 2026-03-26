@@ -83,6 +83,13 @@ export default function MonitorPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"participants" | "leaderboard">("participants");
   const [, setNow] = useState(() => Date.now());
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  function copySessionCode(code: string) {
+    navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  }
 
   const fetchSession = useCallback(async () => {
     const res = await fetch(`/api/sessions/${sessionId}`);
@@ -163,9 +170,17 @@ export default function MonitorPage() {
           <div>
             <h1 className="font-extrabold text-foreground">{sessionData.quiz.title}</h1>
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="font-mono font-extrabold text-primary text-sm tracking-widest">
+              <button
+                type="button"
+                onClick={() => copySessionCode(sessionData.code)}
+                className="font-mono font-extrabold text-primary text-sm tracking-widest hover:text-primary/70 transition flex items-center gap-1.5"
+                title="Click to copy session code"
+              >
                 {sessionData.code}
-              </span>
+                <span className="text-[11px] font-sans font-normal text-muted">
+                  {codeCopied ? "Copied!" : "copy"}
+                </span>
+              </button>
               <span
                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                   sessionData.status === "ACTIVE"
