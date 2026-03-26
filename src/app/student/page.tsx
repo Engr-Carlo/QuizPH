@@ -1,8 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
+
+const AVATAR_SEEDS = ["Felix", "Lily", "Max", "Jade", "River", "Storm", "Luna", "Sage", "Blaze"];
+function dicebear(seed: string) {
+  return `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+}
 
 const RULES = [
   {
@@ -35,12 +41,73 @@ const RULES = [
 ];
 
 export default function StudentDashboard() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const firstName = session?.user?.name?.split(" ")[0] || "Student";
+  const currentAvatar = session?.user?.avatar ?? "Wave";
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function chooseAvatar(seed: string) {
+    if (saving) return;
+    setSaving(true);
+    await fetch("/api/users/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar: seed }),
+    });
+    await update();
+    setPickerOpen(false);
+    setSaving(false);
+  }
 
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-5xl space-y-5">
+
+        {/* Avatar card */}
+        <section className="rounded-[28px] border border-border/70 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center gap-4">
+            <img
+              src={dicebear(currentAvatar)}
+              alt="Your avatar"
+              className="h-16 w-16 rounded-full border border-border/60 bg-surface"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground truncate">{session?.user?.name}</p>
+              <p className="text-xs text-muted truncate">{session?.user?.email}</p>
+            </div>
+            <button
+              onClick={() => setPickerOpen((o) => !o)}
+              className="flex-shrink-0 rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary transition"
+            >
+              {pickerOpen ? "Cancel" : "Change Avatar"}
+            </button>
+          </div>
+
+          {pickerOpen && (
+            <div className="mt-5 border-t border-border/60 pt-5">
+              <p className="mb-3 text-xs font-semibold text-muted uppercase tracking-wide">Pick your avatar</p>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                {AVATAR_SEEDS.map((seed) => (
+                  <button
+                    key={seed}
+                    onClick={() => chooseAvatar(seed)}
+                    disabled={saving}
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 transition ${
+                      currentAvatar === seed
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <img src={dicebear(seed)} alt={seed} className="h-12 w-12 rounded-full" />
+                    <span className="text-[10px] font-semibold text-muted">{seed}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="relative overflow-hidden rounded-[28px] bg-primary px-5 py-6 text-white shadow-lg sm:px-7 sm:py-8">
           <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/12 blur-2xl" />
           <div className="absolute bottom-0 right-0 h-28 w-28 rounded-full bg-cyan-200/20 blur-2xl" />

@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  /* One vibrant color — Indigo */
-  --primary: #4F46E5;
-  --primary-dark: #4338CA;
-  --primary-light: #EEF2FF;
+  /* One vibrant color — Blue */
+  --primary: #2563EB;
+  --primary-dark: #1D4ED8;
+  --primary-light: #EFF6FF;
 
   /* Neutrals */
   --background: #FFFFFF;
@@ -59,7 +59,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* Selection */
-::selection { background: rgba(79, 70, 229, 0.12); color: var(--foreground); }
+::selection { background: rgba(37, 99, 235, 0.12); color: var(--foreground); }
 
 /* Smooth focus rings */
 *:focus-visible {
@@ -96,7 +96,7 @@ body {
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary), #818CF8);
+  background: linear-gradient(135deg, var(--primary), #60A5FA);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -107,9 +107,9 @@ body {
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 .card-hover:hover {
-  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.10);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.10);
   transform: translateY(-1px);
-  border-color: rgba(79, 70, 229, 0.25);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
 /* Live indicator */

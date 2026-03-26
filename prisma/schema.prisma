@@ -58,6 +58,7 @@ model User {
   passwordHash String
   emailVerifiedAt DateTime?
   role         Role     @default(STUDENT)
+  avatar       String   @default("Wave")
   isActive     Boolean  @default(true)
   lastSeenAt   DateTime?
   createdAt    DateTime @default(now())

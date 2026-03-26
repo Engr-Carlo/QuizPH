@@ -229,14 +229,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* User section */}
         <div className="px-4 py-4 border-t border-border">
           <div className="flex items-center gap-3 mb-3 min-w-0">
-            <div
-              className={cn(
-                "w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0",
-                getAvatarColor(session?.user?.name)
-              )}
-            >
-              {getInitials(session?.user?.name)}
-            </div>
+            {session?.user?.avatar ? (
+              <img
+                src={`https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(session.user.avatar)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                alt="avatar"
+                className="w-9 h-9 rounded-full flex-shrink-0 bg-surface border border-border/50"
+              />
+            ) : (
+              <div
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0",
+                  getAvatarColor(session?.user?.name)
+                )}
+              >
+                {getInitials(session?.user?.name)}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground truncate leading-tight">
                 {session?.user?.name}

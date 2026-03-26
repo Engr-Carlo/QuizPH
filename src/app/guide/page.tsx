@@ -64,11 +64,33 @@ const STUDENT_STEPS = [
 ];
 
 const ANTI_CHEAT_RULES = [
-  { icon: "⛶", title: "Fullscreen enforced", desc: "Exiting fullscreen is immediately logged and reported to your teacher." },
-  { icon: "⇄", title: "Tab switching detected", desc: "Switching apps or tabs triggers a violation alert on the teacher's monitor screen." },
-  { icon: "⛔", title: "Copy & paste disabled", desc: "Copy, cut, and paste are blocked during an active quiz to prevent sharing answers." },
-  { icon: "🖱", title: "Right-click blocked", desc: "The browser context menu is disabled to prevent content inspection." },
-  { icon: "⚙", title: "DevTools detection", desc: "Unusually large browser chrome — typical of open DevTools — is periodically checked." },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    ),
+    title: "Fullscreen enforced",
+    desc: "Exiting fullscreen is immediately logged and reported to your teacher.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+      </svg>
+    ),
+    title: "Tab switching detected",
+    desc: "Switching apps or tabs triggers a violation alert on the teacher's monitor screen.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>
+      </svg>
+    ),
+    title: "Copy & paste disabled",
+    desc: "Copy, cut, and paste are blocked during an active quiz to prevent sharing answers.",
+  },
 ];
 
 const FAQ = [
@@ -154,7 +176,7 @@ export default function GuidePage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {ANTI_CHEAT_RULES.map(({ icon, title, desc }) => (
               <div key={title} className="rounded-[20px] border border-border/70 bg-white p-4">
-                <span className="text-xl">{icon}</span>
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">{icon}</span>
                 <p className="mt-2 font-bold text-foreground">{title}</p>
                 <p className="mt-1 text-sm leading-5 text-muted">{desc}</p>
               </div>

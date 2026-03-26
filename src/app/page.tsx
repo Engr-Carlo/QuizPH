@@ -1,5 +1,55 @@
 import Link from "next/link";
 
+const MOCK_STUDENTS = [
+  { i: "JD", name: "Juan P. dela Cruz",  score: 7,  total: 10, pct: 70,  color: "bg-blue-500",     done: false, flag: false },
+  { i: "MS", name: "Maria Santos",        score: 10, total: 10, pct: 100, color: "bg-emerald-500",  done: true,  flag: false },
+  { i: "PR", name: "Pedro Reyes",         score: 3,  total: 10, pct: 30,  color: "bg-amber-500",   done: false, flag: true  },
+  { i: "AV", name: "Ana L. Villalobos",  score: 6,  total: 10, pct: 60,  color: "bg-violet-500",  done: false, flag: false },
+  { i: "CB", name: "Carlo Buenaventura", score: 1,  total: 10, pct: 10,  color: "bg-sky-500",     done: false, flag: false },
+];
+
+function ProductMockup() {
+  return (
+    <div className="w-full rounded-2xl overflow-hidden border border-white/10 bg-slate-900 shadow-2xl text-xs font-mono select-none">
+      {/* Window bar */}
+      <div className="flex items-center gap-1.5 px-4 py-3 bg-slate-800 border-b border-white/8">
+        <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
+        <span className="ml-3 text-slate-400 text-[11px]">Live Monitor — Science Quiz #2</span>
+        <span className="ml-auto flex items-center gap-1 text-emerald-400 text-[11px]">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          LIVE
+        </span>
+      </div>
+      {/* Header row */}
+      <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 px-4 py-2 text-slate-500 border-b border-white/6 text-[10px] uppercase tracking-wide">
+        <span>Student</span><span className="text-center">Answered</span><span className="text-center">Score</span><span className="text-center">Flag</span>
+      </div>
+      {/* Rows */}
+      {MOCK_STUDENTS.map(({ i, name, score, total, pct, color, done, flag }) => (
+        <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 items-center px-4 py-2.5 border-b border-white/5 last:border-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`w-6 h-6 rounded-full ${color} flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0`}>{i}</span>
+            <span className="text-slate-300 truncate text-[11px]">{name}</span>
+          </div>
+          <div className="text-center">
+            {done
+              ? <span className="text-emerald-400 text-[11px] font-semibold">Done</span>
+              : <div className="mx-auto w-14 h-1 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full bg-blue-500" style={{ width: `${pct}%` }} /></div>}
+          </div>
+          <div className="text-center text-slate-300 text-[11px]">{score}/{total}</div>
+          <div className="text-center">
+            {flag
+              ? <span className="text-amber-400 text-[11px]">Tab switch</span>
+              : <span className="text-slate-600 text-[11px]">—</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function FeatureShield() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -128,56 +178,44 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="py-24 px-6 bg-white text-center">
-        <div className="max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3.5 py-1.5 rounded-full mb-8 border border-primary/15 uppercase tracking-wide">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
-            Built for Philippine Educators
+      <section className="py-16 px-6 bg-white lg:py-24">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left */}
+          <div>
+            <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3.5 py-1.5 rounded-full mb-7 border border-primary/15 uppercase tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+              Built for Philippine Educators
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-tight mb-5 tracking-tight">
+              Online Quizzes with<br />
+              <span className="gradient-text">Real-Time Anti-Cheat</span>
+            </h1>
+            <p className="text-base text-muted max-w-lg mb-8 leading-relaxed">
+              Create assessments, detect cheating in real time, and watch a live leaderboard — all in one platform designed for modern classrooms.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/register"
+                className="px-7 py-3 text-white font-semibold rounded-lg transition hover:opacity-90 shadow-sm text-sm text-center"
+                style={{ background: "var(--primary)" }}
+              >
+                Create Free Account
+              </Link>
+              <Link
+                href="/login"
+                className="px-7 py-3 border border-border text-foreground font-semibold rounded-lg hover:border-primary/40 hover:text-primary transition bg-white text-sm text-center"
+              >
+                Sign In
+              </Link>
+            </div>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl font-bold text-foreground leading-tight mb-6 tracking-tight">
-            Online Quizzes with
-            <br />
-            <span className="gradient-text">Real-Time Anti-Cheat</span>
-          </h1>
-
-          <p className="text-lg text-muted max-w-xl mx-auto mb-10 leading-relaxed">
-            Create assessments, detect cheating in real time, and view live leaderboards — all in one platform designed for modern classrooms.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/register"
-              className="px-7 py-3 text-white font-semibold rounded-lg transition hover:opacity-90 shadow-sm text-sm"
-              style={{ background: "var(--primary)" }}
-            >
-              Create Free Account
-            </Link>
-            <Link
-              href="/login"
-              className="px-7 py-3 border border-border text-foreground font-semibold rounded-lg hover:border-primary/40 hover:text-primary transition bg-white text-sm"
-            >
-              Sign In
-            </Link>
+          {/* Right — product mockup */}
+          <div className="hidden lg:block">
+            <ProductMockup />
           </div>
         </div>
       </section>
-
-      {/* Highlight stripe */}
-      <div className="bg-surface border-y border-border py-8 px-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border text-center">
-          {[
-            { label: "Multi-layer anti-cheat", sub: "Fullscreen, tab, clipboard and more" },
-            { label: "Real-time monitoring", sub: "Live leaderboard and violation alerts" },
-            { label: "Instant auto-grading", sub: "Full per-question breakdown" },
-          ].map(({ label, sub }) => (
-            <div key={label} className="px-8 py-4 sm:py-0">
-              <div className="text-sm font-semibold text-foreground mb-0.5">{label}</div>
-              <div className="text-xs text-muted">{sub}</div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Features */}
       <section className="py-20 px-6 bg-white">
@@ -236,6 +274,22 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Testimonial / photo section */}
+      <section className="relative overflow-hidden py-20 px-6">
+        <img
+          src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1400&q=80"
+          alt="Students collaborating on laptops in class"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-slate-900/70" />
+        <div className="relative max-w-3xl mx-auto text-center text-white">
+          <p className="text-2xl font-bold leading-snug mb-6">
+            &ldquo;Finally a quiz platform that actually catches cheating — not just blocks one trick.&rdquo;
+          </p>
+          <p className="text-white/65 text-sm">— Filipino educator, Grades 7 &amp; 8 Science</p>
         </div>
       </section>
 
