@@ -73,7 +73,6 @@ function StudentQuizContent() {
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
   const isSubmittingRef = useRef(false);
-  const devToolsOpenRef = useRef(false);
   const hasFinishedRef = useRef(false);
 
   // Fetch session data
@@ -296,40 +295,7 @@ function StudentQuizContent() {
     };
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
-  // 4. Right-click prevention
-  useEffect(() => {
-    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
-
-    const prevent = (e: MouseEvent) => {
-      e.preventDefault();
-      logViolation("RIGHT_CLICK");
-    };
-
-    document.addEventListener("contextmenu", prevent);
-    return () => document.removeEventListener("contextmenu", prevent);
-  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
-
-  // 5. DevTools detection
-  useEffect(() => {
-    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
-
-    const interval = setInterval(() => {
-      const widthThreshold = window.outerWidth - window.innerWidth > 160;
-      const heightThreshold = window.outerHeight - window.innerHeight > 160;
-      const isOpen = widthThreshold || heightThreshold;
-      if (isOpen && !devToolsOpenRef.current) {
-        devToolsOpenRef.current = true;
-        logViolation("DEVTOOLS");
-      } else if (!isOpen) {
-        devToolsOpenRef.current = false;
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
-
-  // 6. Screenshot prevention — removed (browser APIs cannot block OS-level screenshots)
-  // SCREENSHOT_ATTEMPT violations from keyboard are still logged where possible.
+  // 4. Screenshot prevention — removed (browser APIs cannot block OS-level screenshots)
 
   // Persist lastQuestionIndex to server so student can resume if they close the browser
   const persistQuestionIndex = useCallback(
