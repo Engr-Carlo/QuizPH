@@ -177,14 +177,30 @@ export async function GET(
   });
 
   // --- Quiz resume: find participant, stamp quizStartedAt on first load while ACTIVE ---
-  let resumeData: { timeLeft: number; lastQuestionIndex: number; timerEndsAt: string | null } | null = null;
+  let resumeData: {
+    timeLeft: number;
+    lastQuestionIndex: number;
+    timerEndsAt: string | null;
+    isFinished?: boolean;
+    score?: number | null;
+  } | null = null;
 
   if (participantId && quizSession.status === "ACTIVE") {
     const participant = await prisma.participant.findFirst({
       where: { id: participantId, sessionId },
     });
 
-    if (participant && !participant.isFinished) {
+    if (participant && participant.isFinished) {
+      // Student already submitted — send finished signal so the client shows score,
+      // not the quiz. This prevents retaking after a page refresh.
+      resumeData = {
+        isFinished: true,
+        score: participant.score,
+        timeLeft: 0,
+        lastQuestionIndex: 0,
+        timerEndsAt: null,
+      };
+    } else if (participant && !participant.isFinished) {
       let startedAt = participant.quizStartedAt;
 
       // First time this student opens the quiz while session is ACTIVE — stamp the clock

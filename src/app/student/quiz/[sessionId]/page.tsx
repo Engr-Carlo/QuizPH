@@ -22,7 +22,13 @@ interface SessionData {
   id: string;
   code: string;
   status: string;
-  resumeData: { timeLeft: number; lastQuestionIndex: number; timerEndsAt: string | null } | null;
+  resumeData: {
+    timeLeft: number;
+    lastQuestionIndex: number;
+    timerEndsAt: string | null;
+    isFinished?: boolean;
+    score?: number | null;
+  } | null;
   quiz: {
     title: string;
     duration: number;
@@ -82,6 +88,17 @@ function StudentQuizContent() {
       setSessionData(data);
 
       if (data.status === "ACTIVE") {
+        // If participant already submitted, show finished screen — never re-enter the quiz
+        if (data.resumeData?.isFinished) {
+          hasFinishedRef.current = true;
+          if (data.resumeData.score !== undefined && data.resumeData.score !== null) {
+            setScore(data.resumeData.score);
+          }
+          setStatus("finished");
+          setLoading(false);
+          return;
+        }
+
         let qs = data.quiz.questions;
         if (data.quiz.randomizeQuestions) qs = shuffleArray(qs);
         if (data.quiz.randomizeAnswers) {
