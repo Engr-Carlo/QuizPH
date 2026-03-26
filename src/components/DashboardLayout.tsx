@@ -264,7 +264,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Main content ── */}
       <main className="min-h-screen flex-1 overflow-auto lg:ml-64">
-        <div className="px-4 pb-6 pt-5 sm:px-6 lg:p-8">{children}</div>
+        {/* Desktop top bar */}
+        <div className="sticky top-0 z-20 hidden lg:flex items-center justify-between bg-white/95 backdrop-blur-sm border-b border-border px-8 h-14">
+          <div className="flex items-center gap-2">
+            {roleMeta && (
+              <span className={cn("inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide uppercase", roleMeta.color)}>
+                {roleMeta.label}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {session?.user?.avatar ? (
+              <img
+                src={`https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(session.user.avatar)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                alt="avatar"
+                className="w-8 h-8 rounded-full bg-surface border border-border/50"
+              />
+            ) : (
+              <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0", getAvatarColor(session?.user?.name))}>
+                {getInitials(session?.user?.name)}
+              </div>
+            )}
+            <div className="text-right">
+              <p className="text-sm font-semibold text-foreground leading-tight">{session?.user?.name}</p>
+              <p className="text-[11px] text-muted">{session?.user?.email}</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 pb-6 pt-5 sm:px-6 lg:px-8 lg:pt-7 lg:pb-10">{children}</div>
       </main>
     </div>
   );
