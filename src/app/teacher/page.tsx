@@ -41,6 +41,7 @@ export default function TeacherDashboard() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadQuizzes() {
@@ -63,6 +64,9 @@ export default function TeacherDashboard() {
   const totalSessions = quizzes.reduce((s, q) => s + q._count.sessions, 0);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const filteredQuizzes = searchQuery
+    ? quizzes.filter((q) => q.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : quizzes;
 
   return (
     <DashboardLayout>
@@ -163,8 +167,22 @@ export default function TeacherDashboard() {
             {/* Quiz grid */}
             <div>
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted mb-3">Your Quizzes</h2>
+              <div className="mb-3">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search quizzes…"
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
+                  />
+                </div>
+              </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {quizzes.map((quiz) => (
+                {filteredQuizzes.map((quiz) => (
                   <Link
                     key={quiz.id}
                     href={`/teacher/quiz/${quiz.id}`}
@@ -188,6 +206,12 @@ export default function TeacherDashboard() {
                     </div>
                   </Link>
                 ))}
+
+                {filteredQuizzes.length === 0 && searchQuery && (
+                  <div className="col-span-full text-center py-10 text-muted text-sm">
+                    No quizzes match &ldquo;{searchQuery}&rdquo;
+                  </div>
+                )}
 
                 {/* Add new quiz slot */}
                 <Link

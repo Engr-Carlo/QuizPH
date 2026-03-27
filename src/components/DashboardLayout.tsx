@@ -210,6 +210,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={`${href}-${i}`}
                 href={href}
+                onClick={() => setMobileNavOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-medium transition-all duration-150",
                   isActive

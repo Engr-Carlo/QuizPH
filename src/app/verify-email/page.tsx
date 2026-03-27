@@ -12,12 +12,21 @@ export default function VerifyEmailPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [previewCode, setPreviewCode] = useState("");
   const [deliveryWarning, setDeliveryWarning] = useState("");
 
+  // Countdown for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => {
+      setResendCooldown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setEmail(params.get("email") || "");
     setPreviewCode(params.get("previewCode") || "");
     if (params.get("deliveryFailed") === "true") {
       setDeliveryWarning("We could not send the verification email right now. Please try resending the code in a moment.");
@@ -74,6 +83,7 @@ export default function VerifyEmailPage() {
 
     setSuccess(data.message || "Verification code sent");
     setDeliveryWarning("");
+    setResendCooldown(30);
     if (data.previewCode) {
       setPreviewCode(data.previewCode);
     }
@@ -143,10 +153,10 @@ export default function VerifyEmailPage() {
           <button
             type="button"
             onClick={handleResend}
-            disabled={!email || resending}
+            disabled={!email || resending || resendCooldown > 0}
             className="text-sm font-semibold text-primary hover:underline disabled:opacity-50"
           >
-            {resending ? "Sending..." : "Resend code"}
+            {resending ? "Sending..." : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
           </button>
 
           <Link href="/login" className="text-sm text-muted hover:text-foreground transition">

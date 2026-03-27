@@ -4,21 +4,29 @@ import { prisma } from "@/lib/prisma";
 import { quizSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const quizzes = await prisma.quiz.findMany({
-      where: { teacherId: session.user.id },
-      include: {
-        _count: { select: { questions: true, sessions: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+  const url = new URL(req.url);
+  const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || "0")));
+  const paginated = limit > 0;
 
+  try {
+    const baseQuery = { where: { teacherId: session.user.id }, include: { _count: { select: { questions: true, sessions: true } } }, orderBy: { createdAt: "desc" } } as const;
+
+    if (paginated) {
+      const [quizzes, total] = await Promise.all([
+        prisma.quiz.findMany({ ...baseQuery, skip: (page - 1) * limit, take: limit }),
+        prisma.quiz.count({ where: { teacherId: session.user.id } }),
+      ]);
+      return NextResponse.json({ quizzes, total, page, totalPages: Math.ceil(total / limit) });
+    }
+
+    const quizzes = await prisma.quiz.findMany(baseQuery);
     return NextResponse.json(quizzes);
   } catch (error) {
     console.error("Failed to load quizzes via Prisma, trying legacy fallback", error);

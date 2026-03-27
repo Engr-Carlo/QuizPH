@@ -58,29 +58,34 @@ function buildDailySeries<T extends Record<string, unknown>>(
   });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || "50")));
+
   const since = new Date();
   since.setHours(0, 0, 0, 0);
   since.setDate(since.getDate() - (CHART_DAYS - 1));
 
-  const users: UserRow[] = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      isActive: true,
-      lastSeenAt: true,
-      createdAt: true,
-      _count: { select: { quizzes: true, participants: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [usersRaw, totalUsers] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        id: true, name: true, email: true, role: true, isActive: true,
+        lastSeenAt: true, createdAt: true,
+        _count: { select: { quizzes: true, participants: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.user.count(),
+  ]);
+  const users: UserRow[] = usersRaw;
 
   const [quizCount, sessionCount, participantCount] = await Promise.all([
     prisma.quiz.count(),
@@ -117,6 +122,9 @@ export async function GET() {
 
   return NextResponse.json({
     users: usersWithPresence,
+    total: totalUsers,
+    page,
+    totalPages: Math.ceil(totalUsers / limit),
     stats: {
       quizCount,
       sessionCount,

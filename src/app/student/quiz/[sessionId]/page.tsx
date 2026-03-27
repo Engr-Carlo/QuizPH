@@ -74,6 +74,8 @@ function StudentQuizContent() {
   const [score, setScore] = useState<number | null>(null);
   const isSubmittingRef = useRef(false);
   const hasFinishedRef = useRef(false);
+  const timeWarningShownRef = useRef(false);
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
 
   // Fetch session data
   const fetchSession = useCallback(async () => {
@@ -210,6 +212,16 @@ function StudentQuizContent() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, timerEndsAt]);
+
+  // 1-minute time warning — fires once when timeLeft first drops to ≤ 60s
+  useEffect(() => {
+    if (status === "active" && timeLeft <= 60 && timeLeft > 0 && !timeWarningShownRef.current) {
+      timeWarningShownRef.current = true;
+      setShowTimeWarning(true);
+      const t = setTimeout(() => setShowTimeWarning(false), 8000);
+      return () => clearTimeout(t);
+    }
+  }, [timeLeft, status]);
 
   // ========================
   // ANTI-CHEAT ENGINE
@@ -510,11 +522,12 @@ function StudentQuizContent() {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-danger mb-2">
-              Warning: Cheating Detected!
+              {warningCount <= 1 ? "You left the quiz window" : "Warning: Cheating Detected!"}
             </h2>
             <p className="text-muted mb-4">
-              You left fullscreen mode or switched tabs. This has been recorded and
-              reported to your teacher.
+              {warningCount <= 1
+                ? "You left fullscreen mode or switched tabs. If this was accidental, please return to continue."
+                : "You have multiple violations. Each one is being recorded and reported to your teacher."}
             </p>
             <p className="text-sm text-danger font-medium mb-6">
               Warnings: {warningCount}
@@ -578,6 +591,21 @@ function StudentQuizContent() {
           </div>
         </header>
 
+        {/* 1-minute time warning banner */}
+        {showTimeWarning && (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-danger/10 border border-danger/25 px-4 py-3 text-danger text-sm font-semibold">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Less than 1 minute remaining — finish up and submit!</span>
+            <button onClick={() => setShowTimeWarning(false)} className="ml-auto opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        )}
+
         <main className="mt-4 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
           <section className="rounded-[30px] border border-white/80 bg-white/90 p-4 shadow-[0_22px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
@@ -608,8 +636,21 @@ function StudentQuizContent() {
                       [currentQuestion.id]: e.target.value,
                     }))
                   }
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      await persistCurrentAnswer(currentQuestion);
+                      if (canGoNext) {
+                        const newIdx = currentIndex + 1;
+                        setCurrentIndex(newIdx);
+                        persistQuestionIndex(newIdx);
+                      } else {
+                        handleSubmitQuiz();
+                      }
+                    }
+                  }}
                   className="min-h-36 w-full rounded-2xl border border-border bg-white px-4 py-3 text-base text-foreground shadow-inner focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Type your answer here..."
+                  placeholder="Type your answer here… (Ctrl+Enter to continue)"
                   autoComplete="off"
                 />
               </div>

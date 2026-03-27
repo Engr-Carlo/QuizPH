@@ -112,6 +112,13 @@ body {
   border-color: rgba(37, 99, 235, 0.25);
 }
 
+/* Base card utility — replaces bg-card border border-border rounded-2xl */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
 /* Live indicator */
 .live-dot::before {
   content: '';
@@ -123,4 +130,17 @@ body {
   margin-right: 6px;
   animation: pulse-dot 1.5s ease-in-out infinite;
   box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot,
+  .live-dot::before {
+    animation: none;
+    opacity: 1;
+  }
+  .toast-enter,
+  .toast-exit,
+  .fade-in {
+    animation: none;
+  }
 }

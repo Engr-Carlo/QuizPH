@@ -123,6 +123,13 @@ export default function MonitorPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Re-fetch when the browser tab regains focus (catches missed Pusher events)
+  useEffect(() => {
+    const handleVisible = () => { if (!document.hidden) fetchSession(); };
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => document.removeEventListener("visibilitychange", handleVisible);
+  }, [fetchSession]);
+
   // ── Loading / not found ──────────────────────────────────────────────────
   if (loading) {
     return (
@@ -496,13 +503,32 @@ export default function MonitorPage() {
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full p-6">
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center mx-auto mb-2 text-muted">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                </div>
-                <p className="text-sm text-muted">Select a participant to view details</p>
-              </div>
+            <div className="p-5">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide mb-3">Violations Feed</h4>
+              {(() => {
+                const allViolations = sessionData.participants
+                  .flatMap((p) =>
+                    p.violations.map((v) => ({ ...v, participantName: p.user.name }))
+                  )
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                  .slice(0, 40);
+                return allViolations.length === 0 ? (
+                  <p className="text-xs text-muted text-center py-8">No violations recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {allViolations.map((v, i) => (
+                      <div key={i} className={`flex items-start gap-2.5 text-xs border-l-2 pl-3 py-1.5 ${VIOLATION_META[v.type]?.color ? "border-danger" : "border-muted"}`}>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">{v.participantName}</p>
+                          <p className={`text-[11px] ${VIOLATION_META[v.type]?.color}`}>{VIOLATION_META[v.type]?.label || v.type}</p>
+                          <p className="text-muted text-[10px]">{new Date(v.timestamp).toLocaleTimeString("en-PH")}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <p className="text-[10px] text-muted mt-4 text-center">Click a participant card to see their details.</p>
             </div>
           )}
         </aside>
@@ -516,7 +542,11 @@ export default function MonitorPage() {
             className="toast-enter bg-card border border-danger/40 rounded-xl p-3.5 shadow-lg max-w-[280px]"
           >
             <div className="flex items-start gap-2.5">
-              <span className="text-danger text-lg flex-shrink-0">⚠️</span>
+              <span className="flex-shrink-0 text-danger">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </span>
               <div>
                 <p className="text-sm font-semibold text-foreground">{toast.participantName}</p>
                 <p className="text-xs text-muted mt-0.5">

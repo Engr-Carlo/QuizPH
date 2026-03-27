@@ -70,6 +70,11 @@ function formatDuration(secs: number) {
   return s ? `${m}m ${s}s` : `${m}m`;
 }
 
+function formatDate(date: string | null) {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 function parseQuestionBlock(input: string) {
   const lines = input
     .split(/\r?\n/)
@@ -247,6 +252,19 @@ export default function QuizDetailPage() {
 
   const visibleSessions = quiz ? quiz.sessions.filter((session) => !session.archivedAt) : [];
   const archivedSessions = quiz ? quiz.sessions.filter((session) => Boolean(session.archivedAt)) : [];
+
+  const isDirty = quiz && (
+    settingsTitle !== quiz.title ||
+    settingsDescription !== (quiz.description || "") ||
+    settingsTimerType !== quiz.timerType ||
+    (settingsDurationMinutes * 60 + settingsDurationSeconds) !== quiz.duration ||
+    settingsSelectionMode !== quiz.questionSelectionMode ||
+    settingsRandomQuestionScope !== quiz.randomQuestionScope ||
+    settingsDrawCount !== (quiz.questionDrawCount ?? 10) ||
+    settingsRandomizeQuestions !== quiz.randomizeQuestions ||
+    settingsRandomizeAnswers !== quiz.randomizeAnswers ||
+    settingsAntiCheatEnabled !== quiz.antiCheatEnabled
+  );
 
   const groupedQuestions = filteredQuestions.reduce<Record<string, Question[]>>((acc, question) => {
     const key = question.topic || "General";
@@ -551,8 +569,11 @@ export default function QuizDetailPage() {
             <button
               onClick={handleSaveSettings}
               disabled={settingsLoading}
-              className="px-4 py-2 text-xs font-semibold text-white rounded-xl bg-primary shadow-sm transition disabled:opacity-50 hover:bg-primary/90"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white rounded-xl bg-primary shadow-sm transition disabled:opacity-50 hover:bg-primary/90"
             >
+              {isDirty && (
+                <span className="w-2 h-2 rounded-full bg-warning flex-shrink-0" title="Unsaved changes" aria-label="Unsaved changes" />
+              )}
               {settingsLoading ? "Saving..." : "Save Settings"}
             </button>
           </div>
@@ -765,6 +786,12 @@ export default function QuizDetailPage() {
                     <span className="text-xs text-muted">
                       {s._count.participants} participant{s._count.participants !== 1 ? "s" : ""}
                     </span>
+                    {(s.startedAt || s.endedAt) && (
+                      <span className="text-[11px] text-muted hidden sm:inline">
+                        {s.startedAt && <>Started {formatDate(s.startedAt)}</>}
+                        {s.endedAt && <> · Ended {formatDate(s.endedAt)}</>}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex gap-2">

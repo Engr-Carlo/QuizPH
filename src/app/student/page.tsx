@@ -1,9 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
+
+interface HistoryEntry {
+  id: string;
+  score: number;
+  isFinished: boolean;
+  joinedAt: string;
+  _count: { violations: number };
+  session: {
+    id: string;
+    code: string;
+    status: string;
+    endedAt: string | null;
+    quiz: { title: string; _count: { questions: number } };
+  };
+}
 
 const AVATAR_SEEDS = ["Felix", "Lily", "Max", "Jade", "River", "Storm", "Luna", "Sage", "Blaze"];
 function dicebear(seed: string) {
@@ -46,6 +61,14 @@ export default function StudentDashboard() {
   const currentAvatar = session?.user?.avatar ?? "Wave";
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    fetch("/api/student/sessions")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setHistory(data); })
+      .catch(() => {});
+  }, []);
 
   async function chooseAvatar(seed: string) {
     if (saving) return;
@@ -195,6 +218,56 @@ export default function StudentDashboard() {
             </div>
           </div>
         </section>
+
+        {/* Quiz History */}
+        {history.length > 0 && (
+          <section className="rounded-[28px] border border-border/70 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Your activity</p>
+                <h2 className="mt-1 text-xl font-black text-foreground">Recent quizzes</h2>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {history.map((entry) => {
+                const total = entry.session.quiz._count.questions;
+                const pct = total > 0 ? Math.round((entry.score / total) * 100) : 0;
+                const isEnded = entry.session.status === "ENDED";
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-3 rounded-2xl border border-border/70 bg-surface/60 px-4 py-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{entry.session.quiz.title}</p>
+                      <p className="text-xs text-muted">
+                        Code: <span className="font-mono font-semibold">{entry.session.code}</span>
+                        {entry.isFinished && <> &middot; {entry.score}/{total} &middot; {pct}%</>}
+                        {entry._count.violations > 0 && (
+                          <span className="ml-1.5 text-danger font-medium">{entry._count.violations} violation{entry._count.violations !== 1 ? "s" : ""}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      {isEnded ? (
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-muted/10 text-muted border border-muted/20">
+                          {entry.isFinished ? "Finished" : "Not completed"}
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/student/quiz/${entry.session.id}`}
+                          className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/10 text-success border border-success/30 hover:bg-success/20 transition"
+                        >
+                          Rejoin
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </DashboardLayout>
   );

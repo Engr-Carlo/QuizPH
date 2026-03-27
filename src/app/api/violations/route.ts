@@ -33,6 +33,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Rate-limit: silently drop if this participant has logged > 10 violations in the last 60s
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    const recentCount = await prisma.violationLog.count({
+      where: { participantId, timestamp: { gt: oneMinuteAgo } },
+    });
+    if (recentCount >= 10) {
+      return NextResponse.json({ message: "ok" }, { status: 200 });
+    }
+
     const violation = await prisma.violationLog.create({
       data: {
         participantId,
