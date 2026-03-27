@@ -75,6 +75,7 @@ function StudentQuizContent() {
   const isSubmittingRef = useRef(false);
   const hasFinishedRef = useRef(false);
   const timeWarningShownRef = useRef(false);
+  const questionsInitializedRef = useRef(false);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
 
   // Fetch session data
@@ -100,31 +101,37 @@ function StudentQuizContent() {
           return;
         }
 
-        let qs = data.quiz.questions;
-        if (data.quiz.randomizeQuestions) qs = shuffleArray(qs);
-        if (data.quiz.randomizeAnswers) {
+        // Initialize questions only once per page load — re-fetching on tab switch
+        // must not re-shuffle, otherwise answers map to wrong questions
+        if (!questionsInitializedRef.current) {
+          let qs = data.quiz.questions;
+          if (data.quiz.randomizeQuestions) qs = shuffleArray(qs);
+          if (data.quiz.randomizeAnswers) {
+            qs = qs.map((q) => ({
+              ...q,
+              options: shuffleArray(q.options),
+            }));
+          }
+          // Remove isCorrect from options sent to client
           qs = qs.map((q) => ({
             ...q,
-            options: shuffleArray(q.options),
+            options: q.options.map(({ id, text }) => ({ id, text })),
           }));
+          questionsInitializedRef.current = true;
+          setQuestions(qs);
+
+          // Resume: jump back to where the student left off
+          const resumeIndex = data.resumeData?.lastQuestionIndex ?? 0;
+          setCurrentIndex(Math.min(resumeIndex, qs.length - 1));
         }
-        // Remove isCorrect from options sent to client
-        qs = qs.map((q) => ({
-          ...q,
-          options: q.options.map(({ id, text }) => ({ id, text })),
-        }));
-        setQuestions(qs);
+
         setStatus("active");
 
-        // Resume: use server-computed timeLeft (accounts for elapsed time since first open)
+        // Always re-sync timer — returning from a tab switch must show correct remaining time
         const serverTimeLeft = data.resumeData?.timeLeft ?? data.quiz.duration;
         const nextTimerEndsAt = data.resumeData?.timerEndsAt ?? null;
         setTimerEndsAt(nextTimerEndsAt);
         setTimeLeft(getTimeLeftFromEndsAt(nextTimerEndsAt, serverTimeLeft));
-
-        // Resume: jump back to where the student left off
-        const resumeIndex = data.resumeData?.lastQuestionIndex ?? 0;
-        setCurrentIndex(Math.min(resumeIndex, qs.length - 1));
       } else if (data.status === "ENDED") {
         hasFinishedRef.current = true;
         setStatus("finished");
