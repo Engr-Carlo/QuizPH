@@ -12,7 +12,8 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || "0")));
+  const rawLimit = Number(url.searchParams.get("limit") || "0");
+  const limit = rawLimit > 0 ? Math.min(100, rawLimit) : 0;
   const paginated = limit > 0;
 
   try {
