@@ -114,21 +114,6 @@ export async function verifyEmailCode(email: string, code: string) {
     return { ok: true, alreadyVerified: true };
   }
 
-  // Brute-force guard: block if cumulative failed attempts across active codes >= 10
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-  const recentCodes = await prisma.emailVerificationCode.findMany({
-    where: {
-      userId: user.id,
-      consumedAt: null,
-      createdAt: { gte: fifteenMinutesAgo },
-    },
-    select: { id: true, failedAttempts: true },
-  });
-  const totalFailed = recentCodes.reduce((sum: number, c: { failedAttempts: number }) => sum + c.failedAttempts, 0);
-  if (totalFailed >= 10) {
-    return { ok: false, error: "Too many failed attempts. Please request a new code." };
-  }
-
   const codeHash = hashCode(normalizedEmail, code);
 
   const record = await prisma.emailVerificationCode.findFirst({
@@ -142,11 +127,6 @@ export async function verifyEmailCode(email: string, code: string) {
   });
 
   if (!record) {
-    // Increment failedAttempts on all active codes for this user
-    await prisma.emailVerificationCode.updateMany({
-      where: { userId: user.id, consumedAt: null, createdAt: { gte: fifteenMinutesAgo } },
-      data: { failedAttempts: { increment: 1 } },
-    });
     return { ok: false, error: "Invalid or expired verification code" };
   }
 
