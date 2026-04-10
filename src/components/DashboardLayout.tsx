@@ -78,19 +78,46 @@ function IconBook() {
     </svg>
   );
 }
+function IconClipboard() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+    </svg>
+  );
+}
+function IconPlay() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+function IconShield() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
 
 // ── Nav config ──────────────────────────────────────────────────────────────
-const teacherNav = [
-  { href: "/teacher", label: "My Quizzes", icon: IconGrid },
+type NavItem = { href: string; label: string; icon: () => React.ReactElement; matchPrefix?: boolean };
+
+const teacherNav: NavItem[] = [
+  { href: "/teacher", label: "My Quizzes", icon: IconGrid, matchPrefix: true },
   { href: "/teacher/quiz/create", label: "Create Quiz", icon: IconPlusCircle },
   { href: "/guide", label: "Guide", icon: IconBook },
 ];
-const adminNav = [
+const adminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: IconHome },
-  { href: "/admin", label: "User Management", icon: IconUsers },
+  { href: "/admin/users", label: "Users", icon: IconUsers, matchPrefix: true },
+  { href: "/admin/quizzes", label: "Quizzes", icon: IconClipboard, matchPrefix: true },
+  { href: "/admin/sessions", label: "Sessions", icon: IconPlay, matchPrefix: true },
+  { href: "/admin/violations", label: "Violations", icon: IconShield, matchPrefix: true },
 ];
-const studentNav = [
-  { href: "/student", label: "Dashboard", icon: IconHome },
+const studentNav: NavItem[] = [
+  { href: "/student", label: "Dashboard", icon: IconHome, matchPrefix: true },
   { href: "/student/join", label: "Join a Quiz", icon: IconTarget },
   { href: "/guide", label: "Guide", icon: IconBook },
 ];
@@ -204,11 +231,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }, i) => {
-            const isActive = pathname === href || (i === 0 && pathname.startsWith(href) && href !== "/");
+          {navItems.map(({ href, label, icon: Icon, matchPrefix }) => {
+            const isActive = pathname === href || (!!matchPrefix && pathname.startsWith(href + "/"));
             return (
               <Link
-                key={`${href}-${i}`}
+                key={href}
                 href={href}
                 onClick={() => setMobileNavOpen(false)}
                 className={cn(

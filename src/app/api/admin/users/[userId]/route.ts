@@ -12,14 +12,10 @@ export async function PATCH(
   }
 
   const { userId } = await params;
-  const { isActive } = await req.json();
+  const body = await req.json();
+  const { isActive, name, email, role } = body;
 
-  if (typeof isActive !== "boolean") {
-    return NextResponse.json({ error: "isActive must be a boolean" }, { status: 400 });
-  }
-
-  // Prevent deactivating yourself
-  if (userId === session.user.id) {
+  if (userId === session.user.id && isActive === false) {
     return NextResponse.json({ error: "Cannot deactivate your own account" }, { status: 400 });
   }
 
@@ -28,12 +24,30 @@ export async function PATCH(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: { isActive },
-  });
+  const updateData: Record<string, unknown> = {};
 
-  return NextResponse.json({ message: isActive ? "User activated" : "User deactivated", user: updated });
+  if (typeof isActive === "boolean") updateData.isActive = isActive;
+  if (typeof name === "string" && name.trim()) updateData.name = name.trim();
+  if (typeof email === "string" && email.trim()) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const conflict = await prisma.user.findFirst({ where: { email: normalizedEmail, NOT: { id: userId } } });
+    if (conflict) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+    updateData.email = normalizedEmail;
+  }
+  if (typeof role === "string" && ["TEACHER", "STUDENT", "SUPER_ADMIN"].includes(role)) {
+    if (userId === session.user.id && role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 });
+    }
+    updateData.role = role;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  }
+
+  const updated = await prisma.user.update({ where: { id: userId }, data: updateData });
+
+  return NextResponse.json({ message: "User updated", user: updated });
 }
 
 export async function DELETE(
