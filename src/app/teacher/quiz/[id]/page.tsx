@@ -181,6 +181,7 @@ export default function QuizDetailPage() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<"sessions" | "questions" | "settings">("sessions");
   const [bulkImportLoading, setBulkImportLoading] = useState(false);
+  const [parsedPreview, setParsedPreview] = useState<ReturnType<typeof parseMultipleQuestionBlocks> | null>(null);
   const [topicFilter, setTopicFilter] = useState("ALL_TOPICS");
 
   const [settingsTitle, setSettingsTitle] = useState("");
@@ -386,13 +387,34 @@ export default function QuizDetailPage() {
     setQOptions(parsed.options);
   }
 
-  async function handleImportBulkQuestions() {
+  function handlePreviewBulkQuestions() {
     const parsedBlocks = parseMultipleQuestionBlocks(bulkQuestionInput);
     if (parsedBlocks.length === 0) return;
+    setParsedPreview(parsedBlocks.map((b) => ({
+      type: b.type,
+      text: b.text,
+      options: b.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+    })));
+  }
 
+  function togglePreviewCorrectAnswer(blockIndex: number, optionIndex: number) {
+    setParsedPreview((prev) => {
+      if (!prev) return null;
+      return prev.map((block, bi) => {
+        if (bi !== blockIndex) return block;
+        return {
+          ...block,
+          options: block.options.map((opt, oi) => ({ ...opt, isCorrect: oi === optionIndex })),
+        };
+      });
+    });
+  }
+
+  async function handleImportBulkQuestions() {
+    if (!parsedPreview || parsedPreview.length === 0) return;
     setBulkImportLoading(true);
 
-    for (const parsed of parsedBlocks) {
+    for (const parsed of parsedPreview) {
       await fetch(`/api/quiz/${quizId}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -408,6 +430,7 @@ export default function QuizDetailPage() {
 
     setBulkImportLoading(false);
     setBulkQuestionInput("");
+    setParsedPreview(null);
     fetchQuiz();
   }
 
@@ -970,15 +993,71 @@ export default function QuizDetailPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleImportBulkQuestions}
-                      disabled={!bulkQuestionInput.trim() || bulkImportLoading}
+                      onClick={handlePreviewBulkQuestions}
+                      disabled={!bulkQuestionInput.trim()}
                       className="px-3 py-1.5 rounded-lg border border-primary/25 bg-primary/8 text-xs font-semibold text-primary hover:bg-primary/12 transition disabled:opacity-40"
                     >
-                      {bulkImportLoading ? "Importing..." : "Import Multiple"}
+                      Import Multiple
                     </button>
                   </div>
                 </div>
                 <p className="text-[11px] text-muted mt-2">Use a blank line between questions when importing multiple items. Manual encoding and single-question parsing still work.</p>
+
+                {/* ── Bulk import preview ── */}
+                {parsedPreview !== null && (
+                  <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/4 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-foreground">
+                        Preview — {parsedPreview.length} question{parsedPreview.length !== 1 ? "s" : ""} to import
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setParsedPreview(null)}
+                          className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-danger transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleImportBulkQuestions}
+                          disabled={bulkImportLoading}
+                          className="px-3 py-1.5 rounded-lg bg-primary text-xs font-semibold text-white hover:bg-primary-dark transition disabled:opacity-40"
+                        >
+                          {bulkImportLoading ? "Importing..." : "Confirm Import"}
+                        </button>
+                      </div>
+                    </div>
+                    {parsedPreview.map((block, bi) => (
+                      <div key={bi} className="rounded-xl bg-white border border-border p-4">
+                        <p className="text-[11px] font-semibold text-muted uppercase tracking-[0.16em] mb-1">
+                          {Q_TYPE_LABELS[block.type]} · Q{bi + 1}
+                        </p>
+                        <p className="text-sm font-semibold text-foreground mb-3">{block.text}</p>
+                        <div className="space-y-1.5">
+                          {block.options.map((opt, oi) => (
+                            <button
+                              key={oi}
+                              type="button"
+                              onClick={() => togglePreviewCorrectAnswer(bi, oi)}
+                              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm text-left transition ${
+                                opt.isCorrect
+                                  ? "border-success/40 bg-success/8 text-success font-semibold"
+                                  : "border-border bg-white text-foreground hover:border-primary/35"
+                              }`}
+                            >
+                              <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                                opt.isCorrect ? "border-success bg-success" : "border-muted"
+                              }`} />
+                              <span>{String.fromCharCode(65 + oi)}. {opt.text}</span>
+                              {opt.isCorrect && <span className="ml-auto text-xs font-bold text-success">✓ Correct</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Type selector */}

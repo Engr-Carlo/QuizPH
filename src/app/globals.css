@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode for dark: utility prefix */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* One vibrant color — Blue */
   --primary: #2563EB;
@@ -24,6 +27,41 @@
   --accent: #7C3AED;
   --text-secondary: #6B7280;
 }
+
+/* ── Dark mode ────────────────────────────────────────────────────────── */
+html.dark {
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  --surface: #1E293B;
+  --card: #243049;
+  --border: #334155;
+  --muted: #94A3B8;
+  --primary-light: #1E3A8A;
+  --text-secondary: #94A3B8;
+}
+
+/* Swap hardcoded Tailwind bg-white → card in dark mode */
+html.dark .bg-white { background-color: var(--card) !important; }
+html.dark .bg-white\/90,
+html.dark .bg-white\/92,
+html.dark .bg-white\/95,
+html.dark .bg-white\/88,
+html.dark .bg-white\/85,
+html.dark .bg-white\/82,
+html.dark .bg-white\/80 { background-color: color-mix(in oklab, var(--card) 93%, transparent) !important; }
+html.dark .bg-slate-50 { background-color: #1a2535 !important; }
+html.dark .bg-slate-100 { background-color: #243049 !important; }
+html.dark .text-slate-700 { color: #94A3B8 !important; }
+html.dark .border-white\/80 { border-color: rgba(255,255,255,0.10) !important; }
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: var(--surface) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+html.dark .bg-white\/10 { background-color: rgba(255,255,255,0.06) !important; }
+html.dark .bg-white\/12 { background-color: rgba(255,255,255,0.08) !important; }
 
 @theme inline {
   --color-background: var(--background);

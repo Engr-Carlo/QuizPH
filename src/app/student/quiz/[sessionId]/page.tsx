@@ -68,6 +68,7 @@ function StudentQuizContent() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [perQuestionTimeLeft, setPerQuestionTimeLeft] = useState(0);
   const [timerEndsAt, setTimerEndsAt] = useState<string | null>(null);
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
@@ -180,9 +181,10 @@ function StudentQuizContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  // Timer
+  // Timer (PER_QUIZ only — PER_QUESTION handled separately below)
   useEffect(() => {
     if (status !== "active") return;
+    if (sessionData?.quiz.timerType === "PER_QUESTION") return;
 
     if (!timerEndsAt) {
       if (timeLeft <= 0) return;
@@ -219,6 +221,34 @@ function StudentQuizContent() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, timerEndsAt]);
+
+  // PER_QUESTION timer — resets per question, advances to next question on expiry
+  useEffect(() => {
+    if (status !== "active" || sessionData?.quiz.timerType !== "PER_QUESTION") return;
+    const duration = sessionData.quiz.duration;
+    if (!duration) return;
+
+    let remaining = duration;
+    setPerQuestionTimeLeft(remaining);
+
+    const interval = setInterval(() => {
+      remaining -= 1;
+      setPerQuestionTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        if (currentIndex < questions.length - 1) {
+          const next = currentIndex + 1;
+          setCurrentIndex(next);
+          persistQuestionIndex(next);
+        } else {
+          handleSubmitQuiz();
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, status]);
 
   // 1-minute time warning — fires once when timeLeft first drops to ≤ 60s
   useEffect(() => {
@@ -468,13 +498,12 @@ function StudentQuizContent() {
           {score !== null && (
             <div className="mb-6 mt-6 rounded-[28px] bg-surface border border-border p-8">
               <div className="text-5xl font-black text-primary mb-2">
-                {score}/{questions.length}
+                {score}/{sessionData.quiz.activeQuestionCount}
               </div>
               <div className="text-muted font-medium">
-                {questions.length > 0
-                  ? Math.round((score / questions.length) * 100)
-                  : 0}
-                % Accuracy
+                {sessionData.quiz.activeQuestionCount > 0
+                  ? Math.round((score / sessionData.quiz.activeQuestionCount) * 100)
+                  : 0}% Accuracy
               </div>
             </div>
           )}
@@ -507,10 +536,12 @@ function StudentQuizContent() {
     const value = answers[question.id];
     return typeof value === "string" && value.trim().length > 0;
   }).length;
-  const questionProgress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
-  const answerProgress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+  const questionProgress = sessionData.quiz.activeQuestionCount > 0 ? ((currentIndex + 1) / sessionData.quiz.activeQuestionCount) * 100 : 0;
+  const answerProgress = sessionData.quiz.activeQuestionCount > 0 ? (answeredCount / sessionData.quiz.activeQuestionCount) * 100 : 0;
   const canGoNext = currentIndex < questions.length - 1;
   const questionTypeLabel = QUESTION_TYPE_LABELS[currentQuestion.type] || currentQuestion.type;
+  const displayTimeLeft = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft : timeLeft;
+  const isTimeLow = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft < 10 : timeLeft < 60;
 
   return (
     <div
@@ -555,7 +586,7 @@ function StudentQuizContent() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Live quiz</p>
               <h1 className="mt-1 truncate text-lg font-black text-foreground sm:text-2xl">{sessionData.quiz.title}</h1>
               <p className="mt-2 text-xs text-muted sm:text-sm">
-                Question {currentIndex + 1} of {questions.length} • {answeredCount} answered
+                Question {currentIndex + 1} of {sessionData.quiz.activeQuestionCount} •  {answeredCount} answered
               </p>
             </div>
 
@@ -564,13 +595,13 @@ function StudentQuizContent() {
                 <div className="text-[10px] uppercase tracking-[0.2em] text-muted">Progress</div>
                 <div className="mt-1 text-base font-black text-foreground">{Math.round(questionProgress)}%</div>
               </div>
-              <div className={`rounded-2xl px-4 py-3 ${timeLeft < 60 ? "bg-danger/10 text-danger" : "bg-primary/8 text-primary"}`}>
+              <div className={`rounded-2xl px-4 py-3 ${isTimeLow ? "bg-danger/10 text-danger" : "bg-primary/8 text-primary"}`}>
                 <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Time left</div>
-                <div className={`mt-1 flex items-center gap-2 text-base font-black ${timeLeft < 60 ? "animate-pulse" : ""}`}>
+                <div className={`mt-1 flex items-center gap-2 text-base font-black ${isTimeLow ? "animate-pulse" : ""}`}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
-                  {formatTime(timeLeft)}
+                  {formatTime(displayTimeLeft)}
                 </div>
               </div>
               {sessionData.quiz.antiCheatEnabled && (
@@ -703,7 +734,7 @@ function StudentQuizContent() {
                   <h3 className="mt-1 text-base font-black text-foreground">Jump around</h3>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-muted">
-                  {answeredCount}/{questions.length}
+                  {answeredCount}/{sessionData.quiz.activeQuestionCount}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-4">
