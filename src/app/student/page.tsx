@@ -256,7 +256,7 @@ export default function StudentDashboard() {
                         </span>
                       ) : canRejoin ? (
                         <Link
-                          href={`/student/quiz/${entry.session.id}`}
+                          href={`/student/quiz/${entry.session.id}?participantId=${entry.id}`}
                           className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/10 text-success border border-success/30 hover:bg-success/20 transition"
                         >
                           Rejoin

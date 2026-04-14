@@ -185,10 +185,13 @@ export async function GET(
     score?: number | null;
   } | null = null;
 
-  if (participantId && quizSession.status === "ACTIVE") {
-    const participant = await prisma.participant.findFirst({
-      where: { id: participantId, sessionId },
-    });
+  if (quizSession.status === "ACTIVE") {
+    // Resolve participant: prefer explicit participantId param, fall back to
+    // looking up by authenticated userId — prevents direct-URL bypass where
+    // a finished student navigates without participantId in the query string.
+    const participant = participantId
+      ? await prisma.participant.findFirst({ where: { id: participantId, sessionId } })
+      : await prisma.participant.findFirst({ where: { userId: session.user.id, sessionId } });
 
     if (participant && participant.isFinished) {
       // Student already submitted — send finished signal so the client shows score,
@@ -206,7 +209,7 @@ export async function GET(
       // First time this student opens the quiz while session is ACTIVE — stamp the clock
       if (!startedAt) {
         const updated = await prisma.participant.update({
-          where: { id: participantId },
+          where: { id: participant.id },
           data: { quizStartedAt: new Date() },
         });
         startedAt = updated.quizStartedAt;
