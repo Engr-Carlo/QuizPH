@@ -67,7 +67,9 @@ export default function SettingsPage() {
             />
             <div>
               <p className="text-sm font-semibold text-foreground">{selectedPreset.label}</p>
-              <p className="text-xs text-muted mt-0.5">{selectedPreset.group} preset</p>
+              <p className="text-xs text-muted mt-0.5">
+                {selectedPreset.group} &middot; {(selectedPreset as { style?: string }).style ?? ""}
+              </p>
             </div>
           </div>
 
@@ -82,15 +84,16 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
                   {AVATAR_PRESETS.filter((preset) => preset.group === group).map((preset) => {
                     const isSelected = selectedAvatar === preset.id;
+                    const p = preset as typeof preset & { style?: string };
                     return (
                       <button
                         key={preset.id}
                         type="button"
                         onClick={() => setSelectedAvatar(preset.id)}
-                        className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-3 transition-all ${
+                        className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2.5 transition-all ${
                           isSelected
                             ? "border-primary bg-primary/8 shadow-sm"
                             : "border-border bg-white hover:border-primary/35 hover:bg-surface"
@@ -99,10 +102,13 @@ export default function SettingsPage() {
                         <img
                           src={getAvatarUrl(preset.id)}
                           alt={preset.label}
-                          className="h-16 w-16 rounded-full bg-surface"
+                          className="h-14 w-14 rounded-full bg-surface"
                         />
-                        <span className={`text-[11px] font-semibold ${isSelected ? "text-primary" : "text-muted"}`}>
+                        <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-primary" : "text-foreground"}`}>
                           {preset.label}
+                        </span>
+                        <span className={`text-[10px] leading-tight ${isSelected ? "text-primary/70" : "text-muted"}`}>
+                          {p.style}
                         </span>
                       </button>
                     );
