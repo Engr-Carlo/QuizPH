@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getQuizActiveQuestionCount } from "@/lib/utils";
 
 // GET /api/student/sessions — last 8 sessions the current student participated in
 export async function GET() {
@@ -27,7 +28,11 @@ export async function GET() {
           quiz: {
             select: {
               title: true,
-              _count: { select: { questions: true } },
+              questionSelectionMode: true,
+              questionDrawCount: true,
+              questions: {
+                select: { includedInQuiz: true },
+              },
             },
           },
         },
@@ -36,5 +41,27 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(participants);
+  return NextResponse.json(
+    participants.map((p: (typeof participants)[number]) => ({
+      id: p.id,
+      score: p.score,
+      isFinished: p.isFinished,
+      joinedAt: p.joinedAt,
+      _count: p._count,
+      session: {
+        id: p.session.id,
+        code: p.session.code,
+        status: p.session.status,
+        endedAt: p.session.endedAt,
+        quiz: {
+          title: p.session.quiz.title,
+          activeQuestionCount: getQuizActiveQuestionCount({
+            questions: p.session.quiz.questions,
+            mode: p.session.quiz.questionSelectionMode as "ALL" | "RANDOM" | "MANUAL",
+            drawCount: p.session.quiz.questionDrawCount,
+          }),
+        },
+      },
+    }))
+  );
 }

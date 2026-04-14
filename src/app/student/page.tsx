@@ -16,7 +16,7 @@ interface HistoryEntry {
     code: string;
     status: string;
     endedAt: string | null;
-    quiz: { title: string; _count: { questions: number } };
+    quiz: { title: string; activeQuestionCount: number };
   };
 }
 
@@ -230,9 +230,10 @@ export default function StudentDashboard() {
             </div>
             <div className="space-y-2">
               {history.map((entry) => {
-                const total = entry.session.quiz._count.questions;
+                const total = entry.session.quiz.activeQuestionCount;
                 const pct = total > 0 ? Math.round((entry.score / total) * 100) : 0;
-                const isEnded = entry.session.status === "ENDED";
+                const isActive = entry.session.status === "ACTIVE";
+                const canRejoin = isActive && !entry.isFinished;
                 return (
                   <div
                     key={entry.id}
@@ -249,17 +250,21 @@ export default function StudentDashboard() {
                       </p>
                     </div>
                     <div className="flex-shrink-0 text-right">
-                      {isEnded ? (
+                      {entry.isFinished ? (
                         <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-muted/10 text-muted border border-muted/20">
-                          {entry.isFinished ? "Finished" : "Not completed"}
+                          Finished
                         </span>
-                      ) : (
+                      ) : canRejoin ? (
                         <Link
                           href={`/student/quiz/${entry.session.id}`}
                           className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-success/10 text-success border border-success/30 hover:bg-success/20 transition"
                         >
                           Rejoin
                         </Link>
+                      ) : (
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-muted/10 text-muted border border-muted/20">
+                          {entry.session.status === "ENDED" ? "Not completed" : "Waiting"}
+                        </span>
                       )}
                     </div>
                   </div>
