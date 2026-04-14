@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const VALID_SEEDS = ["Felix", "Lily", "Max", "Jade", "River", "Storm", "Luna", "Sage", "Blaze"];
+import { AVATAR_PRESET_IDS, normalizeAvatarId } from "@/lib/avatar-presets";
 
 export async function PATCH(request: Request) {
   const session = await auth();
@@ -13,14 +12,14 @@ export async function PATCH(request: Request) {
   const body = await request.json();
   const seed = typeof body?.avatar === "string" ? body.avatar : null;
 
-  if (!seed || !VALID_SEEDS.includes(seed)) {
+  if (!seed || !AVATAR_PRESET_IDS.includes(seed as (typeof AVATAR_PRESET_IDS)[number])) {
     return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { avatar: seed } as any,
+    data: { avatar: normalizeAvatarId(seed) } as any,
   });
 
   return NextResponse.json({ ok: true });

@@ -4,26 +4,26 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-
-const VALID_SEEDS = ["Felix", "Lily", "Max", "Jade", "River", "Storm", "Luna", "Sage", "Blaze"] as const;
-type Seed = (typeof VALID_SEEDS)[number];
-
-const DICEBEAR_URL = (seed: string) =>
-  `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+import {
+  AVATAR_PRESETS,
+  DEFAULT_AVATAR_ID,
+  getAvatarPreset,
+  getAvatarUrl,
+  normalizeAvatarId,
+  type AvatarPresetId,
+} from "@/lib/avatar-presets";
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
   const router = useRouter();
-  const [selectedAvatar, setSelectedAvatar] = useState<Seed>(VALID_SEEDS[0]);
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarPresetId>(DEFAULT_AVATAR_ID);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const avatarGroups = ["Men", "Women"] as const;
+  const selectedPreset = getAvatarPreset(selectedAvatar);
 
-  // Seed initial avatar from session once loaded
   useEffect(() => {
-    const current = session?.user?.avatar;
-    if (current && VALID_SEEDS.includes(current as Seed)) {
-      setSelectedAvatar(current as Seed);
-    }
+    setSelectedAvatar(normalizeAvatarId(session?.user?.avatar));
   }, [session?.user?.avatar]);
 
   async function handleSave() {
@@ -45,7 +45,7 @@ export default function SettingsPage() {
     }
   }
 
-  const hasChanges = selectedAvatar !== (session?.user?.avatar ?? VALID_SEEDS[0]);
+  const hasChanges = selectedAvatar !== normalizeAvatarId(session?.user?.avatar);
 
   return (
     <DashboardLayout>
@@ -57,47 +57,59 @@ export default function SettingsPage() {
 
         <div className="rounded-[28px] bg-card border border-border p-6 shadow-sm">
           <h2 className="text-base font-black text-foreground mb-1">Avatar</h2>
-          <p className="text-sm text-muted mb-6">Pick an avatar that will appear across the platform.</p>
+          <p className="text-sm text-muted mb-6">Choose from curated young adult avatars with separate men and women options.</p>
 
-          {/* Current avatar preview */}
           <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl bg-surface border border-border/60">
             <img
-              src={DICEBEAR_URL(selectedAvatar)}
-              alt={selectedAvatar}
+              src={getAvatarUrl(selectedAvatar)}
+              alt={selectedPreset.label}
               className="w-16 h-16 rounded-full border-2 border-primary/30 bg-background"
             />
             <div>
-              <p className="text-sm font-semibold text-foreground">{selectedAvatar}</p>
-              <p className="text-xs text-muted mt-0.5">Currently selected</p>
+              <p className="text-sm font-semibold text-foreground">{selectedPreset.label}</p>
+              <p className="text-xs text-muted mt-0.5">{selectedPreset.group} preset</p>
             </div>
           </div>
 
-          {/* Avatar grid */}
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-            {VALID_SEEDS.map((seed) => {
-              const isSelected = selectedAvatar === seed;
-              return (
-                <button
-                  key={seed}
-                  type="button"
-                  onClick={() => setSelectedAvatar(seed)}
-                  className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-3 transition-all ${
-                    isSelected
-                      ? "border-primary bg-primary/8 shadow-sm"
-                      : "border-border bg-white hover:border-primary/35 hover:bg-surface"
-                  }`}
-                >
-                  <img
-                    src={DICEBEAR_URL(seed)}
-                    alt={seed}
-                    className="w-12 h-12 rounded-full bg-surface"
-                  />
-                  <span className={`text-[11px] font-semibold ${isSelected ? "text-primary" : "text-muted"}`}>
-                    {seed}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="space-y-6">
+            {avatarGroups.map((group) => (
+              <section key={group}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-foreground">{group}</h3>
+                    <p className="text-xs text-muted">
+                      {group === "Men" ? "Handsome, clean-cut young adult looks." : "Pretty, polished young adult looks."}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {AVATAR_PRESETS.filter((preset) => preset.group === group).map((preset) => {
+                    const isSelected = selectedAvatar === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setSelectedAvatar(preset.id)}
+                        className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-3 transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/8 shadow-sm"
+                            : "border-border bg-white hover:border-primary/35 hover:bg-surface"
+                        }`}
+                      >
+                        <img
+                          src={getAvatarUrl(preset.id)}
+                          alt={preset.label}
+                          className="h-16 w-16 rounded-full bg-surface"
+                        />
+                        <span className={`text-[11px] font-semibold ${isSelected ? "text-primary" : "text-muted"}`}>
+                          {preset.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3">

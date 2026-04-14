@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
+import { getAvatarUrl } from "@/lib/avatar-presets";
 
 // ── SVG Icons ──────────────────────────────────────────────────────────────
 function IconGrid() {
@@ -270,7 +271,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3 mb-3 min-w-0">
             {session?.user?.avatar ? (
               <img
-                src={`https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(session.user.avatar)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                src={getAvatarUrl(session.user.avatar)}
                 alt="avatar"
                 className="w-9 h-9 rounded-full flex-shrink-0 bg-surface border border-border/50"
               />
@@ -316,7 +317,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ThemeToggle />
             {session?.user?.avatar ? (
               <img
-                src={`https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(session.user.avatar)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                src={getAvatarUrl(session.user.avatar)}
                 alt="avatar"
                 className="w-8 h-8 rounded-full bg-surface border border-border/50"
               />

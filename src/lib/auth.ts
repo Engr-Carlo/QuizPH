@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_AVATAR_ID, normalizeAvatarId } from "@/lib/avatar-presets";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -43,7 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           email: user.email,
           role: user.role,
-          avatar: user.avatar ?? "Wave",
+          avatar: normalizeAvatarId(user.avatar) ?? DEFAULT_AVATAR_ID,
         };
       },
     }),
@@ -53,15 +54,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.role = (user as { role: string }).role;
         token.id = user.id;
-        token.avatar = (user as { avatar?: string }).avatar ?? "Wave";
+        token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
       }
       if (trigger === "update") {
         const nextAvatar = session?.avatar;
         if (typeof nextAvatar === "string" && nextAvatar.length > 0) {
-          token.avatar = nextAvatar;
+          token.avatar = normalizeAvatarId(nextAvatar);
         } else {
           const fresh = await prisma.user.findUnique({ where: { id: token.id as string }, select: { avatar: true } });
-          if (fresh) token.avatar = fresh.avatar ?? "Wave";
+          if (fresh) token.avatar = normalizeAvatarId(fresh.avatar);
         }
       }
       return token;

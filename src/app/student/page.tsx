@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
+import { getAvatarUrl, normalizeAvatarId } from "@/lib/avatar-presets";
 
 interface HistoryEntry {
   id: string;
@@ -19,9 +20,6 @@ interface HistoryEntry {
     quiz: { title: string; activeQuestionCount: number };
   };
 }
-
-const DICEBEAR_URL = (seed: string) =>
-  `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 
 const RULES = [
   {
@@ -56,7 +54,7 @@ const RULES = [
 export default function StudentDashboard() {
   const { data: session } = useSession();
   const firstName = session?.user?.name?.split(" ")[0] || "Student";
-  const currentAvatar = session?.user?.avatar ?? "Wave";
+  const currentAvatar = normalizeAvatarId(session?.user?.avatar);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
@@ -74,7 +72,7 @@ export default function StudentDashboard() {
         <section className="rounded-[28px] border border-border/70 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center gap-4">
             <img
-              src={DICEBEAR_URL(currentAvatar)}
+              src={getAvatarUrl(currentAvatar)}
               alt="Your avatar"
               className="h-14 w-14 rounded-full border border-border/60 bg-surface flex-shrink-0"
             />
