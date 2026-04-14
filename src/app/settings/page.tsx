@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const VALID_SEEDS = ["Felix", "Lily", "Max", "Jade", "River", "Storm", "Luna", "Sage", "Blaze"] as const;
@@ -12,6 +13,7 @@ const DICEBEAR_URL = (seed: string) =>
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
+  const router = useRouter();
   const [selectedAvatar, setSelectedAvatar] = useState<Seed>(VALID_SEEDS[0]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -34,6 +36,7 @@ export default function SettingsPage() {
     setSaving(false);
     if (res.ok) {
       await update();
+      router.refresh();
       setToast({ msg: "Avatar updated!", ok: true });
       setTimeout(() => setToast(null), 3000);
     } else {
