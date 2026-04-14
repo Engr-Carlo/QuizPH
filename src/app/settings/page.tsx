@@ -35,7 +35,7 @@ export default function SettingsPage() {
     });
     setSaving(false);
     if (res.ok) {
-      await update();
+      await update({ avatar: selectedAvatar });
       router.refresh();
       setToast({ msg: "Avatar updated!", ok: true });
       setTimeout(() => setToast(null), 3000);
