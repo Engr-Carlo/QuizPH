@@ -31,7 +31,7 @@ export async function GET() {
               questionSelectionMode: true,
               questionDrawCount: true,
               questions: {
-                select: { includedInQuiz: true },
+                select: { id: true, order: true, includedInQuiz: true },
               },
             },
           },
