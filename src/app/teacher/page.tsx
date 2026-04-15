@@ -70,27 +70,29 @@ export default function TeacherDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-6xl space-y-5">
 
         {/* ── Hero banner ── */}
-        <div className="relative overflow-hidden rounded-3xl min-h-[220px] flex items-end shadow-xl">
+        <div className="relative overflow-hidden rounded-2xl min-h-[240px] sm:min-h-[268px] flex items-end shadow-2xl">
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-[1.02]"
             style={{ backgroundImage: "url('https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=1600&q=80')" }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-900/78 to-slate-800/40" />
-          <div className="relative w-full px-6 py-7 sm:px-8 sm:py-9">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55 mb-1.5">{greeting}</p>
-                <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight">{firstName}</h1>
-                {!loading && quizzes.length > 0 && (
-                  <p className="mt-2 text-sm text-white/60">
-                    {quizzes.length} quiz{quizzes.length !== 1 ? "zes" : ""} &middot; {totalQuestions} questions &middot; {totalSessions} sessions
-                  </p>
-                )}
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-slate-800/30" />
+          {/* Subtle grain texture overlay */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+          <div className="relative w-full px-6 pb-7 pt-10 sm:px-8 sm:pb-9">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+              <div className="max-w-md">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">{greeting}</p>
+                <h1 className="text-4xl sm:text-5xl font-black text-white leading-[1.05] tracking-tight">
+                  Hi, {firstName}.
+                </h1>
+                <p className="mt-3 text-sm text-white/50 font-medium">
+                  {loading ? "Loading your workspace\u2026" : quizzes.length === 0 ? "Create your first quiz to get started." : `${quizzes.length} quiz${quizzes.length !== 1 ? "zes" : ""} \u00b7 ${totalQuestions} questions \u00b7 ${totalSessions} sessions run`}
+                </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
                 {!loading && quizzes.length > 0 && (
                   <div className="flex gap-2">
                     {[
@@ -98,18 +100,18 @@ export default function TeacherDashboard() {
                       { label: "Questions", value: totalQuestions },
                       { label: "Sessions", value: totalSessions },
                     ].map(({ label, value }) => (
-                      <div key={label} className="rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm px-3.5 py-2.5 text-center min-w-[64px]">
-                        <div className="text-2xl font-black text-white tabular-nums leading-none">{value}</div>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/55 mt-1">{label}</div>
+                      <div key={label} className="rounded-xl bg-white/8 border border-white/12 backdrop-blur-md px-3 py-2.5 text-center min-w-[58px]">
+                        <div className="text-xl font-black text-white tabular-nums leading-none">{value}</div>
+                        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 mt-1">{label}</div>
                       </div>
                     ))}
                   </div>
                 )}
                 <Link
                   href="/teacher/quiz/create"
-                  className="inline-flex items-center gap-2 px-5 py-3 bg-white text-slate-900 text-sm font-bold rounded-2xl transition hover:-translate-y-0.5 hover:shadow-xl shadow-md flex-shrink-0"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-900 text-sm font-bold rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.25)] shadow-lg flex-shrink-0"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   New Quiz
@@ -146,44 +148,53 @@ export default function TeacherDashboard() {
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted">Your Quizzes</h2>
-            </div>
-            <div className="mb-3">
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search quizzes…"
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
-                />
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Your Quizzes</h2>
+                <p className="text-xs text-muted mt-0.5">{filteredQuizzes.length} of {quizzes.length}</p>
+              </div>
+              <div className="w-56">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/70" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search&hellip;"
+                    className="w-full pl-8 pr-4 py-2 text-xs border border-border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60 transition placeholder:text-muted/60"
+                  />
+                </div>
               </div>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredQuizzes.map((quiz) => (
                 <Link
                   key={quiz.id}
                   href={`/teacher/quiz/${quiz.id}`}
-                  className="group rounded-2xl border border-border bg-white hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden block"
+                  className="group rounded-2xl border border-border/70 bg-white hover:border-primary/25 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-200 overflow-hidden block"
                 >
-                  <div className="h-1.5 w-full" style={cardAccentStyle(quiz.id)} />
+                  <div className="h-[3px] w-full" style={cardAccentStyle(quiz.id)} />
                   <div className="p-5">
-                    <h3 className="font-bold text-sm text-foreground mb-1.5 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+                    <h3 className="font-bold text-[14px] text-foreground mb-1.5 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                       {quiz.title}
                     </h3>
                     {quiz.description ? (
                       <p className="text-muted text-xs leading-5 mb-4 line-clamp-2">{quiz.description}</p>
                     ) : (
-                      <p className="text-muted/40 text-xs italic mb-4">No description</p>
+                      <p className="text-muted/35 text-xs italic mb-4">No description</p>
                     )}
-                    <div className="flex items-center gap-3 pt-3 border-t border-border/60">
-                      <span className="text-xs text-muted font-medium">{quiz._count.questions} questions</span>
-                      <span className="text-xs text-muted font-medium">{quiz._count.sessions} sessions</span>
-                      <span className="ml-auto text-xs text-muted bg-surface px-2 py-0.5 rounded-md">{formatDuration(quiz.duration)}</span>
+                    <div className="flex items-center gap-2 pt-3 border-t border-border/50">
+                      <span className="text-[11px] text-muted font-medium">{quiz._count.questions}q</span>
+                      <span className="text-border/80">&middot;</span>
+                      <span className="text-[11px] text-muted font-medium">{quiz._count.sessions} runs</span>
+                      <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted bg-surface px-2 py-0.5 rounded-md font-medium">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        {formatDuration(quiz.duration)}
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -198,14 +209,14 @@ export default function TeacherDashboard() {
               {/* Add new quiz slot */}
               <Link
                 href="/teacher/quiz/create"
-                className="group rounded-2xl border-2 border-dashed border-border hover:border-primary/50 bg-transparent hover:bg-primary/4 transition-all flex flex-col items-center justify-center py-10 gap-2.5 min-h-[140px]"
+                className="group rounded-2xl border-2 border-dashed border-border/60 hover:border-primary/40 bg-transparent hover:bg-primary/[0.03] transition-all flex flex-col items-center justify-center py-10 gap-2 min-h-[148px]"
               >
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <div className="w-9 h-9 rounded-full bg-border/40 text-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-200">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                 </div>
-                <span className="text-xs font-semibold text-muted group-hover:text-primary transition-colors">New Quiz</span>
+                <span className="text-xs font-semibold text-muted/60 group-hover:text-primary transition-colors">New Quiz</span>
               </Link>
             </div>
           </div>

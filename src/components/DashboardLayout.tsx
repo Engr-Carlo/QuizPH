@@ -164,29 +164,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     role === "SUPER_ADMIN" ? adminNav : role === "TEACHER" ? teacherNav : studentNav;
   const roleMeta = role ? ROLE_META[role] : null;
   const homeHref = role === "SUPER_ADMIN" ? "/admin" : role === "TEACHER" ? "/teacher" : "/student";
+  const pageTitle = navItems.find(({ href, matchPrefix }) =>
+    pathname === href || (!!matchPrefix && pathname.startsWith(href + "/"))
+  )?.label;
 
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:flex">
+    <div className="min-h-screen bg-[#F8FAFC] lg:flex">
 
       {/* ── Mobile top bar ── */}
-      <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950 lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950 lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href={homeHref} className="flex items-center gap-2.5">
             <div
-              className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md"
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
               style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
             >
               <span className="text-white font-black text-sm">Q</span>
             </div>
             <div>
               <span className="block text-sm font-extrabold text-white tracking-tight">QuizPH</span>
-              {roleMeta && (
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  {roleMeta.label}
+              {pageTitle && (
+                <span className="block text-[10px] font-medium text-slate-400">
+                  {pageTitle}
                 </span>
               )}
             </div>
@@ -194,7 +197,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button
             type="button"
             onClick={() => setMobileNavOpen((open) => !open)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-slate-300 shadow-sm transition hover:border-slate-600 hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-800/80 text-slate-300 transition hover:border-slate-600 hover:text-white"
             aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
           >
             {mobileNavOpen ? <IconClose /> : <IconMenu />}
@@ -221,32 +224,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       >
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-slate-800/80">
+        <div className="px-5 pt-6 pb-5">
           <Link href={homeHref} className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
               style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
             >
               <span className="text-white font-black text-sm">Q</span>
             </div>
             <div>
-              <span className="block text-lg font-extrabold text-white tracking-tight">QuizPH</span>
-              <span className="block text-[11px] font-medium text-slate-500">Quiz sessions built for focus</span>
+              <span className="block text-base font-extrabold text-white tracking-tight">QuizPH</span>
+              <span className="block text-[10px] font-medium text-slate-500 leading-tight">Quiz sessions for focus</span>
             </div>
           </Link>
         </div>
 
-        {/* Role badge */}
-        {roleMeta && (
-          <div className="px-5 py-3 border-b border-slate-800/60">
-            <span className={cn("inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide uppercase", roleMeta.darkColor)}>
-              {roleMeta.label}
-            </span>
-          </div>
-        )}
+        {/* Divider */}
+        <div className="mx-4 mb-2 h-px bg-slate-800/60" />
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon, matchPrefix }) => {
             const isActive = pathname === href || (!!matchPrefix && pathname.startsWith(href + "/"));
             return (
@@ -255,90 +252,102 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={href}
                 onClick={() => setMobileNavOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-slate-400 hover:bg-slate-800/70 hover:text-white"
+                    ? "bg-primary text-white shadow-[0_2px_10px_rgba(37,99,235,0.45)] ring-1 ring-blue-400/20"
+                    : "text-slate-400 hover:bg-white/6 hover:text-slate-100"
                 )}
               >
-                <span className="flex-shrink-0">
+                <span className={cn("flex-shrink-0 transition-transform duration-150", !isActive && "group-hover:scale-105")}>
                   <Icon />
                 </span>
                 <span>{label}</span>
+                {isActive && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60 flex-shrink-0" />
+                )}
               </Link>
             );
           })}
         </nav>
 
         {/* User section */}
-        <div className="px-4 py-4 border-t border-slate-800/80">
-          <div className="flex items-center gap-3 mb-3 min-w-0">
-            {session?.user?.avatar ? (
-              <img
-                src={getAvatarUrl(session.user.avatar)}
-                alt="avatar"
-                className="w-9 h-9 rounded-full flex-shrink-0 bg-slate-800 border-2 border-slate-700"
-              />
-            ) : (
-              <div
-                className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0",
-                  getAvatarColor(session?.user?.name)
+        <div className="mx-4 mb-4 mt-2">
+          <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-3">
+            <div className="flex items-center gap-2.5 min-w-0 mb-2.5">
+              {session?.user?.avatar ? (
+                <img
+                  src={getAvatarUrl(session.user.avatar)}
+                  alt="avatar"
+                  className="w-8 h-8 rounded-full flex-shrink-0 bg-slate-800 ring-2 ring-slate-700/80"
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0",
+                    getAvatarColor(session?.user?.name)
+                  )}
+                >
+                  {getInitials(session?.user?.name)}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate leading-tight">
+                  {session?.user?.name}
+                </p>
+                {roleMeta && (
+                  <p className={cn("text-[10px] font-semibold truncate", roleMeta.darkColor.replace("bg-", "text-").split(" ")[1] || "text-slate-400")}>
+                    {roleMeta.label}
+                  </p>
                 )}
-              >
-                {getInitials(session?.user?.name)}
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate leading-tight">
-                {session?.user?.name}
-              </p>
-              <p className="text-xs text-slate-400 truncate">{session?.user?.email}</p>
             </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/8 py-1.5 rounded-lg transition-all"
+            >
+              <IconLogOut />
+              Sign out
+            </button>
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center justify-center gap-2 text-xs font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/10 py-2 rounded-lg transition-all"
-          >
-            <IconLogOut />
-            Sign Out
-          </button>
         </div>
       </aside>
 
       {/* ── Main content ── */}
       <main className="min-h-screen flex-1 overflow-auto lg:ml-64">
         {/* Desktop top bar */}
-        <div className="sticky top-0 z-20 hidden lg:flex items-center justify-between bg-white border-b border-border shadow-sm px-8 h-14">
-          <div className="flex items-center gap-2">
-            {roleMeta && (
-              <span className={cn("inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide uppercase", roleMeta.color)}>
-                {roleMeta.label}
-              </span>
+        <div className="sticky top-0 z-20 hidden lg:flex items-center justify-between bg-white/90 backdrop-blur-md border-b border-border/60 px-8 h-[54px]">
+          <div className="flex items-center gap-3">
+            {pageTitle ? (
+              <h2 className="text-sm font-semibold text-foreground">{pageTitle}</h2>
+            ) : (
+              <span className="text-sm font-semibold text-muted">Dashboard</span>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
+            <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2.5">
               {session?.user?.avatar ? (
                 <img
                   src={getAvatarUrl(session.user.avatar)}
                   alt="avatar"
-                  className="w-8 h-8 rounded-full bg-surface border-2 border-border"
+                  className="w-7 h-7 rounded-full bg-surface ring-2 ring-border/60"
                 />
               ) : (
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0", getAvatarColor(session?.user?.name))}>
+                <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0", getAvatarColor(session?.user?.name))}>
                   {getInitials(session?.user?.name)}
                 </div>
               )}
               <div>
-                <p className="text-sm font-semibold text-foreground leading-tight">{session?.user?.name}</p>
-                <p className="text-[11px] text-muted">{session?.user?.email}</p>
+                <p className="text-xs font-semibold text-foreground leading-tight">{session?.user?.name}</p>
+                {roleMeta && (
+                  <p className={cn("text-[10px] font-semibold", roleMeta.color.split(" ").find(c => c.startsWith("text-")) || "text-muted")}>{roleMeta.label}</p>
+                )}
               </div>
             </div>
           </div>
         </div>
-        <div className="px-4 pb-6 pt-5 sm:px-6 lg:px-8 lg:pt-7 lg:pb-10">{children}</div>
+        <div className="px-4 pb-6 pt-5 sm:px-6 lg:px-8 lg:pt-8 lg:pb-12">{children}</div>
       </main>
     </div>
   );
