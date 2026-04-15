@@ -69,23 +69,26 @@ export default function StudentDashboard() {
       <div className="mx-auto max-w-5xl space-y-5">
 
         {/* Profile card */}
-        <section className="rounded-[28px] border border-border/70 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex items-center gap-4">
-            <img
-              src={getAvatarUrl(currentAvatar)}
-              alt="Your avatar"
-              className="h-14 w-14 rounded-full border border-border/60 bg-surface flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-foreground truncate">{session?.user?.name}</p>
-              <p className="text-xs text-muted truncate">{session?.user?.email}</p>
+        <section className="rounded-[28px] border border-border/70 bg-white shadow-sm overflow-hidden">
+          <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2563EB, #0891B2)" }} />
+          <div className="p-5 sm:p-6">
+            <div className="flex items-center gap-4">
+              <img
+                src={getAvatarUrl(currentAvatar)}
+                alt="Your avatar"
+                className="h-14 w-14 rounded-full border-2 border-border bg-surface flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground truncate">{session?.user?.name}</p>
+                <p className="text-xs text-muted truncate">{session?.user?.email}</p>
+              </div>
+              <Link
+                href="/settings"
+                className="flex-shrink-0 rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary transition"
+              >
+                Settings
+              </Link>
             </div>
-            <Link
-              href="/settings"
-              className="flex-shrink-0 rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary transition"
-            >
-              Settings
-            </Link>
           </div>
         </section>
 
