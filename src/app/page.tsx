@@ -140,36 +140,32 @@ const FEATURES = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-black">
 
       {/* Navigation */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-sm border-b border-white/8">
         <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "var(--primary)" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
                 <polyline points="9 13 11 15 15 11" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-foreground tracking-tight">QuizPH</span>
+            <span className="text-lg font-bold text-white tracking-tight">QuizPH</span>
           </Link>
 
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="px-4 py-2 text-sm font-medium text-muted hover:text-foreground rounded-lg transition"
+              className="px-4 py-2 text-sm font-medium text-white/60 hover:text-white rounded-lg transition"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="px-4 py-2 text-sm font-semibold text-white rounded-lg transition hover:opacity-90"
-              style={{ background: "var(--primary)" }}
+              className="px-4 py-2 text-sm font-semibold bg-white text-black rounded-lg transition hover:bg-white/90"
             >
               Get Started
             </Link>
@@ -178,39 +174,36 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="py-16 px-6 bg-white lg:py-24">
+      <section className="py-16 px-6 lg:py-28">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left */}
           <div>
-            <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3.5 py-1.5 rounded-full mb-7 border border-primary/15 uppercase tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+            <div className="inline-flex items-center gap-2 bg-white/8 text-white/70 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-7 border border-white/12 uppercase tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
               Built for Philippine Educators
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-tight mb-5 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-5 tracking-tight">
               Online Quizzes with<br />
-              <span className="gradient-text">Real-Time Anti-Cheat</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">Real-Time Anti-Cheat</span>
             </h1>
-            <p className="text-base text-muted max-w-lg mb-8 leading-relaxed">
+            <p className="text-base text-white/55 max-w-lg mb-8 leading-relaxed">
               Create assessments, detect cheating in real time, and watch a live leaderboard — all in one platform designed for modern classrooms.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href="/register"
-                className="px-7 py-3 text-white font-semibold rounded-lg transition hover:opacity-90 shadow-sm text-sm text-center"
-                style={{ background: "var(--primary)" }}
+                className="px-7 py-3 text-black font-semibold rounded-lg transition hover:bg-white/90 shadow-sm text-sm text-center bg-white"
               >
                 Create Free Account
               </Link>
               <Link
                 href="/login"
-                className="px-7 py-3 border border-border text-foreground font-semibold rounded-lg hover:border-primary/40 hover:text-primary transition bg-white text-sm text-center"
+                className="px-7 py-3 border border-white/15 text-white/70 font-semibold rounded-lg hover:border-white/30 hover:text-white transition text-sm text-center"
               >
                 Sign In
               </Link>
             </div>
           </div>
 
-          {/* Right — product mockup */}
           <div className="hidden lg:block">
             <ProductMockup />
           </div>
@@ -218,13 +211,13 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-20 px-6 border-t border-white/6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-2xl font-bold text-foreground mb-3">
+            <h2 className="text-2xl font-bold text-white mb-3">
               Everything you need to run fair assessments
             </h2>
-            <p className="text-muted max-w-xl mx-auto text-sm">
+            <p className="text-white/45 max-w-xl mx-auto text-sm">
               From building quizzes to monitoring live sessions, QuizPH gives educators complete control.
             </p>
           </div>
@@ -233,13 +226,13 @@ export default function Home() {
             {FEATURES.map(({ title, desc, Icon }) => (
               <div
                 key={title}
-                className="rounded-xl p-6 border border-border hover:border-primary/30 hover:shadow-sm transition-all duration-200 bg-white"
+                className="rounded-xl p-6 border border-white/8 hover:border-white/18 transition-all duration-200 bg-white/4"
               >
-                <div className="w-9 h-9 rounded-lg bg-primary/8 text-primary flex items-center justify-center mb-4">
+                <div className="w-9 h-9 rounded-lg bg-white/8 text-white flex items-center justify-center mb-4">
                   <Icon />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-2">{title}</h3>
-                <p className="text-muted text-sm leading-relaxed">{desc}</p>
+                <h3 className="text-sm font-semibold text-white mb-2">{title}</h3>
+                <p className="text-white/45 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -247,11 +240,11 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 px-6 bg-surface border-y border-border">
+      <section className="py-20 px-6 border-t border-white/6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl font-bold text-foreground mb-3">How it works</h2>
-            <p className="text-muted text-sm">Get your first quiz running in minutes.</p>
+            <h2 className="text-2xl font-bold text-white mb-3">How it works</h2>
+            <p className="text-white/45 text-sm">Get your first quiz running in minutes.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-10">
@@ -261,15 +254,12 @@ export default function Home() {
               { step: "3", title: "Monitor Live", desc: "Watch real-time results, violation alerts, and a live leaderboard as students answer." },
             ].map(({ step, title, desc }) => (
               <div key={step} className="flex gap-4">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5"
-                  style={{ background: "var(--primary)" }}
-                >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-black text-sm font-bold flex-shrink-0 mt-0.5 bg-white">
                   {step}
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-1.5">{title}</h3>
-                  <p className="text-muted text-sm leading-relaxed">{desc}</p>
+                  <h3 className="text-sm font-semibold text-white mb-1.5">{title}</h3>
+                  <p className="text-white/45 text-sm leading-relaxed">{desc}</p>
                 </div>
               </div>
             ))}
@@ -284,26 +274,25 @@ export default function Home() {
           alt="Students collaborating on laptops in class"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-slate-900/70" />
+        <div className="absolute inset-0 bg-black/78" />
         <div className="relative max-w-3xl mx-auto text-center text-white">
           <p className="text-2xl font-bold leading-snug mb-6">
             &ldquo;Finally a quiz platform that actually catches cheating — not just blocks one trick.&rdquo;
           </p>
-          <p className="text-white/65 text-sm">— Filipino educator, Grades 7 &amp; 8 Science</p>
+          <p className="text-white/50 text-sm">— Filipino educator, Grades 7 &amp; 8 Science</p>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-6 text-center" style={{ background: "var(--primary)" }}>
+      <section className="py-20 px-6 text-center border-t border-white/6">
         <div className="max-w-xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-3">Ready to get started?</h2>
-          <p className="text-white/75 text-sm mb-8">
+          <p className="text-white/50 text-sm mb-8">
             Sign up and run your first quiz today. It is completely free.
           </p>
           <Link
             href="/register"
-            className="inline-block px-7 py-3 bg-white font-semibold rounded-lg hover:bg-gray-50 transition text-sm"
-            style={{ color: "var(--primary)" }}
+            className="inline-block px-7 py-3 bg-white text-black font-semibold rounded-lg hover:bg-white/90 transition text-sm"
           >
             Create Free Account
           </Link>
@@ -311,10 +300,10 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-6 px-6 border-t border-border bg-white">
+      <footer className="py-6 px-6 border-t border-white/8">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <span className="font-semibold text-sm text-foreground">QuizPH</span>
-          <p className="text-xs text-muted">
+          <span className="font-semibold text-sm text-white/60">QuizPH</span>
+          <p className="text-xs text-white/30">
             &copy; {new Date().getFullYear()} QuizPH. Built for Philippine educators.
           </p>
         </div>

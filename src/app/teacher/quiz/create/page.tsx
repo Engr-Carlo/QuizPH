@@ -21,6 +21,7 @@ export default function CreateQuizPage() {
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(false);
+  const [allowSkip, setAllowSkip] = useState(true);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +44,7 @@ export default function CreateQuizPage() {
         randomizeQuestions,
         randomizeAnswers,
         antiCheatEnabled,
+        allowSkip,
       }),
     });
 
@@ -287,6 +289,16 @@ export default function CreateQuizPage() {
                     </div>
                   </label>
                 ))}
+              </div>
+
+              <div className="space-y-3 rounded-2xl border border-border p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={!allowSkip} onChange={(e) => setAllowSkip(!e.target.checked)} className="mt-1" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Disable question skipping</p>
+                    <p className="text-xs text-muted">Students must answer in order and cannot jump ahead or go back.</p>
+                  </div>
+                </label>
               </div>
             </div>
           </div>

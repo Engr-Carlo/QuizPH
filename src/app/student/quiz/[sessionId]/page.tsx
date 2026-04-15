@@ -37,6 +37,7 @@ interface SessionData {
     randomizeQuestions: boolean;
     randomizeAnswers: boolean;
     antiCheatEnabled: boolean;
+    allowSkip: boolean;
     questions: Question[];
   };
 }
@@ -77,6 +78,7 @@ function StudentQuizContent() {
   const hasFinishedRef = useRef(false);
   const timeWarningShownRef = useRef(false);
   const questionsInitializedRef = useRef(false);
+  const questionTimerEndRef = useRef<Record<string, number>>({});
   const [showTimeWarning, setShowTimeWarning] = useState(false);
 
   // Fetch session data
@@ -222,20 +224,25 @@ function StudentQuizContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, timerEndsAt]);
 
-  // PER_QUESTION timer — resets per question, advances to next question on expiry
+  // PER_QUESTION timer — tracks per-question end timestamp so navigating back resumes from where the timer left off
   useEffect(() => {
     if (status !== "active" || sessionData?.quiz.timerType !== "PER_QUESTION") return;
     const duration = sessionData.quiz.duration;
     if (!duration) return;
 
-    let remaining = duration;
-    setPerQuestionTimeLeft(remaining);
+    const question = questions[currentIndex];
+    if (!question) return;
 
-    const interval = setInterval(() => {
-      remaining -= 1;
+    const qid = question.id;
+    if (!questionTimerEndRef.current[qid]) {
+      questionTimerEndRef.current[qid] = Date.now() + duration * 1000;
+    }
+    const endAt = questionTimerEndRef.current[qid];
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
       setPerQuestionTimeLeft(remaining);
       if (remaining <= 0) {
-        clearInterval(interval);
         if (currentIndex < questions.length - 1) {
           const next = currentIndex + 1;
           setCurrentIndex(next);
@@ -244,8 +251,10 @@ function StudentQuizContent() {
           handleSubmitQuiz();
         }
       }
-    }, 1000);
+    };
 
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, status]);
@@ -531,6 +540,7 @@ function StudentQuizContent() {
   const currentQuestion = questions[currentIndex];
   if (!currentQuestion) return null;
 
+  const allowSkip = sessionData.quiz.allowSkip !== false;
   const currentAnswer = answers[currentQuestion.id] || "";
   const answeredCount = questions.filter((question) => {
     const value = answers[question.id];
@@ -644,7 +654,7 @@ function StudentQuizContent() {
           </div>
         )}
 
-        <main className="mt-4 grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+        <main className={`mt-4 grid flex-1 gap-4 ${allowSkip ? "lg:grid-cols-[minmax(0,1fr)_280px]" : ""} lg:items-start`}>
           <section className="rounded-[30px] border border-white/80 bg-white/90 p-4 shadow-[0_22px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
@@ -726,7 +736,7 @@ function StudentQuizContent() {
             )}
           </section>
 
-          <aside className="space-y-4 lg:sticky lg:top-32">
+          {allowSkip && <aside className="space-y-4 lg:sticky lg:top-32">
             <div className="rounded-[28px] border border-white/80 bg-white/90 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
               <div className="flex items-center justify-between">
                 <div>
@@ -783,7 +793,7 @@ function StudentQuizContent() {
                 )}
               </div>
             </div>
-          </aside>
+          </aside>}
         </main>
 
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-white/92 px-3 py-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:static sm:mt-4 sm:rounded-[28px] sm:border sm:p-4 sm:shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -795,7 +805,7 @@ function StudentQuizContent() {
                 setCurrentIndex(newIdx);
                 persistQuestionIndex(newIdx);
               }}
-              disabled={currentIndex === 0}
+              disabled={currentIndex === 0 || !allowSkip}
               className="inline-flex min-w-[92px] items-center justify-center gap-1.5 rounded-2xl border border-border bg-white px-4 py-3 text-sm font-bold text-foreground transition disabled:opacity-35"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -816,7 +826,8 @@ function StudentQuizContent() {
                   setCurrentIndex(newIdx);
                   persistQuestionIndex(newIdx);
                 }}
-                className="inline-flex min-w-[110px] items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-black text-white bg-primary shadow-sm transition hover:-translate-y-0.5"
+                disabled={!allowSkip && !currentAnswer.trim()}
+                className="inline-flex min-w-[110px] items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-black text-white bg-primary shadow-sm transition hover:-translate-y-0.5 disabled:opacity-35"
               >
                 Next
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

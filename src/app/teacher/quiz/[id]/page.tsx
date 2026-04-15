@@ -43,6 +43,7 @@ interface Quiz {
   randomizeQuestions: boolean;
   randomizeAnswers: boolean;
   antiCheatEnabled: boolean;
+  allowSkip: boolean;
   questions: Question[];
   sessions: Session[];
 }
@@ -195,6 +196,7 @@ export default function QuizDetailPage() {
   const [settingsRandomizeQuestions, setSettingsRandomizeQuestions] = useState(false);
   const [settingsRandomizeAnswers, setSettingsRandomizeAnswers] = useState(false);
   const [settingsAntiCheatEnabled, setSettingsAntiCheatEnabled] = useState(false);
+  const [settingsAllowSkip, setSettingsAllowSkip] = useState(true);
 
   const [qType, setQType] = useState<"MCQ" | "TRUE_FALSE" | "SHORT_ANSWER">("MCQ");
   const [qTopic, setQTopic] = useState("General");
@@ -233,6 +235,7 @@ export default function QuizDetailPage() {
       setSettingsRandomizeQuestions(data.randomizeQuestions);
       setSettingsRandomizeAnswers(data.randomizeAnswers);
       setSettingsAntiCheatEnabled(data.antiCheatEnabled);
+      setSettingsAllowSkip(data.allowSkip ?? true);
     } catch {
       setError("Failed to load quiz");
       setQuiz(null);
@@ -264,7 +267,8 @@ export default function QuizDetailPage() {
     settingsDrawCount !== (quiz.questionDrawCount ?? 10) ||
     settingsRandomizeQuestions !== quiz.randomizeQuestions ||
     settingsRandomizeAnswers !== quiz.randomizeAnswers ||
-    settingsAntiCheatEnabled !== quiz.antiCheatEnabled
+    settingsAntiCheatEnabled !== quiz.antiCheatEnabled ||
+    settingsAllowSkip !== (quiz.allowSkip ?? true)
   );
 
   const groupedQuestions = filteredQuestions.reduce<Record<string, Question[]>>((acc, question) => {
@@ -341,6 +345,7 @@ export default function QuizDetailPage() {
         randomizeQuestions: settingsRandomizeQuestions,
         randomizeAnswers: settingsRandomizeAnswers,
         antiCheatEnabled: settingsAntiCheatEnabled,
+        allowSkip: settingsAllowSkip,
       }),
     });
     setSettingsLoading(false);
@@ -744,6 +749,16 @@ export default function QuizDetailPage() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">Randomize answer choices</p>
                     <p className="text-xs text-muted">Shuffle MCQ and true/false option order.</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="space-y-3 rounded-2xl border border-border p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={!settingsAllowSkip} onChange={(e) => setSettingsAllowSkip(!e.target.checked)} className="mt-1" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Disable question skipping</p>
+                    <p className="text-xs text-muted">Students must answer in order and cannot jump ahead or go back.</p>
                   </div>
                 </label>
               </div>

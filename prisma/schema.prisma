@@ -110,6 +110,7 @@ model Quiz {
   randomizeQuestions Boolean   @default(false)
   randomizeAnswers   Boolean   @default(false)
   antiCheatEnabled   Boolean   @default(false)
+  allowSkip          Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

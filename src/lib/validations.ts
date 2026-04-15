@@ -23,6 +23,7 @@ export const quizSchema = z.object({
   randomizeQuestions: z.boolean(),
   randomizeAnswers: z.boolean(),
   antiCheatEnabled: z.boolean(),
+  allowSkip: z.boolean(),
 });
 
 export const questionSchema = z.object({
