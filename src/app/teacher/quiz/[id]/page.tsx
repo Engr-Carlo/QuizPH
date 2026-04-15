@@ -18,6 +18,7 @@ interface Question {
   text: string;
   order: number;
   includedInQuiz: boolean;
+  mathTolerance: number;
   options: Option[];
 }
 
@@ -204,6 +205,7 @@ export default function QuizDetailPage() {
   const [qTopic, setQTopic] = useState("General");
   const [qText, setQText] = useState("");
   const [qIncludedInQuiz, setQIncludedInQuiz] = useState(true);
+  const [qMathTolerance, setQMathTolerance] = useState(0);
   const [bulkQuestionInput, setBulkQuestionInput] = useState("");
   const [qOptions, setQOptions] = useState<{ text: string; isCorrect: boolean }[]>([
     { text: "", isCorrect: true },
@@ -285,6 +287,7 @@ export default function QuizDetailPage() {
     setQTopic("General");
     setQText("");
     setQIncludedInQuiz(true);
+    setQMathTolerance(0);
     setBulkQuestionInput("");
     setQOptions([
       { text: "", isCorrect: true },
@@ -324,6 +327,7 @@ export default function QuizDetailPage() {
         topic: qTopic,
         text: qText,
         includedInQuiz: qIncludedInQuiz,
+        mathTolerance: qType === "MATH" ? qMathTolerance : 0,
         options: qOptions.filter((o) => o.text.trim()),
       }),
     });
@@ -364,6 +368,7 @@ export default function QuizDetailPage() {
         text: question.text,
         order: question.order,
         includedInQuiz: !question.includedInQuiz,
+        mathTolerance: question.mathTolerance ?? 0,
         options: question.options.map((option) => ({ text: option.text, isCorrect: option.isCorrect })),
       }),
     });
@@ -382,6 +387,7 @@ export default function QuizDetailPage() {
     setQTopic(question.topic || "General");
     setQText(question.text);
     setQIncludedInQuiz(question.includedInQuiz);
+    setQMathTolerance(question.mathTolerance ?? 0);
     setQOptions(question.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })));
     setShowQuestionForm(true);
   }
@@ -1212,6 +1218,31 @@ export default function QuizDetailPage() {
                   </button>
                 )}
               </div>
+
+              {/* MATH tolerance setting */}
+              {qType === "MATH" && (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">
+                    Acceptable Tolerance (±)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-violet-600">±</span>
+                    <input
+                      type="number"
+                      value={qMathTolerance}
+                      onChange={(e) => setQMathTolerance(Math.max(0, parseFloat(e.target.value) || 0))}
+                      min={0}
+                      step={0.01}
+                      className="w-36 px-4 py-2 border border-violet-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition"
+                      placeholder="0"
+                    />
+                    <span className="text-xs text-muted">Set to 0 for exact match</span>
+                  </div>
+                  <p className="text-xs text-muted mt-1.5">
+                    Example: correct answer is <strong>3.14</strong> with tolerance <strong>0.05</strong> → answers from <strong>3.09</strong> to <strong>3.19</strong> are accepted.
+                  </p>
+                </div>
+              )}
 
               {/* Form actions */}
               <div className="flex gap-2 pt-2">

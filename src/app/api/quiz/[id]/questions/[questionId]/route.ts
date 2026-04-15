@@ -30,6 +30,7 @@ export async function PUT(
       text: body.text,
       order: body.order,
       includedInQuiz: body.includedInQuiz ?? true,
+      mathTolerance: body.type === "MATH" ? (body.mathTolerance ?? 0) : 0,
       options: {
         create: body.options?.map((opt: { text: string; isCorrect: boolean }) => ({
           text: opt.text,

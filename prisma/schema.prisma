@@ -123,12 +123,13 @@ model Quiz {
 }
 
 model Question {
-  id    String       @id @default(cuid())
-  type  QuestionType @default(MCQ)
-  topic String       @default("General")
-  text  String
-  order Int          @default(0)
-  includedInQuiz Boolean @default(true)
+  id             String       @id @default(cuid())
+  type           QuestionType @default(MCQ)
+  topic          String       @default("General")
+  text           String
+  order          Int          @default(0)
+  includedInQuiz Boolean      @default(true)
+  mathTolerance  Float        @default(0)
 
   quizId String
   quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)

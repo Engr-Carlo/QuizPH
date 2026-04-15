@@ -98,7 +98,8 @@ export async function POST(req: Request) {
       const correct = normalize(correctOption?.text ?? "");
       const student = normalize(answerText);
       if (typeof correct === "number" && typeof student === "number") {
-        isCorrect = Math.abs(correct - student) < 1e-9;
+        const tolerance = question.mathTolerance ?? 0;
+        isCorrect = Math.abs(correct - student) <= (tolerance > 0 ? tolerance : 1e-9);
       } else {
         isCorrect = correct === student;
       }

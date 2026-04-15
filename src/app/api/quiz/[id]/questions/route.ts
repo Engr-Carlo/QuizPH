@@ -29,6 +29,7 @@ export async function POST(
       text: body.text,
       order: body.order ?? questionCount,
       includedInQuiz: body.includedInQuiz ?? true,
+      mathTolerance: body.type === "MATH" ? (body.mathTolerance ?? 0) : 0,
       options: {
         create: body.options?.map((opt: { text: string; isCorrect: boolean }) => ({
           text: opt.text,
