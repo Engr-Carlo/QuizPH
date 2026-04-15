@@ -88,6 +88,20 @@ export async function POST(req: Request) {
       isCorrect =
         correctOption?.text.toLowerCase().trim() ===
         answerText.toLowerCase().trim();
+    } else if (question.type === "MATH") {
+      const correctOption = question.options.find((o: Option) => o.isCorrect);
+      const normalize = (v: string) => {
+        const stripped = v.replace(/\s/g, "");
+        const n = parseFloat(stripped);
+        return isNaN(n) ? stripped.toLowerCase() : n;
+      };
+      const correct = normalize(correctOption?.text ?? "");
+      const student = normalize(answerText);
+      if (typeof correct === "number" && typeof student === "number") {
+        isCorrect = Math.abs(correct - student) < 1e-9;
+      } else {
+        isCorrect = correct === student;
+      }
     }
 
     const answer = await prisma.answer.create({

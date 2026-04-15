@@ -52,11 +52,13 @@ const Q_TYPE_LABELS: Record<string, string> = {
   MCQ: "Multiple Choice",
   TRUE_FALSE: "True / False",
   SHORT_ANSWER: "Short Answer",
+  MATH: "Math Problem",
 };
 const Q_TYPE_COLORS: Record<string, string> = {
   MCQ: "bg-primary/10 text-primary",
   TRUE_FALSE: "bg-secondary/10 text-secondary",
   SHORT_ANSWER: "bg-accent/10 text-accent",
+  MATH: "bg-violet-500/10 text-violet-600",
 };
 
 const SESSION_STATUS_STYLE: Record<string, string> = {
@@ -198,7 +200,7 @@ export default function QuizDetailPage() {
   const [settingsAntiCheatEnabled, setSettingsAntiCheatEnabled] = useState(false);
   const [settingsAllowSkip, setSettingsAllowSkip] = useState(true);
 
-  const [qType, setQType] = useState<"MCQ" | "TRUE_FALSE" | "SHORT_ANSWER">("MCQ");
+  const [qType, setQType] = useState<"MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "MATH">("MCQ");
   const [qTopic, setQTopic] = useState("General");
   const [qText, setQText] = useState("");
   const [qIncludedInQuiz, setQIncludedInQuiz] = useState(true);
@@ -294,11 +296,11 @@ export default function QuizDetailPage() {
     setEditingQuestion(null);
   }
 
-  function handleTypeChange(type: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER") {
+  function handleTypeChange(type: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "MATH") {
     setQType(type);
     if (type === "TRUE_FALSE") {
       setQOptions([{ text: "True", isCorrect: true }, { text: "False", isCorrect: false }]);
-    } else if (type === "SHORT_ANSWER") {
+    } else if (type === "SHORT_ANSWER" || type === "MATH") {
       setQOptions([{ text: "", isCorrect: true }]);
     } else {
       setQOptions([
@@ -376,7 +378,7 @@ export default function QuizDetailPage() {
 
   function startEdit(question: Question) {
     setEditingQuestion(question);
-    setQType(question.type as "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER");
+    setQType(question.type as "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "MATH");
     setQTopic(question.topic || "General");
     setQText(question.text);
     setQIncludedInQuiz(question.includedInQuiz);
@@ -1078,8 +1080,8 @@ export default function QuizDetailPage() {
               {/* Type selector */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">Question Type</label>
-                <div className="flex gap-2">
-                  {(["MCQ", "TRUE_FALSE", "SHORT_ANSWER"] as const).map((t) => (
+                <div className="flex flex-wrap gap-2">
+                  {(["MCQ", "TRUE_FALSE", "SHORT_ANSWER", "MATH"] as const).map((t) => (
                     <button
                       key={t}
                       type="button"
@@ -1094,6 +1096,9 @@ export default function QuizDetailPage() {
                     </button>
                   ))}
                 </div>
+                {qType === "MATH" && (
+                  <p className="text-xs text-muted mt-2">Suitable for all levels — elementary arithmetic to college calculus. Students type their answer; numeric values are compared with tolerance (e.g. &ldquo;3.0&rdquo; and &ldquo;3&rdquo; are both accepted).</p>
+                )}
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -1135,7 +1140,7 @@ export default function QuizDetailPage() {
               {/* Options */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
-                  {qType === "SHORT_ANSWER" ? "Correct Answer" : "Answer Choices"}
+                  {qType === "SHORT_ANSWER" ? "Correct Answer" : qType === "MATH" ? "Correct Answer (number or expression)" : "Answer Choices"}
                 </label>
                 <div className="space-y-2">
                   {qOptions.map((opt, idx) => (
@@ -1144,7 +1149,7 @@ export default function QuizDetailPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (qType === "SHORT_ANSWER") return;
+                          if (qType === "SHORT_ANSWER" || qType === "MATH") return;
                           setQOptions(qOptions.map((o, i) => ({ ...o, isCorrect: i === idx })));
                         }}
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition ${
@@ -1152,7 +1157,7 @@ export default function QuizDetailPage() {
                             ? "border-success bg-success"
                             : "border-border hover:border-success/50"
                         }`}
-                        disabled={qType === "SHORT_ANSWER"}
+                        disabled={qType === "SHORT_ANSWER" || qType === "MATH"}
                         title="Mark as correct"
                       >
                         {opt.isCorrect && (
@@ -1174,6 +1179,8 @@ export default function QuizDetailPage() {
                         placeholder={
                           qType === "SHORT_ANSWER"
                             ? "Expected correct answer"
+                            : qType === "MATH"
+                            ? "e.g. 42, 3.14, 2/3, x=5"
                             : `Option ${String.fromCharCode(65 + idx)}`
                         }
                         disabled={qType === "TRUE_FALSE"}

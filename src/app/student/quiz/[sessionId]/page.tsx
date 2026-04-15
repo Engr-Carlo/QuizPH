@@ -46,6 +46,7 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   MCQ: "Multiple Choice",
   TRUE_FALSE: "True or False",
   SHORT_ANSWER: "Short Answer",
+  MATH: "Math Problem",
 };
 
 function getTimeLeftFromEndsAt(timerEndsAt: string | null, fallback: number) {
@@ -78,7 +79,7 @@ function StudentQuizContent() {
   const hasFinishedRef = useRef(false);
   const timeWarningShownRef = useRef(false);
   const questionsInitializedRef = useRef(false);
-  const questionTimerEndRef = useRef<Record<string, number>>({});
+  const questionTimerRemainingRef = useRef<Record<string, number>>({});
   const [showTimeWarning, setShowTimeWarning] = useState(false);
 
   // Fetch session data
@@ -224,7 +225,7 @@ function StudentQuizContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, timerEndsAt]);
 
-  // PER_QUESTION timer — tracks per-question end timestamp so navigating back resumes from where the timer left off
+  // PER_QUESTION timer — pauses when student navigates away, resumes when they return
   useEffect(() => {
     if (status !== "active" || sessionData?.quiz.timerType !== "PER_QUESTION") return;
     const duration = sessionData.quiz.duration;
@@ -234,15 +235,20 @@ function StudentQuizContent() {
     if (!question) return;
 
     const qid = question.id;
-    if (!questionTimerEndRef.current[qid]) {
-      questionTimerEndRef.current[qid] = Date.now() + duration * 1000;
+    // Initialize remaining for this question only on first visit
+    if (questionTimerRemainingRef.current[qid] === undefined) {
+      questionTimerRemainingRef.current[qid] = duration;
     }
-    const endAt = questionTimerEndRef.current[qid];
 
-    const tick = () => {
-      const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+    let remaining = questionTimerRemainingRef.current[qid];
+    setPerQuestionTimeLeft(remaining);
+
+    const interval = setInterval(() => {
+      remaining -= 1;
+      questionTimerRemainingRef.current[qid] = remaining; // save so we can resume later
       setPerQuestionTimeLeft(remaining);
       if (remaining <= 0) {
+        clearInterval(interval);
         if (currentIndex < questions.length - 1) {
           const next = currentIndex + 1;
           setCurrentIndex(next);
@@ -251,10 +257,9 @@ function StudentQuizContent() {
           handleSubmitQuiz();
         }
       }
-    };
+    }, 1000);
 
-    tick();
-    const interval = setInterval(tick, 1000);
+    // Cleanup runs when currentIndex changes — stops the interval, remaining already saved
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, status]);
@@ -701,6 +706,41 @@ function StudentQuizContent() {
                   placeholder="Type your answer here… (Ctrl+Enter to continue)"
                   autoComplete="off"
                 />
+              </div>
+            ) : currentQuestion.type === "MATH" ? (
+              <div className="mt-6 rounded-[26px] border border-violet-200/80 bg-violet-50/50 p-4 sm:p-5">
+                <label className="mb-3 block text-sm font-bold text-foreground">Your answer</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0 font-black text-lg">=</div>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={currentAnswer}
+                    onChange={(e) =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [currentQuestion.id]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={async (e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        await persistCurrentAnswer(currentQuestion);
+                        if (canGoNext) {
+                          const newIdx = currentIndex + 1;
+                          setCurrentIndex(newIdx);
+                          persistQuestionIndex(newIdx);
+                        } else {
+                          handleSubmitQuiz();
+                        }
+                      }
+                    }}
+                    className="flex-1 rounded-2xl border border-violet-200 bg-white px-4 py-3 text-lg font-bold text-foreground shadow-inner focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-300/40"
+                    placeholder="Type your answer…"
+                    autoComplete="off"
+                  />
+                </div>
+                <p className="mt-2.5 text-xs text-muted">Enter a number or expression (e.g. 42, 3.14, −2). Press Enter to continue.</p>
               </div>
             ) : (
               <div className="mt-6 grid gap-3">
