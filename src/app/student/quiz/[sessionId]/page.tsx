@@ -84,17 +84,19 @@ function StudentQuizContent() {
   const [focusLost, setFocusLost] = useState(false);
   const [isFullscreenActive, setIsFullscreenActive] = useState(false);
   const [secureModeError, setSecureModeError] = useState<string | null>(null);
-  const [focusWarningMode, setFocusWarningMode] = useState(false); // true = 1st hit (warning only, not reported)
-  const focusLossCountRef = useRef(0); // total confirmed focus-loss events this session
-  const focusLossTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 5s grace timer
+  const [lockedQuestionIds, setLockedQuestionIds] = useState<Set<string>>(new Set());
 
-  // Restore timerEndsAt from sessionStorage on mount — prevents timer flash on refresh
+  // Restore timer state from sessionStorage on mount — prevents timer flash on refresh
   useEffect(() => {
     if (!participantId) return;
     const cached = sessionStorage.getItem(`timerEndsAt:${participantId}`);
     if (cached) {
       setTimerEndsAt(cached);
       setTimeLeft(getTimeLeftFromEndsAt(cached, 0));
+    }
+    const lockedRaw = sessionStorage.getItem(`qtimerLocked:${participantId}`);
+    if (lockedRaw) {
+      try { setLockedQuestionIds(new Set(JSON.parse(lockedRaw))); } catch { /* ignore */ }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -264,15 +266,24 @@ function StudentQuizContent() {
     }
 
     let remaining = questionTimerRemainingRef.current[qid];
-    setPerQuestionTimeLeft(remaining);
+    setPerQuestionTimeLeft(Math.max(0, remaining));
 
     const interval = setInterval(() => {
       remaining -= 1;
-      questionTimerRemainingRef.current[qid] = remaining; // save so we can resume on question switch
-      sessionStorage.setItem(storageKey, String(remaining)); // persist across page refreshes
-      setPerQuestionTimeLeft(remaining);
+      questionTimerRemainingRef.current[qid] = remaining;
+      sessionStorage.setItem(storageKey, String(remaining));
+      setPerQuestionTimeLeft(Math.max(0, remaining));
       if (remaining <= 0) {
         clearInterval(interval);
+        // Lock this question — student cannot navigate back to it
+        setLockedQuestionIds((prev) => {
+          const next = new Set(prev);
+          next.add(qid);
+          if (participantId) {
+            sessionStorage.setItem(`qtimerLocked:${participantId}`, JSON.stringify([...next]));
+          }
+          return next;
+        });
         if (currentIndex < questions.length - 1) {
           const next = currentIndex + 1;
           setCurrentIndex(next);
@@ -318,7 +329,7 @@ function StudentQuizContent() {
     [participantId, sessionId]
   );
 
-  // 1. Fullscreen enforcement (2-tier: 1st exit = warning only; 2nd+ = reported to teacher)
+  // 1. Fullscreen enforcement — every exit immediately triggers a violation
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
     setIsFullscreenActive(Boolean(document.fullscreenElement));
@@ -328,29 +339,17 @@ function StudentQuizContent() {
       setIsFullscreenActive(fullscreenNowActive);
 
       if (fullscreenNowActive) {
-        // Student returned to fullscreen — cancel any pending 5s grace timer
-        if (focusLossTimerRef.current) {
-          clearTimeout(focusLossTimerRef.current);
-          focusLossTimerRef.current = null;
-        }
         setSecureModeError(null);
         setFocusLost(false);
-        setFocusWarningMode(false);
         setWarningVisible(false);
         return;
       }
 
       if (status === "active" && !isSubmittingRef.current) {
-        focusLossCountRef.current += 1;
         setWarningVisible(true);
         setFocusLost(true);
-        if (focusLossCountRef.current >= 2) {
-          setFocusWarningMode(false);
-          setWarningCount((c) => c + 1);
-          logViolation("FULLSCREEN_EXIT");
-        } else {
-          setFocusWarningMode(true);
-        }
+        setWarningCount((c) => c + 1);
+        logViolation("FULLSCREEN_EXIT");
       }
     };
 
@@ -359,66 +358,38 @@ function StudentQuizContent() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
-  // 2. Tab switch / visibility detection + focus-loss shield (5-second grace, 2-tier)
-  //    – Focus lost for < 5 s → no penalty (accidental taps forgiven)
-  //    – 5 s elapsed, 1st event → warning shown to student, NOT sent to teacher
-  //    – 5 s elapsed, 2nd+ event → violation logged + Pusher alert to teacher
+  // 2. Tab switch / focus-loss shield — every focus-loss event reported immediately
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
     const triggerFocusLoss = () => {
-      if (focusLossTimerRef.current) return; // already counting down
-      focusLossTimerRef.current = setTimeout(() => {
-        focusLossTimerRef.current = null;
-        focusLossCountRef.current += 1;
-        setFocusLost(true);
-        if (focusLossCountRef.current >= 2) {
-          setFocusWarningMode(false);
+      if (isSubmittingRef.current) return;
+      setFocusLost((prev) => {
+        if (!prev) {
+          // Only log once per focus-loss event (guard with prev)
           setWarningCount((c) => c + 1);
           logViolation("TAB_SWITCH");
-        } else {
-          setFocusWarningMode(true);
         }
-      }, 5000);
-    };
-
-    const cancelFocusLoss = () => {
-      if (focusLossTimerRef.current) {
-        clearTimeout(focusLossTimerRef.current);
-        focusLossTimerRef.current = null;
-      }
-      setFocusLost(false);
-      setFocusWarningMode(false);
+        return true;
+      });
     };
 
     const handleVisibility = () => {
-      if (isSubmittingRef.current) return;
-      if (document.hidden) {
-        triggerFocusLoss();
-      } else {
-        cancelFocusLoss();
-      }
+      if (document.hidden) triggerFocusLoss();
+      else setFocusLost(false);
     };
 
-    const handleBlur = () => {
-      if (isSubmittingRef.current) return;
-      triggerFocusLoss();
-    };
-
-    const handleFocus = () => {
-      cancelFocusLoss();
-    };
+    const handleBlur = () => { triggerFocusLoss(); };
+    const handleFocus = () => { setFocusLost(false); };
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("blur", handleBlur);
     window.addEventListener("focus", handleFocus);
 
-    // Polling fallback — catches mobile browsers that don't reliably fire blur/visibilitychange.
+    // Polling fallback — catches mobile browsers that don't fire blur/visibilitychange reliably.
     const focusPoll = setInterval(() => {
       if (isSubmittingRef.current || document.hidden) return;
-      if (!document.hasFocus()) {
-        triggerFocusLoss();
-      }
+      if (!document.hasFocus()) triggerFocusLoss();
     }, 500);
 
     return () => {
@@ -426,10 +397,6 @@ function StudentQuizContent() {
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
       clearInterval(focusPoll);
-      if (focusLossTimerRef.current) {
-        clearTimeout(focusLossTimerRef.current);
-        focusLossTimerRef.current = null;
-      }
     };
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
@@ -505,6 +472,7 @@ function StudentQuizContent() {
       }
       keysToRemove.forEach((k) => sessionStorage.removeItem(k));
       sessionStorage.removeItem(`timerEndsAt:${participantId}`);
+      sessionStorage.removeItem(`qtimerLocked:${participantId}`);
     }
 
     try {
@@ -544,7 +512,6 @@ function StudentQuizContent() {
       }
       setIsFullscreenActive(Boolean(document.fullscreenElement));
       setFocusLost(false);
-      setFocusWarningMode(false);
       setWarningVisible(false);
     } catch {
       setIsFullscreenActive(Boolean(document.fullscreenElement));
@@ -646,27 +613,17 @@ function StudentQuizContent() {
               </div>
             </div>
           )}
-          {sessionData.quiz.antiCheatEnabled && (warningCount > 0 || focusLossCountRef.current > 0) && (
+          {sessionData.quiz.antiCheatEnabled && warningCount > 0 && (
             <div className="mb-5 rounded-[20px] border border-danger/25 bg-danger/6 px-5 py-4 text-left">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-danger flex-shrink-0">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
                 <p className="text-sm font-bold text-danger">Anti-Cheat Report</p>
               </div>
-              {warningCount > 0 && (
-                <p className="text-sm text-danger font-semibold mb-1">
-                  🚨 {warningCount} violation{warningCount > 1 ? "s" : ""} reported to your teacher
-                </p>
-              )}
-              {focusLossCountRef.current > warningCount && (
-                <p className="text-xs text-amber-600 font-medium">
-                  ⚠️ {focusLossCountRef.current - warningCount} unrecorded warning{focusLossCountRef.current - warningCount > 1 ? "s" : ""} (not reported)
-                </p>
-              )}
-              {warningCount === 0 && focusLossCountRef.current > 0 && (
-                <p className="text-xs text-muted mt-1">No violations were reported to your teacher.</p>
-              )}
+              <p className="text-sm text-danger font-semibold">
+                🚨 {warningCount} violation{warningCount > 1 ? "s" : ""} reported to your teacher
+              </p>
             </div>
           )}
           <a
@@ -694,21 +651,19 @@ function StudentQuizContent() {
   const questionProgress = sessionData.quiz.activeQuestionCount > 0 ? ((currentIndex + 1) / sessionData.quiz.activeQuestionCount) * 100 : 0;
   const answerProgress = sessionData.quiz.activeQuestionCount > 0 ? (answeredCount / sessionData.quiz.activeQuestionCount) * 100 : 0;
   const canGoNext = currentIndex < questions.length - 1;
+  // Prev is allowed only if not on first question, skip is enabled, and the previous question's timer hasn't expired
+  const prevQuestion = questions[currentIndex - 1];
+  const canGoPrev = currentIndex > 0 && allowSkip && !lockedQuestionIds.has(prevQuestion?.id ?? "");
   const questionTypeLabel = QUESTION_TYPE_LABELS[currentQuestion.type] || currentQuestion.type;
   const displayTimeLeft = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft : timeLeft;
   const isTimeLow = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft < 10 : timeLeft < 60;
   const secureModeRequired = Boolean(sessionData.quiz.antiCheatEnabled);
   const secureModeBlocked = secureModeRequired && (!isFullscreenActive || focusLost);
-  const secureModeTitle = focusWarningMode
-    ? "Heads Up — You Left the Quiz"
-    : focusLost || warningCount > 0
-    ? "Secure Mode Interrupted"
-    : "Enter Secure Mode";
-  const secureModeMessage = focusWarningMode
-    ? "You left the quiz window. This is your first warning and will NOT be reported to your teacher. Return immediately to continue."
-    : focusLost || warningCount > 0
+  const secureModeTitle = focusLost || warningCount > 0 ? "Secure Mode Interrupted" : "Enter Secure Mode";
+  const secureModeMessage = focusLost || warningCount > 0
     ? "The quiz was covered because fullscreen or focus was lost. Your teacher has been notified. Return to secure mode to continue."
     : "This quiz is protected. Question content stays hidden until fullscreen is active on this device.";
+  const isPerQuestion = sessionData.quiz.timerType === "PER_QUESTION";
 
   return (
     <div
@@ -717,39 +672,23 @@ function StudentQuizContent() {
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
-      {/* ── Messenger Shield / Focus-loss overlay ── */}
-      {/* Covers all quiz content when the window loses focus (Messenger bubbles, other apps, address bar) */}
+      {/* ── Secure-mode / Focus-loss overlay ── */}
       {secureModeBlocked && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/97 backdrop-blur-sm px-6 text-center">
-          {/* Icon — orange for 1st warning, red for violations */}
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${focusWarningMode ? "bg-amber-500/20 text-amber-400" : "bg-danger/15 text-danger"}`}>
-            {focusWarningMode ? (
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-            ) : (
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            )}
+          <div className="w-16 h-16 rounded-2xl bg-danger/15 text-danger flex items-center justify-center mx-auto mb-5">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
           </div>
-          <h2 className={`text-2xl font-black mb-2 ${focusWarningMode ? "text-amber-300" : "text-white"}`}>{secureModeTitle}</h2>
+          <h2 className="text-2xl font-black text-white mb-2">{secureModeTitle}</h2>
           <p className="text-slate-400 text-sm mb-2 max-w-sm leading-6">
             {secureModeMessage}
           </p>
-          {/* Show violation count only when it's a real violation (not warning-only mode) */}
-          {!focusWarningMode && warningCount > 0 && (
+          {warningCount > 0 && (
             <p className="text-danger text-sm font-bold mb-3 px-4 py-2 rounded-xl bg-danger/15 border border-danger/30">
               ⚠️ {warningCount} violation{warningCount > 1 ? "s" : ""} recorded — your teacher can see this
-            </p>
-          )}
-          {focusWarningMode && (
-            <p className="text-amber-400/80 text-xs font-semibold mb-3">
-              Next time you leave, it WILL be reported.
             </p>
           )}
           {secureModeError && (
@@ -1006,17 +945,23 @@ function StudentQuizContent() {
                 {questions.map((question, idx) => {
                   const isCurrent = idx === currentIndex;
                   const hasAnswer = Boolean(answers[question.id]?.trim());
+                  const isLocked = lockedQuestionIds.has(question.id);
                   return (
                     <button
                       key={question.id}
                       onClick={async () => {
+                        if (isLocked) return;
                         await persistCurrentAnswer(currentQuestion);
                         setCurrentIndex(idx);
                         persistQuestionIndex(idx);
                       }}
+                      disabled={isLocked}
+                      title={isLocked ? "Time expired — this question is locked" : undefined}
                       className={`h-11 rounded-2xl text-sm font-black transition ${
                         isCurrent
                           ? "bg-primary text-white shadow-sm"
+                          : isLocked
+                          ? "bg-slate-200 text-slate-400 cursor-not-allowed line-through"
                           : hasAnswer
                           ? "bg-primary/10 text-primary"
                           : "bg-slate-100 text-muted"
@@ -1060,7 +1005,7 @@ function StudentQuizContent() {
                 setCurrentIndex(newIdx);
                 persistQuestionIndex(newIdx);
               }}
-              disabled={currentIndex === 0 || !allowSkip}
+              disabled={!canGoPrev}
               className="inline-flex min-w-[92px] items-center justify-center gap-1.5 rounded-2xl border border-border bg-white px-4 py-3 text-sm font-bold text-foreground transition disabled:opacity-35"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
