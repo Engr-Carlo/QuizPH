@@ -743,47 +743,47 @@ function StudentQuizContent() {
         </div>
       )}
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 pb-28 pt-3 sm:px-5 sm:pb-8 sm:pt-5 lg:px-8">
-        <header className="sticky top-3 z-20 rounded-[28px] border border-white/80 bg-white/82 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Live quiz</p>
-              <h1 className="mt-1 truncate text-lg font-black text-foreground sm:text-2xl">{sessionData.quiz.title}</h1>
-              <p className="mt-2 text-xs text-muted sm:text-sm">
-                Question {currentIndex + 1} of {sessionData.quiz.activeQuestionCount} •  {answeredCount} answered
+        <header className="sticky top-3 z-20 rounded-[24px] border border-white/80 bg-white/82 px-4 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary leading-none">Live quiz</p>
+              <h1 className="mt-0.5 truncate text-sm font-black text-foreground sm:text-base">{sessionData.quiz.title}</h1>
+              <p className="mt-0.5 text-[11px] text-muted">
+                Q {currentIndex + 1}/{sessionData.quiz.activeQuestionCount} · {answeredCount} answered
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
-              <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-muted">Progress</div>
-                <div className="mt-1 text-base font-black text-foreground">{Math.round(questionProgress)}%</div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="rounded-xl bg-slate-50 px-3 py-1.5 text-center">
+                <div className="text-[9px] uppercase tracking-[0.15em] text-muted leading-none">Progress</div>
+                <div className="mt-0.5 text-sm font-black text-foreground">{Math.round(questionProgress)}%</div>
               </div>
-              <div className={`rounded-2xl px-4 py-3 ${isTimeLow ? "bg-danger/10 text-danger" : "bg-primary/8 text-primary"}`}>
-                <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Time left</div>
-                <div className={`mt-1 flex items-center gap-2 text-base font-black ${isTimeLow ? "animate-pulse" : ""}`}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className={`rounded-xl px-3 py-1.5 text-center ${isTimeLow ? "bg-danger/10 text-danger" : "bg-primary/8 text-primary"}`}>
+                <div className="text-[9px] uppercase tracking-[0.15em] opacity-70 leading-none">Time</div>
+                <div className={`mt-0.5 flex items-center gap-1 text-sm font-black ${isTimeLow ? "animate-pulse" : ""}`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
                   {formatTime(displayTimeLeft)}
                 </div>
               </div>
               {sessionData.quiz.antiCheatEnabled && (
-                <div className={`rounded-2xl px-4 py-3 ${warningCount > 0 ? "bg-danger/10 text-danger" : "bg-emerald-50 text-emerald-700"}`}>
-                  <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">Monitor</div>
-                  <div className="mt-1 text-base font-black">{warningCount > 0 ? `${warningCount} warning${warningCount > 1 ? "s" : ""}` : "Clean run"}</div>
+                <div className={`rounded-xl px-3 py-1.5 text-center ${warningCount > 0 ? "bg-danger/10 text-danger" : "bg-emerald-50 text-emerald-700"}`}>
+                  <div className="text-[9px] uppercase tracking-[0.15em] opacity-70 leading-none">Monitor</div>
+                  <div className="mt-0.5 text-sm font-black">{warningCount > 0 ? `⚠ ${warningCount}` : "Clean"}</div>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <div className="h-2 rounded-full bg-slate-100">
+          <div className="mt-2.5 space-y-1.5">
+            <div className="h-1.5 rounded-full bg-slate-100">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300"
                 style={{ width: `${questionProgress}%` }}
               />
             </div>
-            <div className="h-2 rounded-full bg-slate-100">
+            <div className="h-1.5 rounded-full bg-slate-100">
               <div
                 className="h-full rounded-full bg-success transition-all duration-300"
                 style={{ width: `${answerProgress}%` }}

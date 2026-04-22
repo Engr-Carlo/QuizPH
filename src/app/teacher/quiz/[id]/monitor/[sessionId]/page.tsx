@@ -311,7 +311,7 @@ export default function MonitorPage() {
                         <div className="mb-2">
                           <div className="flex justify-between text-[10px] text-muted mb-1">
                             <span>{p.answers.length}/{totalQ} answered</span>
-                            <span className="font-semibold text-primary">{p.score} pts</span>
+                            <span key={p.score} className="score-bump font-semibold text-primary">{p.score} pts</span>
                           </div>
                           <div className="h-1.5 bg-surface rounded-full overflow-hidden">
                             <div
@@ -376,7 +376,7 @@ export default function MonitorPage() {
                     return (
                       <div
                         key={p.id}
-                        className={`bg-card border rounded-2xl px-5 py-3.5 flex items-center gap-4 ${
+                        className={`bg-card border rounded-2xl px-5 py-3.5 flex items-center gap-4 transition-all duration-500 ${
                           rank === 0 ? "border-warning/40 shadow-sm" : "border-border"
                         }`}
                       >
@@ -389,7 +389,7 @@ export default function MonitorPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold text-foreground truncate">{p.user.name}</p>
-                            <span className="text-sm font-extrabold text-primary ml-2">{p.score} pts</span>
+                            <span key={p.score} className="score-bump text-sm font-extrabold text-primary ml-2">{p.score} pts</span>
                           </div>
                           <div className="h-1.5 bg-surface rounded-full overflow-hidden">
                             <div

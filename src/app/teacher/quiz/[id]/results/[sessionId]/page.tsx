@@ -62,16 +62,23 @@ export default function ResultsPage() {
   const sorted = [...data.participants].sort((a, b) => b.score - a.score);
 
   function generateCSV() {
-    const headers = ["Rank", "Name", "Email", "Score", "Accuracy", "Violations", "Status"];
-    const rows = sorted.map((p, idx) => [
-      idx + 1,
-      `"${p.user.name.replace(/"/g, '""')}"`,
-      `"${p.user.email.replace(/"/g, '""')}"`,
-      `"${p.score}/${totalQuestions}"`,
-      `"${totalQuestions > 0 ? Math.round((p.score / totalQuestions) * 100) : 0}%"`,
-      p.violations.length,
-      p.isFinished ? "Finished" : "In Progress",
-    ]);
+    const headers = ["Rank", "Last Name", "First Name", "Email", "Score", "Accuracy", "Violations", "Status"];
+    const rows = sorted.map((p, idx) => {
+      // Split "First Last" or "First Middle Last" → firstName = first token, lastName = rest
+      const nameParts = p.user.name.trim().split(/\s+/);
+      const firstName = nameParts[0] ?? "";
+      const lastName = nameParts.slice(1).join(" ") || nameParts[0] ?? "";
+      return [
+        idx + 1,
+        `"${lastName.replace(/"/g, '""')}"`,
+        `"${firstName.replace(/"/g, '""')}"`,
+        `"${p.user.email.replace(/"/g, '""')}"`,
+        `"${p.score}/${totalQuestions}"`,
+        `"${totalQuestions > 0 ? Math.round((p.score / totalQuestions) * 100) : 0}%"`,
+        p.violations.length,
+        p.isFinished ? "Finished" : "In Progress",
+      ];
+    });
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
