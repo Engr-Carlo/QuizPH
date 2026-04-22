@@ -163,43 +163,25 @@ export default function MonitorPage() {
     return () => document.removeEventListener("visibilitychange", handleVisible);
   }, [fetchSession]);
 
-  // ── Loading / not found ──────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-muted">Loading monitor...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!sessionData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted">Session not found.</p>
-      </div>
-    );
-  }
-
-  const totalQ = sessionData.quiz.activeQuestionCount;
-  const selectedP = sessionData.participants.find((p) => p.id === selectedId);
-  const finished = sessionData.participants.filter((p) => p.isFinished).length;
-  const withViolations = sessionData.participants.filter((p) => p.violations.length > 0).length;
+  const totalQ = sessionData?.quiz.activeQuestionCount ?? 0;
+  const selectedP = sessionData?.participants.find((p) => p.id === selectedId) ?? null;
+  const finished = sessionData?.participants.filter((p) => p.isFinished).length ?? 0;
+  const withViolations = sessionData?.participants.filter((p) => p.violations.length > 0).length ?? 0;
 
   // Leaderboard: sort by score desc, then violations asc
-  const leaderboard = [...sessionData.participants].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.violations.length - b.violations.length;
-  });
+  const leaderboard = sessionData
+    ? [...sessionData.participants].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.violations.length - b.violations.length;
+      })
+    : [];
 
   const leaderboardSignature = leaderboard
     .map((participant) => `${participant.id}:${participant.score}:${participant.violations.length}`)
     .join("|");
 
   useLayoutEffect(() => {
-    if (activeTab !== "leaderboard") {
+    if (!sessionData || activeTab !== "leaderboard") {
       previousLeaderboardPositionsRef.current = {};
       return;
     }
@@ -243,7 +225,27 @@ export default function MonitorPage() {
     });
 
     previousLeaderboardPositionsRef.current = nextPositions;
-  }, [activeTab, leaderboard, leaderboardSignature]);
+  }, [activeTab, leaderboard, leaderboardSignature, sessionData]);
+
+  // ── Loading / not found ──────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted">Loading monitor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!sessionData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted">Session not found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
