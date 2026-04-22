@@ -79,6 +79,15 @@ function formatDate(date: string | null) {
   return new Date(date).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+// Strip leading question numbering: "1." "1)" "1.)" "(1)" "Q1." etc.
+function stripLeadingNumber(line: string): string {
+  const stripped = line
+    .replace(/^\s*(?:\(\d+\)|Q\.?\s*\d+\s*[\.\)\:\-]+|\d+\s*[\.\)\:\-]+\.?)\s*/, "")
+    .trim();
+  // Only use stripped if something actually changed and result is non-empty
+  return stripped.length > 0 && stripped !== line.trim() ? stripped : line.trim();
+}
+
 function parseQuestionBlock(input: string) {
   const lines = input
     .split(/\r?\n/)
@@ -87,21 +96,26 @@ function parseQuestionBlock(input: string) {
 
   if (lines.length === 0) return null;
 
-  const text = lines[0];
+  // Strip leading question number from the question text
+  const text = stripLeadingNumber(lines[0]);
   let answerRef = "";
 
   const rawOptions = lines
     .slice(1)
     .map((line) => {
-      const answerMatch = line.match(/^(answer|correct answer)\s*:\s*(.+)$/i);
+      // Accept "answer: C" as well as "2. answer: C" (numbered answer lines)
+      const answerMatch = line.match(/^(?:\d+[\s\.\_\)\:]+)?(?:answer|correct answer)\s*:\s*(.+)$/i);
       if (answerMatch) {
-        answerRef = answerMatch[2].trim();
+        answerRef = answerMatch[1].trim();
         return null;
       }
 
-      const labelMatch = line.match(/^([A-Ha-h])[\).:-]\s*(.*)$/);
+      // Choice label patterns: "A." "A)" "A:" "A-" and also "(A)"
+      const labelMatch =
+        line.match(/^\(([A-Ha-h])\)\s*(.*)$/) ||
+        line.match(/^([A-Ha-h])[\).:\-]\s*(.*)$/);
       const label = labelMatch?.[1]?.toUpperCase() || "";
-      let optionText = labelMatch?.[2] || line.replace(/^[-*]\s*/, "");
+      let optionText = labelMatch?.[2] ?? line.replace(/^[-*•]\s*/, "");
 
       const isMarkedCorrect = /^\*\s*/.test(optionText)
         || /\*\s*$/.test(optionText)
@@ -165,8 +179,36 @@ function parseQuestionBlock(input: string) {
 }
 
 function parseMultipleQuestionBlocks(input: string) {
-  return input
-    .split(/\n\s*\n+/)
+  const rawBlocks = input
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split(/\n[ \t]*\n+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  // Merge orphan "answer: X" blocks into the preceding question block.
+  // An orphan block is one where every non-empty line is an answer line
+  // (optionally prefixed with a number like "2. answer: C").
+  const answerLineRe = /^(?:\d+[\s\.\)\:]+)?(?:answer|correct answer)\s*:/i;
+  const merged: string[] = [];
+  for (const block of rawBlocks) {
+    const blockLines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    const isOrphanAnswer =
+      blockLines.length > 0 && blockLines.every((l) => answerLineRe.test(l));
+
+    if (isOrphanAnswer && merged.length > 0) {
+      // Normalise the answer line (strip leading number) and append to previous block
+      const answerLines = blockLines.map((l) => {
+        const m = l.match(/^(?:\d+[\s\.\)\:]+)?(?:answer|correct answer)\s*:\s*(.+)$/i);
+        return m ? `answer: ${m[1].trim()}` : null;
+      }).filter(Boolean);
+      merged[merged.length - 1] += "\n" + answerLines.join("\n");
+    } else {
+      merged.push(block);
+    }
+  }
+
+  return merged
     .map((block) => parseQuestionBlock(block))
     .filter((block): block is NonNullable<ReturnType<typeof parseQuestionBlock>> => Boolean(block));
 }
