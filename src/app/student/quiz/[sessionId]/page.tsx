@@ -84,6 +84,9 @@ function StudentQuizContent() {
   const [focusLost, setFocusLost] = useState(false);
   const [isFullscreenActive, setIsFullscreenActive] = useState(false);
   const [secureModeError, setSecureModeError] = useState<string | null>(null);
+  const [focusWarningMode, setFocusWarningMode] = useState(false); // true = 1st hit (warning only, not reported)
+  const focusLossCountRef = useRef(0); // total confirmed focus-loss events this session
+  const focusLossTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 5s grace timer
 
   // Restore timerEndsAt from sessionStorage on mount — prevents timer flash on refresh
   useEffect(() => {
@@ -315,7 +318,7 @@ function StudentQuizContent() {
     [participantId, sessionId]
   );
 
-  // 1. Fullscreen enforcement
+  // 1. Fullscreen enforcement (2-tier: 1st exit = warning only; 2nd+ = reported to teacher)
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
     setIsFullscreenActive(Boolean(document.fullscreenElement));
@@ -325,17 +328,29 @@ function StudentQuizContent() {
       setIsFullscreenActive(fullscreenNowActive);
 
       if (fullscreenNowActive) {
+        // Student returned to fullscreen — cancel any pending 5s grace timer
+        if (focusLossTimerRef.current) {
+          clearTimeout(focusLossTimerRef.current);
+          focusLossTimerRef.current = null;
+        }
         setSecureModeError(null);
         setFocusLost(false);
+        setFocusWarningMode(false);
         setWarningVisible(false);
         return;
       }
 
       if (status === "active" && !isSubmittingRef.current) {
+        focusLossCountRef.current += 1;
         setWarningVisible(true);
         setFocusLost(true);
-        setWarningCount((c) => c + 1);
-        logViolation("FULLSCREEN_EXIT");
+        if (focusLossCountRef.current >= 2) {
+          setFocusWarningMode(false);
+          setWarningCount((c) => c + 1);
+          logViolation("FULLSCREEN_EXIT");
+        } else {
+          setFocusWarningMode(true);
+        }
       }
     };
 
@@ -344,47 +359,65 @@ function StudentQuizContent() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
-  // 2. Tab switch / visibility detection + focus-loss shield (Messenger bubbles, overlay apps)
+  // 2. Tab switch / visibility detection + focus-loss shield (5-second grace, 2-tier)
+  //    – Focus lost for < 5 s → no penalty (accidental taps forgiven)
+  //    – 5 s elapsed, 1st event → warning shown to student, NOT sent to teacher
+  //    – 5 s elapsed, 2nd+ event → violation logged + Pusher alert to teacher
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
-    const handleVisibility = () => {
-      if (document.hidden && !isSubmittingRef.current) {
-        logViolation("TAB_SWITCH");
+    const triggerFocusLoss = () => {
+      if (focusLossTimerRef.current) return; // already counting down
+      focusLossTimerRef.current = setTimeout(() => {
+        focusLossTimerRef.current = null;
+        focusLossCountRef.current += 1;
         setFocusLost(true);
-        setWarningCount((c) => c + 1);
+        if (focusLossCountRef.current >= 2) {
+          setFocusWarningMode(false);
+          setWarningCount((c) => c + 1);
+          logViolation("TAB_SWITCH");
+        } else {
+          setFocusWarningMode(true);
+        }
+      }, 5000);
+    };
+
+    const cancelFocusLoss = () => {
+      if (focusLossTimerRef.current) {
+        clearTimeout(focusLossTimerRef.current);
+        focusLossTimerRef.current = null;
+      }
+      setFocusLost(false);
+      setFocusWarningMode(false);
+    };
+
+    const handleVisibility = () => {
+      if (isSubmittingRef.current) return;
+      if (document.hidden) {
+        triggerFocusLoss();
+      } else {
+        cancelFocusLoss();
       }
     };
 
-    // Fires when the browser window loses focus (desktop window switch,
-    // Android full app switch, tapping a Messenger chat head to open it)
     const handleBlur = () => {
       if (isSubmittingRef.current) return;
-      setFocusLost(true);
-      setWarningCount((c) => c + 1);
-      logViolation("TAB_SWITCH");
+      triggerFocusLoss();
     };
 
     const handleFocus = () => {
-      setFocusLost(false);
+      cancelFocusLoss();
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("blur", handleBlur);
     window.addEventListener("focus", handleFocus);
 
-    // Polling fallback — some mobile browsers don't reliably fire blur/visibilitychange.
-    // document.hasFocus() catches cases where the window lost focus without an event firing.
+    // Polling fallback — catches mobile browsers that don't reliably fire blur/visibilitychange.
     const focusPoll = setInterval(() => {
       if (isSubmittingRef.current || document.hidden) return;
       if (!document.hasFocus()) {
-        setFocusLost((prev) => {
-          if (!prev) {
-            setWarningCount((c) => c + 1);
-            logViolation("TAB_SWITCH");
-          }
-          return true;
-        });
+        triggerFocusLoss();
       }
     }, 500);
 
@@ -393,6 +426,10 @@ function StudentQuizContent() {
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
       clearInterval(focusPoll);
+      if (focusLossTimerRef.current) {
+        clearTimeout(focusLossTimerRef.current);
+        focusLossTimerRef.current = null;
+      }
     };
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
@@ -507,6 +544,7 @@ function StudentQuizContent() {
       }
       setIsFullscreenActive(Boolean(document.fullscreenElement));
       setFocusLost(false);
+      setFocusWarningMode(false);
       setWarningVisible(false);
     } catch {
       setIsFullscreenActive(Boolean(document.fullscreenElement));
@@ -608,13 +646,28 @@ function StudentQuizContent() {
               </div>
             </div>
           )}
-          {warningCount > 0 && (
-            <p className="text-sm text-danger mb-4 flex items-center justify-center gap-1.5 rounded-2xl bg-danger/6 px-4 py-3">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              {warningCount} anti-cheat warning(s) recorded
-            </p>
+          {sessionData.quiz.antiCheatEnabled && (warningCount > 0 || focusLossCountRef.current > 0) && (
+            <div className="mb-5 rounded-[20px] border border-danger/25 bg-danger/6 px-5 py-4 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-danger flex-shrink-0">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <p className="text-sm font-bold text-danger">Anti-Cheat Report</p>
+              </div>
+              {warningCount > 0 && (
+                <p className="text-sm text-danger font-semibold mb-1">
+                  🚨 {warningCount} violation{warningCount > 1 ? "s" : ""} reported to your teacher
+                </p>
+              )}
+              {focusLossCountRef.current > warningCount && (
+                <p className="text-xs text-amber-600 font-medium">
+                  ⚠️ {focusLossCountRef.current - warningCount} unrecorded warning{focusLossCountRef.current - warningCount > 1 ? "s" : ""} (not reported)
+                </p>
+              )}
+              {warningCount === 0 && focusLossCountRef.current > 0 && (
+                <p className="text-xs text-muted mt-1">No violations were reported to your teacher.</p>
+              )}
+            </div>
           )}
           <a
             href="/student"
@@ -646,8 +699,14 @@ function StudentQuizContent() {
   const isTimeLow = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft < 10 : timeLeft < 60;
   const secureModeRequired = Boolean(sessionData.quiz.antiCheatEnabled);
   const secureModeBlocked = secureModeRequired && (!isFullscreenActive || focusLost);
-  const secureModeTitle = focusLost || warningCount > 0 ? "Secure Mode Interrupted" : "Enter Secure Mode";
-  const secureModeMessage = focusLost || warningCount > 0
+  const secureModeTitle = focusWarningMode
+    ? "Heads Up — You Left the Quiz"
+    : focusLost || warningCount > 0
+    ? "Secure Mode Interrupted"
+    : "Enter Secure Mode";
+  const secureModeMessage = focusWarningMode
+    ? "You left the quiz window. This is your first warning and will NOT be reported to your teacher. Return immediately to continue."
+    : focusLost || warningCount > 0
     ? "The quiz was covered because fullscreen or focus was lost. Your teacher has been notified. Return to secure mode to continue."
     : "This quiz is protected. Question content stays hidden until fullscreen is active on this device.";
 
@@ -662,20 +721,35 @@ function StudentQuizContent() {
       {/* Covers all quiz content when the window loses focus (Messenger bubbles, other apps, address bar) */}
       {secureModeBlocked && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/97 backdrop-blur-sm px-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-danger/15 text-danger flex items-center justify-center mx-auto mb-5">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
+          {/* Icon — orange for 1st warning, red for violations */}
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${focusWarningMode ? "bg-amber-500/20 text-amber-400" : "bg-danger/15 text-danger"}`}>
+            {focusWarningMode ? (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            )}
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">{secureModeTitle}</h2>
-          <p className="text-slate-400 text-sm mb-1 max-w-sm leading-6">
+          <h2 className={`text-2xl font-black mb-2 ${focusWarningMode ? "text-amber-300" : "text-white"}`}>{secureModeTitle}</h2>
+          <p className="text-slate-400 text-sm mb-2 max-w-sm leading-6">
             {secureModeMessage}
           </p>
-          {warningCount > 0 && (
-            <p className="text-danger/80 text-xs font-semibold mb-3">
-              Violation #{warningCount} recorded
+          {/* Show violation count only when it's a real violation (not warning-only mode) */}
+          {!focusWarningMode && warningCount > 0 && (
+            <p className="text-danger text-sm font-bold mb-3 px-4 py-2 rounded-xl bg-danger/15 border border-danger/30">
+              ⚠️ {warningCount} violation{warningCount > 1 ? "s" : ""} recorded — your teacher can see this
+            </p>
+          )}
+          {focusWarningMode && (
+            <p className="text-amber-400/80 text-xs font-semibold mb-3">
+              Next time you leave, it WILL be reported.
             </p>
           )}
           {secureModeError && (
@@ -783,6 +857,20 @@ function StudentQuizContent() {
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </button>
+          </div>
+        )}
+
+        {/* Persistent violation counter — visible throughout quiz once teacher is notified */}
+        {sessionData.quiz.antiCheatEnabled && warningCount > 0 && (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-danger/12 border border-danger/30 px-4 py-3 animate-pulse-once">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger flex-shrink-0">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p className="text-danger text-sm font-bold flex-1">
+              ⚠️ {warningCount} violation{warningCount > 1 ? "s" : ""} recorded — your teacher can see this
+            </p>
           </div>
         )}
 

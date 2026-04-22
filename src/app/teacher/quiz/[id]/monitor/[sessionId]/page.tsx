@@ -272,14 +272,23 @@ export default function MonitorPage() {
                       <button
                         key={p.id}
                         onClick={() => setSelectedId(p.id === selectedId ? null : p.id)}
-                        className={`bg-card border rounded-2xl p-4 text-left transition hover:shadow-md ${
+                        className={`border rounded-2xl p-4 text-left transition hover:shadow-md ${
                           selectedId === p.id
-                            ? "border-primary ring-2 ring-primary/20 shadow-md"
+                            ? "bg-card border-primary ring-2 ring-primary/20 shadow-md"
                             : vCount > 0
-                            ? "border-danger/40"
-                            : "border-border"
+                            ? "bg-danger/5 border-danger/50 ring-1 ring-danger/20"
+                            : "bg-card border-border"
                         }`}
                       >
+                        {/* ALERT banner for students with violations */}
+                        {vCount > 0 && (
+                          <div className="flex items-center gap-1.5 mb-2.5 px-2 py-1 rounded-lg bg-danger/15 border border-danger/30">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger flex-shrink-0">
+                              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            <span className="text-[10px] font-black text-danger uppercase tracking-wide">⚠ Alert — {vCount} violation{vCount > 1 ? "s" : ""}</span>
+                          </div>
+                        )}
                         {/* Avatar + name */}
                         <div className="flex items-center gap-2.5 mb-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${avatarColor(p.user.name)}`}>
@@ -321,7 +330,7 @@ export default function MonitorPage() {
 
                         {/* Violation badges */}
                         {vCount > 0 ? (
-                          <div className="flex flex-wrap gap-1 mt-2">
+                          <div className="flex flex-wrap gap-1.5 mt-2">
                             {Object.entries(
                               p.violations.reduce<Record<string, number>>((acc, v) => {
                                 acc[v.type] = (acc[v.type] || 0) + 1;
@@ -330,10 +339,10 @@ export default function MonitorPage() {
                             ).map(([type, cnt]) => (
                               <span
                                 key={type}
-                                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${VIOLATION_META[type]?.bg} ${VIOLATION_META[type]?.color}`}
+                                className={`text-xs font-bold px-2 py-0.5 rounded-full border ${VIOLATION_META[type]?.bg} ${VIOLATION_META[type]?.color} border-current/20`}
                                 title={VIOLATION_META[type]?.label}
                               >
-                                {VIOLATION_META[type]?.short} x{cnt}
+                                {VIOLATION_META[type]?.short} ×{cnt}
                               </span>
                             ))}
                           </div>
@@ -539,19 +548,20 @@ export default function MonitorPage() {
         {toasts.map((toast, i) => (
           <div
             key={i}
-            className="toast-enter bg-card border border-danger/40 rounded-xl p-3.5 shadow-lg max-w-[280px]"
+            className="toast-enter bg-danger border border-danger rounded-xl p-3.5 shadow-[0_8px_30px_rgba(220,38,38,0.4)] max-w-[300px] pointer-events-auto"
           >
             <div className="flex items-start gap-2.5">
-              <span className="flex-shrink-0 text-danger">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <span className="flex-shrink-0 text-white mt-0.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
               </span>
               <div>
-                <p className="text-sm font-semibold text-foreground">{toast.participantName}</p>
-                <p className="text-xs text-muted mt-0.5">
+                <p className="text-xs font-black text-white/70 uppercase tracking-widest mb-0.5">⚠ Violation Alert</p>
+                <p className="text-sm font-black text-white">{toast.participantName}</p>
+                <p className="text-xs text-white/80 mt-0.5">
                   {VIOLATION_META[toast.type]?.label || toast.type}
-                  <span className="ml-1 text-danger font-semibold">(Total: {toast.totalCount})</span>
+                  <span className="ml-1 font-bold">— {toast.totalCount} total</span>
                 </p>
               </div>
             </div>

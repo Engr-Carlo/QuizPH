@@ -230,6 +230,7 @@ export default function QuizDetailPage() {
   const [bulkImportLoading, setBulkImportLoading] = useState(false);
   const [parsedPreview, setParsedPreview] = useState<ReturnType<typeof parseMultipleQuestionBlocks> | null>(null);
   const [topicFilter, setTopicFilter] = useState("ALL_TOPICS");
+  const [regradedNotice, setRegradedNotice] = useState<string | null>(null);
 
   const [settingsTitle, setSettingsTitle] = useState("");
   const [settingsDescription, setSettingsDescription] = useState("");
@@ -375,7 +376,16 @@ export default function QuizDetailPage() {
         options: qOptions.filter((o) => o.text.trim()),
       }),
     });
-    if (res.ok) { resetForm(); fetchQuiz(); }
+    if (res.ok) {
+      const data = await res.json();
+      resetForm();
+      fetchQuiz();
+      if (editingQuestion && typeof data.regraded === "number" && data.regraded > 0) {
+        const msg = `Answer key updated — ${data.regraded} existing answer${data.regraded > 1 ? "s" : ""} re-graded and scores adjusted.`;
+        setRegradedNotice(msg);
+        setTimeout(() => setRegradedNotice(null), 8000);
+      }
+    }
   }
 
   async function handleSaveSettings() {
@@ -553,6 +563,21 @@ export default function QuizDetailPage() {
 
   return (
     <DashboardLayout>
+      {/* Re-grade success notice */}
+      {regradedNotice && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 rounded-2xl bg-success border border-success/30 px-5 py-3 shadow-lg text-white text-sm font-semibold max-w-md w-[90vw]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>{regradedNotice}</span>
+          <button onClick={() => setRegradedNotice(null)} className="ml-auto opacity-70 hover:opacity-100">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted mb-6">
         <Link href="/teacher" className="hover:text-foreground transition">My Quizzes</Link>
