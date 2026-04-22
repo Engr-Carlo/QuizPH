@@ -824,7 +824,15 @@ export default function QuizDetailPage() {
                   <input type="checkbox" checked={settingsAntiCheatEnabled} onChange={(e) => setSettingsAntiCheatEnabled(e.target.checked)} className="mt-1" />
                   <div>
                     <p className="text-sm font-semibold text-foreground">Enable premium anti-cheat</p>
-                    <p className="text-xs text-muted">Use this as a limited-time premium feature teaser with fullscreen and activity monitoring.</p>
+                    <p className="text-xs text-muted mt-0.5">When enabled, the quiz runs with the following protections active:</p>
+                    <ul className="mt-2 space-y-1.5 text-[11px] text-muted">
+                      <li className="flex items-start gap-1.5"><span className="text-success mt-px">✓</span><span><strong className="text-foreground">Fullscreen enforcement</strong> — quiz launches in fullscreen; exiting is logged as a violation</span></li>
+                      <li className="flex items-start gap-1.5"><span className="text-success mt-px">✓</span><span><strong className="text-foreground">Messenger Shield</strong> — when a chat bubble (Messenger, etc.) or any app steals focus, a full-screen blackout instantly hides quiz content and notifies you</span></li>
+                      <li className="flex items-start gap-1.5"><span className="text-success mt-px">✓</span><span><strong className="text-foreground">Tab-switch detection</strong> — switching tabs or apps is logged and counts as a violation</span></li>
+                      <li className="flex items-start gap-1.5"><span className="text-success mt-px">✓</span><span><strong className="text-foreground">Copy / paste blocked</strong> — clipboard is disabled for the duration of the quiz</span></li>
+                      <li className="flex items-start gap-1.5"><span className="text-success mt-px">✓</span><span><strong className="text-foreground">Right-click disabled</strong> — context menu is suppressed</span></li>
+                      <li className="flex items-start gap-1.5"><span className="text-success mt-px">✓</span><span>All violations are <strong className="text-foreground">reported live</strong> to this dashboard with timestamps</span></li>
+                    </ul>
                   </div>
                 </label>
               </div>

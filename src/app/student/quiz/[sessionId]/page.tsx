@@ -81,6 +81,18 @@ function StudentQuizContent() {
   const questionsInitializedRef = useRef(false);
   const questionTimerRemainingRef = useRef<Record<string, number>>({});
   const [showTimeWarning, setShowTimeWarning] = useState(false);
+  const [focusLost, setFocusLost] = useState(false);
+
+  // Restore timerEndsAt from sessionStorage on mount — prevents timer flash on refresh
+  useEffect(() => {
+    if (!participantId) return;
+    const cached = sessionStorage.getItem(`timerEndsAt:${participantId}`);
+    if (cached) {
+      setTimerEndsAt(cached);
+      setTimeLeft(getTimeLeftFromEndsAt(cached, 0));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch session data
   const fetchSession = useCallback(async () => {
@@ -136,6 +148,10 @@ function StudentQuizContent() {
         const nextTimerEndsAt = data.resumeData?.timerEndsAt ?? null;
         setTimerEndsAt(nextTimerEndsAt);
         setTimeLeft(getTimeLeftFromEndsAt(nextTimerEndsAt, serverTimeLeft));
+        // Cache for instant display on next refresh (prevents 0-flash)
+        if (nextTimerEndsAt && participantId) {
+          sessionStorage.setItem(`timerEndsAt:${participantId}`, nextTimerEndsAt);
+        }
       } else if (data.status === "ENDED") {
         hasFinishedRef.current = true;
         setStatus("finished");
@@ -235,9 +251,11 @@ function StudentQuizContent() {
     if (!question) return;
 
     const qid = question.id;
-    // Initialize remaining for this question only on first visit
+    const storageKey = `qtimer:${participantId}:${qid}`;
+    // Initialize remaining — prefer sessionStorage (survives refresh) then in-memory ref, then full duration
     if (questionTimerRemainingRef.current[qid] === undefined) {
-      questionTimerRemainingRef.current[qid] = duration;
+      const stored = sessionStorage.getItem(storageKey);
+      questionTimerRemainingRef.current[qid] = stored ? parseInt(stored, 10) : duration;
     }
 
     let remaining = questionTimerRemainingRef.current[qid];
@@ -245,7 +263,8 @@ function StudentQuizContent() {
 
     const interval = setInterval(() => {
       remaining -= 1;
-      questionTimerRemainingRef.current[qid] = remaining; // save so we can resume later
+      questionTimerRemainingRef.current[qid] = remaining; // save so we can resume on question switch
+      sessionStorage.setItem(storageKey, String(remaining)); // persist across page refreshes
       setPerQuestionTimeLeft(remaining);
       if (remaining <= 0) {
         clearInterval(interval);
@@ -321,7 +340,7 @@ function StudentQuizContent() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
-  // 2. Tab switch / visibility detection
+  // 2. Tab switch / visibility detection + focus-loss shield (Messenger bubbles, overlay apps)
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
 
@@ -333,9 +352,26 @@ function StudentQuizContent() {
       }
     };
 
+    // Messenger Shield: fires when any external app/overlay steals window focus
+    // (chat heads, split-screen, address bar, etc.) without hiding the tab
+    const handleBlur = () => {
+      if (isSubmittingRef.current) return;
+      setFocusLost(true);
+      setWarningCount((c) => c + 1);
+      logViolation("TAB_SWITCH");
+    };
+
+    const handleFocus = () => {
+      setFocusLost(false);
+    };
+
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
@@ -401,6 +437,17 @@ function StudentQuizContent() {
     if (isSubmittingRef.current || hasFinishedRef.current) return;
     isSubmittingRef.current = true;
     hasFinishedRef.current = true;
+
+    // Clean up persisted timer data from sessionStorage
+    if (participantId) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith(`qtimer:${participantId}:`)) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+      sessionStorage.removeItem(`timerEndsAt:${participantId}`);
+    }
 
     try {
       const res = await fetch("/api/answers/submit", {
@@ -565,6 +612,33 @@ function StudentQuizContent() {
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
+      {/* ── Messenger Shield / Focus-loss overlay ── */}
+      {/* Covers all quiz content when the window loses focus (Messenger bubbles, other apps, address bar) */}
+      {sessionData.quiz.antiCheatEnabled && focusLost && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/97 backdrop-blur-sm px-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-danger/15 text-danger flex items-center justify-center mx-auto mb-5">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2">Quiz Paused</h2>
+          <p className="text-slate-400 text-sm mb-1 max-w-xs leading-6">
+            You navigated away from the quiz window. Your teacher has been notified.
+          </p>
+          <p className="text-danger/80 text-xs font-semibold mb-8">
+            Violation #{warningCount} recorded
+          </p>
+          <button
+            onClick={() => { setFocusLost(false); handleReenterFullscreen(); }}
+            className="px-8 py-3.5 rounded-2xl bg-primary text-white font-black text-sm shadow-lg hover:bg-primary/90 transition"
+          >
+            Return to Quiz
+          </button>
+        </div>
+      )}
+
       {/* Warning Modal */}
       {sessionData.quiz.antiCheatEnabled && warningVisible && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/72 px-4 backdrop-blur-sm">
