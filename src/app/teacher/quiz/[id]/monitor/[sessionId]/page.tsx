@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
 import { formatTime } from "@/lib/utils";
@@ -86,6 +86,8 @@ export default function MonitorPage() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [startingQuiz, setStartingQuiz] = useState(false);
   const [newlyJoinedIds, setNewlyJoinedIds] = useState<Set<string>>(new Set());
+  const leaderboardItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const previousLeaderboardPositionsRef = useRef<Record<string, number>>({});
 
   function copySessionCode(code: string) {
     navigator.clipboard.writeText(code);
@@ -191,6 +193,57 @@ export default function MonitorPage() {
     if (b.score !== a.score) return b.score - a.score;
     return a.violations.length - b.violations.length;
   });
+
+  const leaderboardSignature = leaderboard
+    .map((participant) => `${participant.id}:${participant.score}:${participant.violations.length}`)
+    .join("|");
+
+  useLayoutEffect(() => {
+    if (activeTab !== "leaderboard") {
+      previousLeaderboardPositionsRef.current = {};
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nextPositions: Record<string, number> = {};
+
+    leaderboard.forEach((participant) => {
+      const element = leaderboardItemRefs.current[participant.id];
+      if (!element) return;
+
+      const nextTop = element.getBoundingClientRect().top;
+      nextPositions[participant.id] = nextTop;
+
+      if (prefersReducedMotion) return;
+
+      const previousTop = previousLeaderboardPositionsRef.current[participant.id];
+      if (previousTop === undefined) return;
+
+      const deltaY = previousTop - nextTop;
+      if (Math.abs(deltaY) < 1) return;
+
+      element.animate(
+        [
+          {
+            transform: `translateY(${deltaY}px) scale(0.985)`,
+            boxShadow: "0 20px 45px rgba(37,99,235,0.18)",
+            zIndex: 2,
+          },
+          {
+            transform: "translateY(0) scale(1)",
+            boxShadow: "0 6px 18px rgba(15,23,42,0.08)",
+            zIndex: 1,
+          },
+        ],
+        {
+          duration: 700,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        }
+      );
+    });
+
+    previousLeaderboardPositionsRef.current = nextPositions;
+  }, [activeTab, leaderboard, leaderboardSignature]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -513,6 +566,9 @@ export default function MonitorPage() {
                     return (
                       <div
                         key={p.id}
+                        ref={(element) => {
+                          leaderboardItemRefs.current[p.id] = element;
+                        }}
                         className={`bg-card border rounded-2xl px-5 py-3.5 flex items-center gap-4 transition-all duration-500 ${
                           rank === 0 ? "border-warning/40 shadow-sm" : "border-border"
                         }`}

@@ -920,13 +920,21 @@ export default function QuizDetailPage() {
 
                   <div className="flex gap-2">
                     {s.status === "WAITING" && (
-                      <button
-                        onClick={() => handleSessionAction(s.id, "ACTIVE")}
-                        className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl transition hover:opacity-90"
-                        style={{ background: "var(--success)" }}
-                      >
-                        Start Session
-                      </button>
+                      <>
+                        <Link
+                          href={`/teacher/quiz/${quizId}/monitor/${s.id}`}
+                          className="px-3.5 py-1.5 text-xs font-semibold rounded-xl border border-primary/25 text-primary bg-primary/6 transition hover:bg-primary/10"
+                        >
+                          Open Lobby
+                        </Link>
+                        <button
+                          onClick={() => handleSessionAction(s.id, "ACTIVE")}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl transition hover:opacity-90"
+                          style={{ background: "var(--success)" }}
+                        >
+                          Start Session
+                        </button>
+                      </>
                     )}
                     {s.status === "ACTIVE" && (
                       <>
