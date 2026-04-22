@@ -80,6 +80,7 @@ function StudentQuizContent() {
   const timeWarningShownRef = useRef(false);
   const questionsInitializedRef = useRef(false);
   const questionTimerRemainingRef = useRef<Record<string, number>>({});
+  const focusLostRef = useRef(false); // tracks focus state without stale-closure risk
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [focusLost, setFocusLost] = useState(false);
   const [isFullscreenActive, setIsFullscreenActive] = useState(false);
@@ -340,6 +341,7 @@ function StudentQuizContent() {
 
       if (fullscreenNowActive) {
         setSecureModeError(null);
+        focusLostRef.current = false;
         setFocusLost(false);
         setWarningVisible(false);
         return;
@@ -364,23 +366,28 @@ function StudentQuizContent() {
 
     const triggerFocusLoss = () => {
       if (isSubmittingRef.current) return;
-      setFocusLost((prev) => {
-        if (!prev) {
-          // Only log once per focus-loss event (guard with prev)
-          setWarningCount((c) => c + 1);
-          logViolation("TAB_SWITCH");
-        }
-        return true;
-      });
+      // Guard with a ref so we log exactly once per focus-loss period
+      // (calling logViolation inside a setState updater is unreliable — updaters must be pure)
+      if (!focusLostRef.current) {
+        focusLostRef.current = true;
+        setFocusLost(true);
+        setWarningCount((c) => c + 1);
+        logViolation("TAB_SWITCH");
+      }
+    };
+
+    const restoreFocus = () => {
+      focusLostRef.current = false;
+      setFocusLost(false);
     };
 
     const handleVisibility = () => {
       if (document.hidden) triggerFocusLoss();
-      else setFocusLost(false);
+      else restoreFocus();
     };
 
     const handleBlur = () => { triggerFocusLoss(); };
-    const handleFocus = () => { setFocusLost(false); };
+    const handleFocus = () => { restoreFocus(); };
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("blur", handleBlur);
@@ -511,6 +518,7 @@ function StudentQuizContent() {
         await document.documentElement.requestFullscreen();
       }
       setIsFullscreenActive(Boolean(document.fullscreenElement));
+      focusLostRef.current = false;
       setFocusLost(false);
       setWarningVisible(false);
     } catch {
