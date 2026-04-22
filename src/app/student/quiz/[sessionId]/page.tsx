@@ -347,13 +347,13 @@ function StudentQuizContent() {
     const handleVisibility = () => {
       if (document.hidden && !isSubmittingRef.current) {
         logViolation("TAB_SWITCH");
-        setWarningVisible(true);
+        setFocusLost(true);
         setWarningCount((c) => c + 1);
       }
     };
 
-    // Messenger Shield: fires when any external app/overlay steals window focus
-    // (chat heads, split-screen, address bar, etc.) without hiding the tab
+    // Fires when the browser window loses focus (desktop window switch,
+    // Android full app switch, tapping a Messenger chat head to open it)
     const handleBlur = () => {
       if (isSubmittingRef.current) return;
       setFocusLost(true);
@@ -368,10 +368,27 @@ function StudentQuizContent() {
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("blur", handleBlur);
     window.addEventListener("focus", handleFocus);
+
+    // Polling fallback — some mobile browsers don't reliably fire blur/visibilitychange.
+    // document.hasFocus() catches cases where the window lost focus without an event firing.
+    const focusPoll = setInterval(() => {
+      if (isSubmittingRef.current || document.hidden) return;
+      if (!document.hasFocus()) {
+        setFocusLost((prev) => {
+          if (!prev) {
+            setWarningCount((c) => c + 1);
+            logViolation("TAB_SWITCH");
+          }
+          return true;
+        });
+      }
+    }, 500);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
+      clearInterval(focusPoll);
     };
   }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
 
