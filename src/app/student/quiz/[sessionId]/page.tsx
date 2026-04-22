@@ -82,6 +82,8 @@ function StudentQuizContent() {
   const questionTimerRemainingRef = useRef<Record<string, number>>({});
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [focusLost, setFocusLost] = useState(false);
+  const [isFullscreenActive, setIsFullscreenActive] = useState(false);
+  const [secureModeError, setSecureModeError] = useState<string | null>(null);
 
   // Restore timerEndsAt from sessionStorage on mount — prevents timer flash on refresh
   useEffect(() => {
@@ -316,20 +318,22 @@ function StudentQuizContent() {
   // 1. Fullscreen enforcement
   useEffect(() => {
     if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
-
-    const enterFullscreen = async () => {
-      try {
-        await document.documentElement.requestFullscreen();
-      } catch {
-        // Browser may block if not triggered by user gesture
-      }
-    };
-
-    enterFullscreen();
+    setIsFullscreenActive(Boolean(document.fullscreenElement));
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && status === "active" && !isSubmittingRef.current) {
+      const fullscreenNowActive = Boolean(document.fullscreenElement);
+      setIsFullscreenActive(fullscreenNowActive);
+
+      if (fullscreenNowActive) {
+        setSecureModeError(null);
+        setFocusLost(false);
+        setWarningVisible(false);
+        return;
+      }
+
+      if (status === "active" && !isSubmittingRef.current) {
         setWarningVisible(true);
+        setFocusLost(true);
         setWarningCount((c) => c + 1);
         logViolation("FULLSCREEN_EXIT");
       }
@@ -489,10 +493,29 @@ function StudentQuizContent() {
     setStatus("finished");
   }
 
-  // Re-enter fullscreen from warning modal
+  async function enterSecureMode() {
+    setSecureModeError(null);
+
+    if (typeof document.documentElement.requestFullscreen !== "function") {
+      setSecureModeError("This browser does not support fullscreen secure mode.");
+      return;
+    }
+
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setIsFullscreenActive(Boolean(document.fullscreenElement));
+      setFocusLost(false);
+      setWarningVisible(false);
+    } catch {
+      setIsFullscreenActive(Boolean(document.fullscreenElement));
+      setSecureModeError("Secure mode was blocked. Tap again and allow fullscreen to continue the quiz.");
+    }
+  }
+
   function handleReenterFullscreen() {
-    setWarningVisible(false);
-    document.documentElement.requestFullscreen().catch(() => {});
+    void enterSecureMode();
   }
 
   if (loading) {
@@ -621,6 +644,12 @@ function StudentQuizContent() {
   const questionTypeLabel = QUESTION_TYPE_LABELS[currentQuestion.type] || currentQuestion.type;
   const displayTimeLeft = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft : timeLeft;
   const isTimeLow = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft < 10 : timeLeft < 60;
+  const secureModeRequired = Boolean(sessionData.quiz.antiCheatEnabled);
+  const secureModeBlocked = secureModeRequired && (!isFullscreenActive || focusLost);
+  const secureModeTitle = focusLost || warningCount > 0 ? "Secure Mode Interrupted" : "Enter Secure Mode";
+  const secureModeMessage = focusLost || warningCount > 0
+    ? "The quiz was covered because fullscreen or focus was lost. Your teacher has been notified. Return to secure mode to continue."
+    : "This quiz is protected. Question content stays hidden until fullscreen is active on this device.";
 
   return (
     <div
@@ -631,7 +660,7 @@ function StudentQuizContent() {
     >
       {/* ── Messenger Shield / Focus-loss overlay ── */}
       {/* Covers all quiz content when the window loses focus (Messenger bubbles, other apps, address bar) */}
-      {sessionData.quiz.antiCheatEnabled && focusLost && (
+      {secureModeBlocked && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/97 backdrop-blur-sm px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-danger/15 text-danger flex items-center justify-center mx-auto mb-5">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -640,24 +669,31 @@ function StudentQuizContent() {
               <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">Quiz Paused</h2>
-          <p className="text-slate-400 text-sm mb-1 max-w-xs leading-6">
-            You navigated away from the quiz window. Your teacher has been notified.
+          <h2 className="text-2xl font-black text-white mb-2">{secureModeTitle}</h2>
+          <p className="text-slate-400 text-sm mb-1 max-w-sm leading-6">
+            {secureModeMessage}
           </p>
-          <p className="text-danger/80 text-xs font-semibold mb-8">
-            Violation #{warningCount} recorded
-          </p>
+          {warningCount > 0 && (
+            <p className="text-danger/80 text-xs font-semibold mb-3">
+              Violation #{warningCount} recorded
+            </p>
+          )}
+          {secureModeError && (
+            <p className="mb-4 max-w-sm rounded-2xl border border-danger/25 bg-danger/10 px-4 py-3 text-xs font-medium text-danger">
+              {secureModeError}
+            </p>
+          )}
           <button
-            onClick={() => { setFocusLost(false); handleReenterFullscreen(); }}
+            onClick={handleReenterFullscreen}
             className="px-8 py-3.5 rounded-2xl bg-primary text-white font-black text-sm shadow-lg hover:bg-primary/90 transition"
           >
-            Return to Quiz
+            {isFullscreenActive ? "Return to Quiz" : "Enter Secure Mode"}
           </button>
         </div>
       )}
 
       {/* Warning Modal */}
-      {sessionData.quiz.antiCheatEnabled && warningVisible && (
+      {sessionData.quiz.antiCheatEnabled && warningVisible && !secureModeBlocked && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/72 px-4 backdrop-blur-sm">
           <div className="mx-4 max-w-md rounded-[28px] bg-white p-7 text-center shadow-2xl">
             <div className="w-14 h-14 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
