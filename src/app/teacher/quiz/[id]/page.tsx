@@ -223,6 +223,7 @@ export default function QuizDetailPage() {
   const [error, setError] = useState("");
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [questionFormTab, setQuestionFormTab] = useState<"single" | "paste">("single");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<"sessions" | "questions" | "settings">("sessions");
@@ -339,6 +340,7 @@ export default function QuizDetailPage() {
     ]);
     setShowQuestionForm(false);
     setEditingQuestion(null);
+    setQuestionFormTab("single");
   }
 
   function handleTypeChange(type: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "MATH") {
@@ -1030,103 +1032,162 @@ export default function QuizDetailPage() {
 
         {/* ── Question form ── */}
         {showQuestionForm && (
-          <div className="bg-card border-2 border-primary/25 rounded-2xl p-6 mb-5 shadow-sm fade-in">
-            <h3 className="font-bold text-foreground mb-5">
-              {editingQuestion ? "Edit Question" : "New Question"}
-            </h3>
+          <div className="bg-card border-2 border-primary/25 rounded-2xl mb-5 shadow-sm fade-in overflow-hidden">
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Paste Question Block</label>
-                <textarea
-                  value={bulkQuestionInput}
-                  onChange={(e) => setBulkQuestionInput(e.target.value)}
-                  rows={5}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition placeholder:text-muted"
-                  placeholder={`Paste a full question like:\nWhat is the capital of the Philippines?\nA. Manila\nB. Cebu\nC. Davao\nD. Baguio`}
-                />
-                <div className="flex items-center justify-between gap-3 mt-2">
-                  <p className="text-xs text-muted">The system will split the question and options automatically. You can still choose the correct answer manually.</p>
-                  <div className="flex items-center gap-2">
+            {/* Tab header */}
+            {!editingQuestion && (
+              <div className="flex border-b border-border">
+                {(["single", "paste"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => { setQuestionFormTab(tab); setParsedPreview(null); }}
+                    className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                      questionFormTab === tab
+                        ? "bg-primary/8 text-primary border-b-2 border-primary"
+                        : "text-muted hover:text-foreground hover:bg-surface/60"
+                    }`}
+                  >
+                    {tab === "single" ? "Single Question" : "Paste Multiple"}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="p-6">
+              <h3 className="font-bold text-foreground mb-5">
+                {editingQuestion ? "Edit Question" : questionFormTab === "single" ? "New Question" : "Import Questions"}
+              </h3>
+
+              {/* ─────────── PASTE MULTIPLE TAB ─────────── */}
+              {!editingQuestion && questionFormTab === "paste" && (
+                <div className="space-y-4">
+
+                  {/* Format guide */}
+                  <div className="rounded-xl border border-border/60 bg-surface/50 p-4">
+                    <p className="text-xs font-bold text-foreground mb-2.5">Format guide</p>
+                    <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-1.5">Multiple Choice</p>
+                        <pre className="font-mono text-[11px] leading-5 text-muted whitespace-pre-wrap bg-white rounded-lg border border-border/50 px-3 py-2.5">{`What is the capital of the Philippines?
+A. Manila
+B. Cebu
+C. Davao
+D. Baguio
+Answer: A`}</pre>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-success mb-1.5">True / False</p>
+                          <pre className="font-mono text-[11px] leading-5 text-muted whitespace-pre-wrap bg-white rounded-lg border border-border/50 px-3 py-2.5">{`The sun is a star.
+True
+False
+Answer: True`}</pre>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-warning mb-1.5">Short Answer / Math</p>
+                          <pre className="font-mono text-[11px] leading-5 text-muted whitespace-pre-wrap bg-white rounded-lg border border-border/50 px-3 py-2.5">{`What is 12 × 12?
+Answer: 144`}</pre>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted mt-3">
+                      <strong>Tip:</strong> Separate each question with a <strong>blank line</strong>. Question numbers like <code className="bg-border/40 px-1 rounded text-[10px]">1.</code>, <code className="bg-border/40 px-1 rounded text-[10px]">1)</code>, <code className="bg-border/40 px-1 rounded text-[10px]">(1)</code> are automatically stripped.
+                      Choice labels <code className="bg-border/40 px-1 rounded text-[10px]">A.</code> <code className="bg-border/40 px-1 rounded text-[10px]">A)</code> <code className="bg-border/40 px-1 rounded text-[10px]">(A)</code> are all accepted.
+                    </p>
+                  </div>
+
+                  {/* Textarea */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Paste your questions here</label>
+                    <textarea
+                      value={bulkQuestionInput}
+                      onChange={(e) => setBulkQuestionInput(e.target.value)}
+                      rows={10}
+                      className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y transition font-mono placeholder:text-muted placeholder:font-sans"
+                      placeholder={`What is the capital of the Philippines?\nA. Manila\nB. Cebu\nC. Davao\nD. Baguio\nAnswer: A\n\nThe sun is a star.\nTrue\nFalse\nAnswer: True`}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2">
                     <button
                       type="button"
-                      onClick={handleParseBulkQuestion}
-                      disabled={!bulkQuestionInput.trim()}
-                      className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-primary hover:bg-primary/8 transition disabled:opacity-40"
+                      onClick={resetForm}
+                      className="px-4 py-2 border border-border text-muted text-sm rounded-xl hover:bg-surface transition"
                     >
-                      Parse Single
+                      Cancel
                     </button>
                     <button
                       type="button"
                       onClick={handlePreviewBulkQuestions}
                       disabled={!bulkQuestionInput.trim()}
-                      className="px-3 py-1.5 rounded-lg border border-primary/25 bg-primary/8 text-xs font-semibold text-primary hover:bg-primary/12 transition disabled:opacity-40"
+                      className="px-5 py-2 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary/90 transition disabled:opacity-40"
                     >
-                      Import Multiple
+                      Preview Import
                     </button>
                   </div>
-                </div>
-                <p className="text-[11px] text-muted mt-2">Use a blank line between questions when importing multiple items. Manual encoding and single-question parsing still work.</p>
 
-                {/* ── Bulk import preview ── */}
-                {parsedPreview !== null && (
-                  <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/4 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-foreground">
-                        Preview — {parsedPreview.length} question{parsedPreview.length !== 1 ? "s" : ""} to import
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setParsedPreview(null)}
-                          className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-danger transition"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleImportBulkQuestions}
-                          disabled={bulkImportLoading}
-                          className="px-3 py-1.5 rounded-lg bg-primary text-xs font-semibold text-white hover:bg-primary-dark transition disabled:opacity-40"
-                        >
-                          {bulkImportLoading ? "Importing..." : "Confirm Import"}
-                        </button>
-                      </div>
-                    </div>
-                    {parsedPreview.map((block, bi) => (
-                      <div key={bi} className="rounded-xl bg-white border border-border p-4">
-                        <p className="text-[11px] font-semibold text-muted uppercase tracking-[0.16em] mb-1">
-                          {Q_TYPE_LABELS[block.type]} · Q{bi + 1}
+                  {/* ── Bulk import preview ── */}
+                  {parsedPreview !== null && (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/4 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-foreground">
+                          Preview — {parsedPreview.length} question{parsedPreview.length !== 1 ? "s" : ""} to import
                         </p>
-                        <p className="text-sm font-semibold text-foreground mb-3">{block.text}</p>
-                        <div className="space-y-1.5">
-                          {block.options.map((opt, oi) => (
-                            <button
-                              key={oi}
-                              type="button"
-                              onClick={() => togglePreviewCorrectAnswer(bi, oi)}
-                              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm text-left transition ${
-                                opt.isCorrect
-                                  ? "border-success/40 bg-success/8 text-success font-semibold"
-                                  : "border-border bg-white text-foreground hover:border-primary/35"
-                              }`}
-                            >
-                              <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                                opt.isCorrect ? "border-success bg-success" : "border-muted"
-                              }`} />
-                              <span>{String.fromCharCode(65 + oi)}. {opt.text}</span>
-                              {opt.isCorrect && <span className="ml-auto text-xs font-bold text-success">✓ Correct</span>}
-                            </button>
-                          ))}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setParsedPreview(null)}
+                            className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-danger transition"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleImportBulkQuestions}
+                            disabled={bulkImportLoading}
+                            className="px-3 py-1.5 rounded-lg bg-primary text-xs font-semibold text-white hover:bg-primary-dark transition disabled:opacity-40"
+                          >
+                            {bulkImportLoading ? "Importing..." : "Confirm Import"}
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      {parsedPreview.map((block, bi) => (
+                        <div key={bi} className="rounded-xl bg-white border border-border p-4">
+                          <p className="text-[11px] font-semibold text-muted uppercase tracking-[0.16em] mb-1">
+                            {Q_TYPE_LABELS[block.type]} · Q{bi + 1}
+                          </p>
+                          <p className="text-sm font-semibold text-foreground mb-3">{block.text}</p>
+                          <div className="space-y-1.5">
+                            {block.options.map((opt, oi) => (
+                              <button
+                                key={oi}
+                                type="button"
+                                onClick={() => togglePreviewCorrectAnswer(bi, oi)}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm text-left transition ${
+                                  opt.isCorrect
+                                    ? "border-success/40 bg-success/8 text-success font-semibold"
+                                    : "border-border bg-white text-foreground hover:border-primary/35"
+                                }`}
+                              >
+                                <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                                  opt.isCorrect ? "border-success bg-success" : "border-muted"
+                                }`} />
+                                <span>{String.fromCharCode(65 + oi)}. {opt.text}</span>
+                                {opt.isCorrect && <span className="ml-auto text-xs font-bold text-success">✓ Correct</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* Type selector */}
-              <div>
+              {/* ─────────── SINGLE QUESTION TAB ─────────── */}
+              {(editingQuestion || questionFormTab === "single") && (
+              <div className="space-y-4">
                 <label className="block text-sm font-semibold text-foreground mb-2">Question Type</label>
                 <div className="flex flex-wrap gap-2">
                   {(["MCQ", "TRUE_FALSE", "SHORT_ANSWER", "MATH"] as const).map((t) => (
@@ -1302,6 +1363,9 @@ export default function QuizDetailPage() {
                   Cancel
                 </button>
               </div>
+              </div>
+              )}
+
             </div>
           </div>
         )}
