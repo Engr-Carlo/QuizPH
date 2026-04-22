@@ -88,6 +88,12 @@ function StudentQuizContent() {
   const [secureModeError, setSecureModeError] = useState<string | null>(null);
   const [lockedQuestionIds, setLockedQuestionIds] = useState<Set<string>>(new Set());
 
+  // ── Fake biometrics (psychological pressure display) ──────────────────
+  const [heartRate, setHeartRate] = useState(78);
+  const [spo2, setSpo2] = useState(98);
+  const heartRateRef = useRef(78);
+  const timeLeftRef = useRef(0);
+
   // Restore timer state from sessionStorage on mount — prevents timer flash on refresh
   useEffect(() => {
     if (!participantId) return;
@@ -440,6 +446,36 @@ function StudentQuizContent() {
 
   // 4. Screenshot prevention — removed (browser APIs cannot block OS-level screenshots)
 
+  // ── Biometrics simulation ──────────────────────────────────────────────
+
+  // Mirror timeLeft into a ref so the vitals interval reads the latest value
+  // without including timeLeft in the effect deps (avoids re-creating every second).
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+
+  // Fake heart-rate / SpO₂ — escalates as time pressure builds.
+  useEffect(() => {
+    if (status !== "active") return;
+    const duration = sessionData?.quiz.duration ?? 600;
+
+    const updateVitals = () => {
+      const tl = timeLeftRef.current;
+      const progress = Math.max(0, Math.min(1, 1 - tl / duration));
+      const stressMul = tl < 60 ? 1.48 : tl < 120 ? 1.24 : 1.0;
+      const baseHR = Math.round(72 + (118 - 72) * progress * stressMul);
+      const noise = Math.round((Math.random() - 0.3) * 16);
+      const newHR = Math.min(140, Math.max(64, baseHR + noise));
+      heartRateRef.current = newHR;
+      setHeartRate(newHR);
+      const spo2Base = progress > 0.65 ? 95.2 : 97.8;
+      const spo2Noise = (Math.random() - 0.5) * 3;
+      setSpo2(Math.min(99, Math.max(91, Math.round(spo2Base + spo2Noise))));
+    };
+
+    updateVitals();
+    const iv = setInterval(updateVitals, 2800);
+    return () => clearInterval(iv);
+  }, [status, sessionData?.quiz.duration]);
+
   // Persist lastQuestionIndex to server so student can resume if they close the browser
   const persistQuestionIndex = useCallback(
     async (index: number) => {
@@ -685,6 +721,11 @@ function StudentQuizContent() {
     : "This quiz is protected. Question content stays hidden until fullscreen is active on this device.";
   const isPerQuestion = sessionData.quiz.timerType === "PER_QUESTION";
 
+  // Biometrics derived display values
+  const hrColor = heartRate > 108 ? "#f87171" : heartRate > 88 ? "#facc15" : "#34d399";
+  const spo2Color = spo2 < 95 ? "#f87171" : spo2 < 97 ? "#facc15" : "#60a5fa";
+  const beatPeriod = `${(60 / heartRate).toFixed(2)}s`;
+
   return (
     <div
       className="min-h-screen bg-surface select-none"
@@ -788,7 +829,72 @@ function StudentQuizContent() {
             </div>
           </div>
 
-          <div className="mt-2.5 space-y-1.5">
+          {/* ── Live Biometrics Monitor ── */}
+          <div className="mt-2 flex items-center gap-3 rounded-xl bg-slate-950 border border-slate-700/60 px-3 py-2">
+            {/* Heart Rate */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className="heart-pulse text-base leading-none flex-shrink-0"
+                style={{ color: hrColor, "--beat-period": beatPeriod } as React.CSSProperties}
+                aria-hidden="true"
+              >
+                ♥
+              </span>
+              <div className="min-w-0">
+                <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400 leading-none">Heart Rate</div>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  {/* Scrolling ECG trace */}
+                  <div
+                    className="w-16 h-5 overflow-hidden flex-shrink-0"
+                    style={{ "--ecg-duration": beatPeriod } as React.CSSProperties}
+                  >
+                    <svg
+                      width="128"
+                      height="20"
+                      viewBox="0 0 128 20"
+                      className="ecg-scroll"
+                      aria-hidden="true"
+                    >
+                      <polyline
+                        points="0,10 8,10 10,8 12,10 16,10 18,12 20,1 22,19 24,10 30,10 33,7 36,10 64,10 72,10 74,8 76,10 80,10 82,12 84,1 86,19 88,10 94,10 97,7 100,10 128,10"
+                        fill="none"
+                        stroke={hrColor}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-black tabular-nums leading-none flex-shrink-0" style={{ color: hrColor }}>
+                    {heartRate}
+                    <span className="text-[8px] font-normal text-slate-400 ml-0.5">bpm</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-px h-7 bg-slate-700 flex-shrink-0" />
+
+            {/* SpO₂ */}
+            <div className="flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill={spo2Color} aria-hidden="true" className="flex-shrink-0">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+              </svg>
+              <div>
+                <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400 leading-none">SpO₂</div>
+                <div className="mt-0.5 text-sm font-black tabular-nums leading-none" style={{ color: spo2Color }}>
+                  {spo2}<span className="text-[8px] font-normal text-slate-400 ml-0.5">%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
+              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500 hidden sm:block">Live Monitor</span>
+            </div>
+          </div>
+
+          <div className="mt-2 space-y-1.5">
             <div className="h-1.5 rounded-full bg-slate-100">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300"

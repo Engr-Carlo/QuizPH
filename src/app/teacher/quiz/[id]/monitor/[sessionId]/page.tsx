@@ -204,24 +204,67 @@ export default function MonitorPage() {
       const deltaY = previousTop - nextTop;
       if (Math.abs(deltaY) < 1) return;
 
+      const isOvertaking = deltaY > 0; // card moved up = overtook someone
+
       element.animate(
-        [
-          {
-            transform: `translateY(${deltaY}px) scale(0.985)`,
-            boxShadow: "0 20px 45px rgba(37,99,235,0.18)",
-            zIndex: 2,
-          },
-          {
-            transform: "translateY(0) scale(1)",
-            boxShadow: "0 6px 18px rgba(15,23,42,0.08)",
-            zIndex: 1,
-          },
-        ],
+        isOvertaking
+          ? [
+              {
+                transform: `translateY(${deltaY}px) scale(0.95)`,
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
+                zIndex: 10,
+              },
+              {
+                offset: 0.32,
+                transform: `translateY(${deltaY * 0.22}px) scale(1.08)`,
+                boxShadow:
+                  "0 0 55px 16px rgba(234,179,8,0.60), 0 30px 70px rgba(234,179,8,0.32)",
+                zIndex: 10,
+              },
+              {
+                offset: 0.70,
+                transform: "translateY(0) scale(1.03)",
+                boxShadow:
+                  "0 0 30px 8px rgba(234,179,8,0.30), 0 12px 32px rgba(234,179,8,0.14)",
+                zIndex: 5,
+              },
+              {
+                transform: "translateY(0) scale(1)",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
+                zIndex: 1,
+              },
+            ]
+          : [
+              {
+                transform: `translateY(${deltaY}px) scale(1.01)`,
+                boxShadow: "0 18px 40px rgba(37,99,235,0.14)",
+                zIndex: 2,
+              },
+              {
+                transform: "translateY(0) scale(1)",
+                boxShadow: "0 4px 12px rgba(15,23,42,0.06)",
+                zIndex: 1,
+              },
+            ],
         {
-          duration: 700,
+          duration: isOvertaking ? 980 : 750,
           easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          fill: "none",
         }
       );
+
+      // Inject rank-up glow class + floating badge for overtaking cards
+      if (isOvertaking) {
+        element.classList.add("rank-overtake");
+        const badge = document.createElement("div");
+        badge.className = "rank-badge-up";
+        badge.textContent = "↑ Rank Up!";
+        element.appendChild(badge);
+        setTimeout(() => {
+          element.classList.remove("rank-overtake");
+          if (badge.parentNode === element) element.removeChild(badge);
+        }, 1400);
+      }
     });
 
     previousLeaderboardPositionsRef.current = nextPositions;
@@ -571,7 +614,7 @@ export default function MonitorPage() {
                         ref={(element) => {
                           leaderboardItemRefs.current[p.id] = element;
                         }}
-                        className={`bg-card border rounded-2xl px-5 py-3.5 flex items-center gap-4 transition-all duration-500 ${
+                        className={`relative bg-card border rounded-2xl px-5 py-3.5 flex items-center gap-4 transition-all duration-500 ${
                           rank === 0 ? "border-warning/40 shadow-sm" : "border-border"
                         }`}
                       >
