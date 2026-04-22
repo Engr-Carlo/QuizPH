@@ -81,6 +81,7 @@ function StudentQuizContent() {
   const questionsInitializedRef = useRef(false);
   const questionTimerRemainingRef = useRef<Record<string, number>>({});
   const focusLostRef = useRef(false); // tracks focus state without stale-closure risk
+  const antiCheatEnabledRef = useRef(false); // mirrors sessionData.quiz.antiCheatEnabled as a ref
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [focusLost, setFocusLost] = useState(false);
   const [isFullscreenActive, setIsFullscreenActive] = useState(false);
@@ -314,25 +315,34 @@ function StudentQuizContent() {
   // ANTI-CHEAT ENGINE
   // ========================
 
-  const logViolation = useCallback(
-    async (type: string) => {
+  // Keep a ref in sync with sessionData so anti-cheat effects don't need
+  // sessionData in their deps — without this, every fetchSession() call (triggered
+  // by Pusher events) tears down and re-registers all event listeners, creating
+  // a brief window where focus-loss events are silently dropped.
+  useEffect(() => {
+    antiCheatEnabledRef.current = Boolean(sessionData?.quiz.antiCheatEnabled);
+  }, [sessionData?.quiz.antiCheatEnabled]);
+
+  // Helper — fire-and-forget violation POST.  Uses participantId / sessionId
+  // directly (both are stable URL params, not React state) so there is no
+  // stale-closure risk regardless of when the callback is invoked.
+  const postViolation = useCallback(
+    (type: string) => {
       if (!participantId || !sessionId) return;
-      try {
-        await fetch("/api/violations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ participantId, sessionId, type }),
-        });
-      } catch {
-        // Silently fail — violation logging shouldn't crash quiz
-      }
+      fetch("/api/violations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantId, sessionId, type }),
+      }).catch(() => {});
     },
     [participantId, sessionId]
   );
 
-  // 1. Fullscreen enforcement — every exit immediately triggers a violation
+  // 1. Fullscreen enforcement — every exit immediately triggers a violation.
+  // Deps: only [status, postViolation].  antiCheatEnabled is read from a ref at
+  // call-time so this effect is NOT re-registered on every fetchSession().
   useEffect(() => {
-    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
+    if (status !== "active") return;
     setIsFullscreenActive(Boolean(document.fullscreenElement));
 
     const handleFullscreenChange = () => {
@@ -347,32 +357,33 @@ function StudentQuizContent() {
         return;
       }
 
-      if (status === "active" && !isSubmittingRef.current) {
+      if (!antiCheatEnabledRef.current) return;
+      if (!isSubmittingRef.current) {
         setWarningVisible(true);
         setFocusLost(true);
         setWarningCount((c) => c + 1);
-        logViolation("FULLSCREEN_EXIT");
+        postViolation("FULLSCREEN_EXIT");
       }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
+  }, [status, postViolation]);
 
-  // 2. Tab switch / focus-loss shield — every focus-loss event reported immediately
+  // 2. Tab switch / focus-loss shield — every focus-loss event reported immediately.
+  // Registered once when status becomes "active"; antiCheatEnabled checked at call-time.
   useEffect(() => {
-    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
+    if (status !== "active") return;
 
     const triggerFocusLoss = () => {
+      if (!antiCheatEnabledRef.current) return;
       if (isSubmittingRef.current) return;
-      // Guard with a ref so we log exactly once per focus-loss period
-      // (calling logViolation inside a setState updater is unreliable — updaters must be pure)
       if (!focusLostRef.current) {
         focusLostRef.current = true;
         setFocusLost(true);
         setWarningCount((c) => c + 1);
-        logViolation("TAB_SWITCH");
+        postViolation("TAB_SWITCH");
       }
     };
 
@@ -405,15 +416,16 @@ function StudentQuizContent() {
       window.removeEventListener("focus", handleFocus);
       clearInterval(focusPoll);
     };
-  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
+  }, [status, postViolation]);
 
   // 3. Copy-paste prevention
   useEffect(() => {
-    if (status !== "active" || !sessionData?.quiz.antiCheatEnabled) return;
+    if (status !== "active") return;
 
     const prevent = (e: ClipboardEvent) => {
+      if (!antiCheatEnabledRef.current) return;
       e.preventDefault();
-      logViolation("COPY_PASTE");
+      postViolation("COPY_PASTE");
     };
 
     document.addEventListener("copy", prevent);
@@ -424,7 +436,7 @@ function StudentQuizContent() {
       document.removeEventListener("paste", prevent);
       document.removeEventListener("cut", prevent);
     };
-  }, [status, logViolation, sessionData?.quiz.antiCheatEnabled]);
+  }, [status, postViolation]);
 
   // 4. Screenshot prevention — removed (browser APIs cannot block OS-level screenshots)
 

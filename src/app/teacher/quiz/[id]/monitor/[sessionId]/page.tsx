@@ -84,11 +84,28 @@ export default function MonitorPage() {
   const [activeTab, setActiveTab] = useState<"participants" | "leaderboard">("participants");
   const [, setNow] = useState(() => Date.now());
   const [codeCopied, setCodeCopied] = useState(false);
+  const [startingQuiz, setStartingQuiz] = useState(false);
+  const [newlyJoinedIds, setNewlyJoinedIds] = useState<Set<string>>(new Set());
 
   function copySessionCode(code: string) {
     navigator.clipboard.writeText(code);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
+  }
+
+  async function startQuiz() {
+    if (startingQuiz) return;
+    setStartingQuiz(true);
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      });
+      // fetchSession will be triggered automatically by the Pusher session-status event
+    } catch {
+      setStartingQuiz(false);
+    }
   }
 
   const fetchSession = useCallback(async () => {
@@ -106,7 +123,21 @@ export default function MonitorPage() {
       setToasts((prev) => [data, ...prev].slice(0, 8));
       fetchSession();
     });
-    ch.bind("participant-joined", fetchSession);
+    ch.bind("session-status", () => {
+      setStartingQuiz(false);
+      fetchSession();
+    });
+    ch.bind("participant-joined", (data: { participantId: string }) => {
+      setNewlyJoinedIds((prev) => new Set([...prev, data.participantId]));
+      setTimeout(() => {
+        setNewlyJoinedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(data.participantId);
+          return next;
+        });
+      }, 3000);
+      fetchSession();
+    });
     ch.bind("answer-submitted", fetchSession);
     ch.bind("participant-finished", fetchSession);
     return () => { ch.unbind_all(); pusher.unsubscribe(`session-${sessionId}`); };
@@ -225,6 +256,112 @@ export default function MonitorPage() {
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
 
+        {/* ── WAITING LOBBY ── */}
+        {sessionData.status === "WAITING" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+
+            {/* Lobby top bar */}
+            <div className="flex-shrink-0 px-6 py-4 border-b border-border bg-card flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Live count badge */}
+                <div className="flex items-center gap-2 bg-primary/8 border border-primary/20 rounded-2xl px-4 py-2">
+                  <span className="w-2 h-2 rounded-full bg-primary pulse-dot" />
+                  <span className="text-sm font-extrabold text-primary">
+                    {sessionData.participants.length} waiting
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Share this code with your students</p>
+                  <button
+                    type="button"
+                    onClick={() => copySessionCode(sessionData.code)}
+                    className="font-mono font-black text-2xl tracking-[0.25em] text-primary hover:text-primary/70 transition flex items-center gap-2 leading-none mt-0.5"
+                  >
+                    {sessionData.code}
+                    <span className="text-[11px] font-sans font-normal text-muted normal-case tracking-normal">
+                      {codeCopied ? "Copied!" : "copy"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={startQuiz}
+                disabled={startingQuiz || sessionData.participants.length === 0}
+                className="flex items-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-xl hover:bg-primary/90 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm"
+              >
+                {startingQuiz ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Starting…
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Start Quiz
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Student roster */}
+            <div className="flex-1 overflow-auto p-6">
+              {sessionData.participants.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                  <div className="w-20 h-20 rounded-full bg-primary/8 border-2 border-dashed border-primary/25 flex items-center justify-center">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/50">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">No students yet</p>
+                    <p className="text-sm text-muted mt-1">
+                      Ask your students to go to the quiz and enter code{" "}
+                      <span className="font-mono font-bold text-primary">{sessionData.code}</span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-muted font-semibold uppercase tracking-wide mb-4">
+                    Students in lobby — {sessionData.participants.length}
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {sessionData.participants.map((p) => (
+                      <div
+                        key={p.id}
+                        className={`bg-card border rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center transition-shadow hover:shadow-md ${
+                          newlyJoinedIds.has(p.id)
+                            ? "border-primary/50 ring-2 ring-primary/20 lobby-pop"
+                            : "border-border"
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold ${avatarColor(p.user.name)}`}>
+                          {getInitials(p.user.name)}
+                        </div>
+                        <p className="text-xs font-semibold text-foreground leading-tight break-words w-full">{p.user.name}</p>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Ready
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── ACTIVE / ENDED — normal monitor panels ── */}
+        {sessionData.status !== "WAITING" && (
+        <>
         {/* ── Main panel ── */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Tab bar */}
