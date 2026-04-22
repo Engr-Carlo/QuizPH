@@ -1,0 +1,22 @@
+Patch update:
+1. ✅Fix Line Dependent bug for pasting multiple questions
+2. ✅Added feature: auto detect number and fixing numbering automatically
+3. ✅Make 2 separate tabs for single questions and for pasting multiple questions
+4. ✅Fix bug about timer reset when the user refresh the page
+5. Messenger pop up is impossible to detect (so instead we implemented 
+focus loss algorithm and psychological deterrence)
+6. ✅If the teacher change an answer key the student score will reflect the changes
+7. ✅In the CSV download can we separate the full name? to last name and first name? 
+so that when we sort it the last name will be sorted
+8. A monitor for lobby while waiting for the session 
+to start so that the teacher will know who already entered the waiting lobby, 
+make sure the appearance of the waiting lobby is good enough 
+9. The teacher can have a settings for heart rate monitor and oxygen level
+though it will be a pretend data for students  to feel more anxious
+10. ✅In the quiz student monitor while taking quiz the progress bar, 
+timer and monitor (volation/clean run) and the green and blue bar 
+is kinda too big, so students is scrolling down to see the entire question
+can we make it smaller? 
+11. ✅A smooth animation in the teacher monitor while the score changes for students
+show picture
+12. ✅When timer times out the questions will be lock for that specific number

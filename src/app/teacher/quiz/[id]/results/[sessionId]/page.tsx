@@ -66,8 +66,8 @@ export default function ResultsPage() {
     const rows = sorted.map((p, idx) => {
       // Split "First Last" or "First Middle Last" → firstName = first token, lastName = rest
       const nameParts = p.user.name.trim().split(/\s+/);
-      const firstName = nameParts[0] ?? "";
-      const lastName = nameParts.slice(1).join(" ") || nameParts[0] ?? "";
+      const firstName = nameParts.length > 0 ? nameParts[0] : "";
+      const lastName = nameParts.slice(1).join(" ") || firstName;
       return [
         idx + 1,
         `"${lastName.replace(/"/g, '""')}"`,

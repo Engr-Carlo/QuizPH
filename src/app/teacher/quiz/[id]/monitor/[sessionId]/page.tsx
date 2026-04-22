@@ -326,7 +326,7 @@ export default function MonitorPage() {
                   </div>
                 </div>
               ) : (
-                <>
+                <div>
                   <p className="text-xs text-muted font-semibold uppercase tracking-wide mb-4">
                     Students in lobby — {sessionData.participants.length}
                   </p>
@@ -353,7 +353,7 @@ export default function MonitorPage() {
                       </div>
                     ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -361,7 +361,7 @@ export default function MonitorPage() {
 
         {/* ── ACTIVE / ENDED — normal monitor panels ── */}
         {sessionData.status !== "WAITING" && (
-        <>
+        <div className="contents">
         {/* ── Main panel ── */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Tab bar */}
@@ -627,7 +627,7 @@ export default function MonitorPage() {
 
               {/* Timeline */}
               {selectedP.violations.length > 0 && (
-                <>
+                <div>
                   <h4 className="text-xs font-bold text-foreground uppercase tracking-wide mb-2.5">Timeline</h4>
                   <div className="space-y-2 max-h-56 overflow-y-auto">
                     {[...selectedP.violations]
@@ -645,7 +645,7 @@ export default function MonitorPage() {
                         </div>
                       ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
           ) : (
@@ -678,6 +678,8 @@ export default function MonitorPage() {
             </div>
           )}
         </aside>
+        </div>
+        )}
       </div>
 
       {/* ── Toast notifications ── */}
