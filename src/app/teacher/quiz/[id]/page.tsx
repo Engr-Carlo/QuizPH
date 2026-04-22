@@ -1208,7 +1208,6 @@ Answer: 144`}</pre>
                 {qType === "MATH" && (
                   <p className="text-xs text-muted mt-2">Suitable for all levels — elementary arithmetic to college calculus. Students type their answer; numeric values are compared with tolerance (e.g. &ldquo;3.0&rdquo; and &ldquo;3&rdquo; are both accepted).</p>
                 )}
-              </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
