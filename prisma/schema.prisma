@@ -69,6 +69,8 @@ model User {
   participants Participant[]
   verificationCodes EmailVerificationCode[]
   passwordResetTokens PasswordResetToken[]
+
+  @@index([lastSeenAt])
 }
 
 model EmailVerificationCode {
@@ -136,6 +138,8 @@ model Question {
 
   options Option[]
   answers Answer[]
+
+  @@index([quizId])
 }
 
 model Option {
@@ -145,6 +149,8 @@ model Option {
 
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
 }
 
 model QuizSession {
@@ -179,6 +185,9 @@ model Participant {
 
   answers    Answer[]
   violations ViolationLog[]
+
+  @@index([sessionId])
+  @@index([userId, sessionId])
 }
 
 model Answer {
@@ -192,6 +201,10 @@ model Answer {
 
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([participantId, questionId])
+  @@index([participantId])
+  @@index([questionId])
 }
 
 model ViolationLog {
@@ -206,4 +219,8 @@ model ViolationLog {
 
   sessionId String
   session   QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([participantId])
+  @@index([participantId, timestamp])
+  @@index([sessionId])
 }

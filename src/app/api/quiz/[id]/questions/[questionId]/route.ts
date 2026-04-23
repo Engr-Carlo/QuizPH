@@ -109,19 +109,25 @@ export async function PUT(
     }
 
     if (changes.length > 0) {
-      // Flat list of operations — Prisma runs them all in one transaction
+      // Batch answer updates: 2 updateMany ops instead of N individual updates
+      const nowCorrectIds = changes.filter((c) => c.delta === 1).map((c) => c.answerId);
+      const nowIncorrectIds = changes.filter((c) => c.delta === -1).map((c) => c.answerId);
+
+      // Group score deltas by participant — 1 update per participant instead of N
+      const scoreDeltas = new Map<string, number>();
+      for (const c of changes) {
+        scoreDeltas.set(c.participantId, (scoreDeltas.get(c.participantId) ?? 0) + c.delta);
+      }
+
       await prisma.$transaction([
-        ...changes.map((c) =>
-          prisma.answer.update({
-            where: { id: c.answerId },
-            data: { isCorrect: c.delta === 1 },
-          })
-        ),
-        ...changes.map((c) =>
-          prisma.participant.update({
-            where: { id: c.participantId },
-            data: { score: { increment: c.delta } },
-          })
+        ...(nowCorrectIds.length > 0
+          ? [prisma.answer.updateMany({ where: { id: { in: nowCorrectIds } }, data: { isCorrect: true } })]
+          : []),
+        ...(nowIncorrectIds.length > 0
+          ? [prisma.answer.updateMany({ where: { id: { in: nowIncorrectIds } }, data: { isCorrect: false } })]
+          : []),
+        ...Array.from(scoreDeltas.entries()).map(([pid, delta]) =>
+          prisma.participant.update({ where: { id: pid }, data: { score: { increment: delta } } })
         ),
       ]);
     }

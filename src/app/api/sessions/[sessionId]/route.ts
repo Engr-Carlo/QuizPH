@@ -122,20 +122,63 @@ export async function GET(
 
   const quizSession = await prisma.quizSession.findUnique({
     where: { id: sessionId },
-    include: {
+    select: {
+      id: true,
+      code: true,
+      status: true,
+      startedAt: true,
+      endedAt: true,
+      archivedAt: true,
+      createdAt: true,
+      quizId: true,
       quiz: {
-        include: {
+        select: {
+          id: true,
+          title: true,
+          timerType: true,
+          duration: true,
+          questionSelectionMode: true,
+          randomQuestionScope: true,
+          questionDrawCount: true,
+          randomizeQuestions: true,
+          randomizeAnswers: true,
+          antiCheatEnabled: true,
+          allowSkip: true,
+          teacherId: true,
           questions: {
-            include: { options: true },
+            select: {
+              id: true,
+              type: true,
+              topic: true,
+              text: true,
+              order: true,
+              includedInQuiz: true,
+              mathTolerance: true,
+              options: {
+                select: { id: true, text: true, isCorrect: true },
+              },
+            },
             orderBy: { order: "asc" },
           },
         },
       },
       participants: {
-        include: {
+        select: {
+          id: true,
+          score: true,
+          isFinished: true,
+          joinedAt: true,
+          quizStartedAt: true,
+          lastQuestionIndex: true,
+          sessionId: true,
+          userId: true,
           user: { select: { name: true, email: true } },
-          violations: true,
-          answers: true,
+          violations: {
+            select: { type: true, timestamp: true },
+          },
+          answers: {
+            select: { questionId: true, isCorrect: true, answerText: true },
+          },
         },
         orderBy: { score: "desc" },
       },

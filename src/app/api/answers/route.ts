@@ -18,17 +18,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // Verify participant
+    // Verify participant — slim select: only fields needed for auth + question selection + Pusher name
     const participant = await prisma.participant.findUnique({
       where: { id: participantId },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        isFinished: true,
+        sessionId: true,
+        score: true,
+        user: { select: { name: true } },
         session: {
-          include: {
+          select: {
+            id: true,
             quiz: {
-              include: {
+              select: {
+                questionSelectionMode: true,
+                randomQuestionScope: true,
+                questionDrawCount: true,
+                // Only the 3 fields selectQuestionsForSession actually needs
                 questions: {
+                  select: { id: true, order: true, includedInQuiz: true },
                   orderBy: { order: "asc" },
-                  include: { options: true },
                 },
               },
             },
@@ -54,7 +65,6 @@ export async function POST(req: Request) {
           ? `${participant.sessionId}:${participant.id}`
           : participant.sessionId,
     });
-
     if (!allowedQuestions.some((question) => question.id === questionId)) {
       return NextResponse.json({ error: "Question is not assigned to this participant" }, { status: 403 });
     }
@@ -114,27 +124,25 @@ export async function POST(req: Request) {
       },
     });
 
-    // Update score if correct
+    // Update score if correct and capture new score in one query
+    let finalScore = participant.score;
     if (isCorrect) {
-      await prisma.participant.update({
+      const updated = await prisma.participant.update({
         where: { id: participantId },
         data: { score: { increment: 1 } },
+        select: { score: true },
       });
+      finalScore = updated.score;
     }
 
-    // Notify leaderboard update
-    const updatedParticipant = await prisma.participant.findUnique({
-      where: { id: participantId },
-      include: { user: { select: { name: true } } },
-    });
-
+    // Notify leaderboard update — name already loaded in the initial fetch
     await pusherServer.trigger(
       `session-${participant.sessionId}`,
       "answer-submitted",
       {
         participantId,
-        participantName: updatedParticipant?.user.name,
-        score: updatedParticipant?.score,
+        participantName: participant.user.name,
+        score: finalScore,
         isCorrect,
       }
     );

@@ -50,17 +50,18 @@ export async function POST(req: Request) {
       },
     });
 
-    // Get total violation count for this participant
-    const totalCount = await prisma.violationLog.count({
+    // Single query — compute total + breakdown in JS instead of 2 separate DB round-trips
+    const allViolations = await prisma.violationLog.findMany({
       where: { participantId },
+      select: { type: true },
     });
 
-    // Get violation count by type
-    const typeCounts = await prisma.violationLog.groupBy({
-      by: ["type"],
-      where: { participantId },
-      _count: true,
-    });
+    const totalCount = allViolations.length;
+    const typeMap = new Map<string, number>();
+    for (const v of allViolations) {
+      typeMap.set(v.type, (typeMap.get(v.type) ?? 0) + 1);
+    }
+    const typeCounts = Array.from(typeMap.entries()).map(([t, count]) => ({ type: t, count }));
 
     // Notify teacher in real-time
     await pusherServer.trigger(`session-${sessionId}`, "violation", {
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
       participantName: participant.user.name,
       type,
       totalCount,
-      typeCounts: typeCounts.map((t: { type: string; _count: number }) => ({ type: t.type, count: t._count })),
+      typeCounts,
       timestamp: violation.timestamp,
     });
 
