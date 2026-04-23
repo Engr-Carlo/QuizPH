@@ -62,19 +62,31 @@ export default function ResultsPage() {
   const sorted = [...data.participants].sort((a, b) => b.score - a.score);
 
   function generateCSV() {
-    const headers = ["Rank", "Last Name", "First Name", "Email", "Score", "Accuracy", "Violations", "Status"];
+    const headers = [
+      "Rank",
+      "Last Name",
+      "First Name",
+      "Email",
+      "Score",
+      "Score Value",
+      "Accuracy",
+      "Violations",
+      "Status",
+    ];
     const rows = sorted.map((p, idx) => {
       // Split "First Last" or "First Middle Last" → firstName = first token, lastName = rest
       const nameParts = p.user.name.trim().split(/\s+/);
       const firstName = nameParts.length > 0 ? nameParts[0] : "";
       const lastName = nameParts.slice(1).join(" ") || firstName;
+      const accuracy = totalQuestions > 0 ? Math.round((p.score / totalQuestions) * 100) : 0;
       return [
         idx + 1,
         `"${lastName.replace(/"/g, '""')}"`,
         `"${firstName.replace(/"/g, '""')}"`,
         `"${p.user.email.replace(/"/g, '""')}"`,
-        `"${p.score}/${totalQuestions}"`,
-        `"${totalQuestions > 0 ? Math.round((p.score / totalQuestions) * 100) : 0}%"`,
+        `="${p.score}/${totalQuestions}"`,
+        p.score,
+        `"${accuracy}%"`,
         p.violations.length,
         p.isFinished ? "Finished" : "In Progress",
       ];
