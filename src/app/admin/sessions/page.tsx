@@ -11,6 +11,14 @@ interface ParticipantData {
   user: { id: string; name: string; email: string };
 }
 
+interface AnswerData {
+  id: string;
+  answerText: string;
+  isCorrect: boolean;
+  answeredAt: string;
+  question: { text: string; order: number; type: string };
+}
+
 interface SessionData {
   id: string;
   code: string;
@@ -48,6 +56,20 @@ export default function AdminSessionsPage() {
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [forceEndTarget, setForceEndTarget] = useState<SessionData | null>(null);
   const [forceEndLoading, setForceEndLoading] = useState(false);
+
+  // Answers modal
+  const [answersModal, setAnswersModal] = useState<{ sessionId: string; participantId: string; participantName: string } | null>(null);
+  const [answersData, setAnswersData] = useState<AnswerData[] | null>(null);
+  const [answersLoading, setAnswersLoading] = useState(false);
+
+  async function openAnswers(sessionId: string, participantId: string, participantName: string) {
+    setAnswersModal({ sessionId, participantId, participantName });
+    setAnswersData(null);
+    setAnswersLoading(true);
+    const res = await fetch(`/api/admin/sessions/${sessionId}/answers?participantId=${participantId}`);
+    if (res.ok) setAnswersData(await res.json());
+    setAnswersLoading(false);
+  }
 
   useEffect(() => {
     setPage(1);
@@ -186,7 +208,8 @@ export default function AdminSessionsPage() {
                               <th className="pb-2 pr-4">Name</th>
                               <th className="pb-2 pr-4">Email</th>
                               <th className="pb-2 pr-4 text-center">Score</th>
-                              <th className="pb-2 text-center">Status</th>
+                              <th className="pb-2 pr-4 text-center">Status</th>
+                              <th className="pb-2 text-right">Answers</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/30">
@@ -198,10 +221,18 @@ export default function AdminSessionsPage() {
                                 </td>
                                 <td className="py-2 pr-4 text-xs text-muted">{p.user.email}</td>
                                 <td className="py-2 pr-4 text-center font-semibold text-foreground">{p.score}</td>
-                                <td className="py-2 text-center">
+                                <td className="py-2 pr-4 text-center">
                                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${p.isFinished ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
                                     {p.isFinished ? "Finished" : "In Progress"}
                                   </span>
+                                </td>
+                                <td className="py-2 text-right">
+                                  <button
+                                    onClick={() => openAnswers(s.id, p.id, p.user.name)}
+                                    className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-muted hover:text-primary hover:border-primary/30 transition"
+                                  >
+                                    Answers
+                                  </button>
                                 </td>
                               </tr>
                             ))}
@@ -245,6 +276,58 @@ export default function AdminSessionsPage() {
             <div className="flex gap-3 border-t border-border px-6 py-4">
               <button onClick={() => setForceEndTarget(null)} className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-muted transition hover:bg-surface">Cancel</button>
               <button onClick={handleForceEnd} disabled={forceEndLoading} className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 hover:opacity-90" style={{ background: "var(--warning)" }}>{forceEndLoading ? "Ending..." : "Force End"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Answers Modal */}
+      {answersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Answers — {answersModal.participantName}</h3>
+                <p className="mt-0.5 text-xs text-muted">Per-question answer breakdown</p>
+              </div>
+              <button
+                onClick={() => setAnswersModal(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-foreground transition"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-5">
+              {answersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="h-6 w-6 rounded-full border-2 border-border border-t-primary animate-spin" />
+                </div>
+              ) : answersData && answersData.length > 0 ? (
+                <div className="space-y-3">
+                  {answersData.map((a) => (
+                    <div key={a.id} className={`rounded-xl border p-4 ${
+                      a.isCorrect ? "border-success/20 bg-success/5" : "border-danger/20 bg-danger/5"
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <span className={`flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white ${
+                          a.isCorrect ? "bg-success" : "bg-danger"
+                        }`}>
+                          {a.isCorrect ? "✓" : "✗"}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-muted mb-0.5">Q{a.question.order}</p>
+                          <p className="text-sm font-medium text-foreground mb-1">{a.question.text}</p>
+                          <p className="text-xs text-muted">Answer: <span className={`font-semibold ${
+                            a.isCorrect ? "text-success" : "text-danger"
+                          }`}>{a.answerText || "(no answer)"}</span></p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-muted">No answers recorded for this participant.</p>
+              )}
             </div>
           </div>
         </div>

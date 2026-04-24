@@ -20,8 +20,18 @@ interface ChartPoint {
   count: number;
 }
 
+interface ActivityEvent {
+  type: "session" | "violation";
+  label: string;
+  desc: string;
+  code?: string;
+  violationType?: string;
+  at: string;
+}
+
 interface AdminData {
   users: UserData[];
+  total: number;
   stats: {
     quizCount: number;
     sessionCount: number;
@@ -47,6 +57,7 @@ interface AdminData {
     sessionStatus: ChartPoint[];
     onlineByRole: { label: string; online: number; total: number }[];
   };
+  recentActivity: ActivityEvent[];
 }
 
 const ROLE_BADGE: Record<string, string> = {
@@ -59,6 +70,16 @@ const BAR_COLORS = ["var(--primary)", "var(--secondary)", "var(--accent)", "var(
 
 function getInitials(name: string) {
   return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function getTimeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 function RoleDonut({ teachers, students, admins }: { teachers: number; students: number; admins: number }) {
@@ -246,13 +267,13 @@ export default function AdminDashboard() {
 
   const stats = [
     { label: "Online Now", value: data.stats.onlineUsers, sub: "Active in the last 2 minutes", Icon: IconPulse, color: "text-success", bg: "bg-success/10 text-success" },
-    { label: "Total Users", value: data.users.length, sub: `${data.stats.teacherCount} teachers · ${data.stats.studentCount} students`, Icon: IconUsers, color: "text-primary", bg: "bg-primary/10 text-primary" },
+    { label: "Total Users", value: data.total, sub: `${data.stats.teacherCount} teachers · ${data.stats.studentCount} students`, Icon: IconUsers, color: "text-primary", bg: "bg-primary/10 text-primary" },
     { label: "Sessions Run", value: data.stats.sessionCount, sub: `${data.stats.activeSessionCount} active now`, Icon: IconPlay, color: "text-foreground", bg: "bg-surface text-muted" },
     { label: "Participants", value: data.stats.participantCount, sub: `${data.stats.quizCount} quizzes across the platform`, Icon: IconClipboard, color: "text-foreground", bg: "bg-surface text-muted" },
   ];
 
   const quickLinks = [
-    { href: "/admin/users", label: "Manage Users", desc: `${data.users.length} registered accounts`, color: "bg-primary/10 text-primary border-primary/20", icon: <IconUsers /> },
+    { href: "/admin/users", label: "Manage Users", desc: `${data.total} registered accounts`, color: "bg-primary/10 text-primary border-primary/20", icon: <IconUsers /> },
     { href: "/admin/quizzes", label: "Browse Quizzes", desc: `${data.stats.quizCount} quizzes on platform`, color: "bg-secondary/10 text-secondary border-secondary/20", icon: <IconClipboard /> },
     { href: "/admin/sessions", label: "Monitor Sessions", desc: `${data.stats.activeSessionCount} active right now`, color: "bg-success/10 text-success border-success/20", icon: <IconPlay /> },
     { href: "/admin/violations", label: "View Violations", desc: "Anti-cheat logs by session", color: "bg-danger/10 text-danger border-danger/20", icon: <IconShield /> },
@@ -309,6 +330,33 @@ export default function AdminDashboard() {
         <BarTrend title="Teacher Account Growth" points={data.charts.teachersByDay} color="var(--primary)" />
         <BarTrend title="Student Account Growth" points={data.charts.studentsByDay} color="var(--success)" />
       </div>
+
+      {/* Recent Activity */}
+      {data.recentActivity.length > 0 && (
+        <div className="mt-6 rounded-xl border border-border bg-white p-5">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Recent Activity</h2>
+          <div className="relative pl-5">
+            <div className="absolute left-2 top-0 h-full w-px bg-border" />
+            {data.recentActivity.map((ev, idx) => (
+              <div key={idx} className="relative mb-4 last:mb-0">
+                <div className={`absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                  ev.type === "violation" ? "bg-danger" : "bg-success"
+                }`} />
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{ev.label}</p>
+                    <p className="mt-0.5 text-xs text-muted">{ev.desc}{ev.code && <span className="ml-1.5 rounded bg-surface px-1.5 py-0.5 font-mono text-[10px]">{ev.code}</span>}</p>
+                    {ev.violationType && (
+                      <span className="mt-1 inline-block rounded-full bg-danger/8 px-2 py-0.5 text-[10px] font-semibold text-danger">{ev.violationType.replace("_", " ")}</span>
+                    )}
+                  </div>
+                  <span className="flex-shrink-0 text-[11px] text-muted">{getTimeAgo(ev.at)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

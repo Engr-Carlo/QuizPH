@@ -10,8 +10,10 @@ interface ViolationEntry {
 }
 
 interface ParticipantViolations {
+  participantId: string;
   name: string;
   email: string;
+  note: string | null;
   violations: ViolationEntry[];
 }
 
@@ -47,6 +49,12 @@ export default function AdminViolationsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState("");
+  const [nameSearch, setNameSearch] = useState("");
+  // notes: keyed by participantId, value is current note text
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [savingNote, setSavingNote] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -56,9 +64,28 @@ export default function AdminViolationsPage() {
       const data = await res.json();
       setSummaries(data.sessionSummaries);
       setTotal(data.total);
+      // Seed notes state from API response
+      const noteMap: Record<string, string> = {};
+      for (const s of data.sessionSummaries) {
+        for (const p of s.participants) {
+          if (p.note) noteMap[p.participantId] = p.note;
+        }
+      }
+      setNotes((prev) => ({ ...noteMap, ...prev }));
     }
     setLoading(false);
   }, [page]);
+
+  async function saveNote(participantId: string) {
+    setSavingNote(participantId);
+    await fetch("/api/admin/violations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participantId, note: notes[participantId] ?? "" }),
+    });
+    setSavingNote(null);
+    setEditingNote(null);
+  }
 
   useEffect(() => {
     fetchData();
@@ -66,9 +93,33 @@ export default function AdminViolationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Violations</h1>
-        <p className="mt-1 text-sm text-muted">Anti-cheat violation logs grouped by session. Expand a session to see which students triggered alerts.</p>
+        <p className="mt-1 text-sm text-muted">Anti-cheat violation logs grouped by session. Expand a session to see flagged students.</p>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          value={nameSearch}
+          onChange={(e) => setNameSearch(e.target.value)}
+          placeholder="Search student name…"
+          className="w-52 rounded-lg border border-border px-3 py-1.5 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {["", "FULLSCREEN_EXIT", "TAB_SWITCH", "COPY_PASTE", "RIGHT_CLICK", "DEVTOOLS", "SCREENSHOT_ATTEMPT"].map((t) => (
+            <button
+              key={t || "ALL"}
+              onClick={() => setTypeFilter(t)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                typeFilter === t ? "bg-primary text-white" : "border border-border bg-white text-muted hover:text-foreground"
+              }`}
+            >
+              {t === "" ? "All types" : VIOLATION_LABEL[t] ?? t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -86,6 +137,14 @@ export default function AdminViolationsPage() {
       ) : (
         <div className="space-y-3">
           {summaries.map((s) => {
+            // Client-side filter by type and name
+            const filteredParticipants = s.participants.filter((p) => {
+              const matchName = nameSearch === "" || p.name.toLowerCase().includes(nameSearch.toLowerCase());
+              const matchType = typeFilter === "" || p.violations.some((v) => v.type === typeFilter);
+              return matchName && matchType;
+            });
+            if (filteredParticipants.length === 0) return null;
+
             const isExpanded = expandedSession === s.sessionId;
             return (
               <div key={s.sessionId} className="overflow-hidden rounded-xl border border-border bg-white">
@@ -119,18 +178,29 @@ export default function AdminViolationsPage() {
                 {/* Expanded Participants */}
                 {isExpanded && (
                   <div className="border-t border-border/40 divide-y divide-border/30">
-                    {s.participants.map((p) => {
+                    {filteredParticipants.map((p) => {
+                      const pid = p.participantId;
                       const participantTotal = p.violations.reduce((sum, v) => sum + v.count, 0);
+                      const isEditingThisNote = editingNote === pid;
                       return (
                         <div key={p.email} className="px-5 py-4">
                           <div className="mb-3 flex items-center gap-3">
                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
                               {p.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
                             </div>
-                            <div>
+                            <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-foreground">{p.name}</p>
                               <p className="text-xs text-muted">{p.email} · {participantTotal} violation{participantTotal !== 1 ? "s" : ""}</p>
                             </div>
+                            <button
+                              onClick={() => {
+                                setEditingNote(isEditingThisNote ? null : pid);
+                                if (!isEditingThisNote) setNotes((prev) => ({ ...prev, [pid]: prev[pid] ?? p.note ?? "" }));
+                              }}
+                              className="flex-shrink-0 rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-muted hover:text-primary hover:border-primary/30 transition"
+                            >
+                              {isEditingThisNote ? "Cancel" : notes[pid] || p.note ? "Edit Note" : "+ Note"}
+                            </button>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {p.violations.map((v, idx) => (
@@ -143,6 +213,28 @@ export default function AdminViolationsPage() {
                           <p className="mt-2 text-[10px] text-muted">
                             Last: {new Date(p.violations[p.violations.length - 1].timestamp).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                           </p>
+                          {/* Admin note */}
+                          {(notes[pid] || p.note) && !isEditingThisNote && (
+                            <p className="mt-2 text-xs italic text-muted border-l-2 border-border pl-2">{notes[pid] ?? p.note}</p>
+                          )}
+                          {isEditingThisNote && (
+                            <div className="mt-2 flex gap-2">
+                              <textarea
+                                rows={2}
+                                value={notes[pid] ?? ""}
+                                onChange={(e) => setNotes((prev) => ({ ...prev, [pid]: e.target.value }))}
+                                placeholder="Add an admin note about this student…"
+                                className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus:border-primary focus:outline-none resize-none"
+                              />
+                              <button
+                                onClick={() => saveNote(pid)}
+                                disabled={savingNote === pid}
+                                className="self-end rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60 transition"
+                              >
+                                {savingNote === pid ? "Saving…" : "Save"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

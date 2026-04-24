@@ -10,25 +10,22 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const sessionId = url.searchParams.get("sessionId") ?? "";
+  const typeFilter = url.searchParams.get("type") ?? "";
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || "50")));
 
-  const where = sessionId ? { sessionId } : {};
+  const where: Record<string, unknown> = {};
+  if (sessionId) where.sessionId = sessionId;
+  if (typeFilter) where.type = typeFilter;
 
   const [violations, total] = await Promise.all([
     prisma.violationLog.findMany({
       where,
-      include: {
-        participant: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-        },
-        session: {
-          include: {
-            quiz: { select: { id: true, title: true } },
-          },
-        },
+      select: {
+        id: true, type: true, count: true, note: true, timestamp: true,
+        participantId: true, sessionId: true,
+        participant: { select: { user: { select: { name: true, email: true } } } },
+        session: { select: { code: true, quiz: { select: { title: true } } } },
       },
       orderBy: { timestamp: "desc" },
       skip: (page - 1) * limit,
@@ -37,13 +34,20 @@ export async function GET(req: Request) {
     prisma.violationLog.count({ where }),
   ]);
 
-  // Group by session for the summary view
+  type ParticipantEntry = {
+    participantId: string;
+    name: string;
+    email: string;
+    note: string | null;
+    violations: { type: string; count: number; timestamp: string }[];
+  };
+
   type SessionSummary = {
     sessionId: string;
     sessionCode: string;
     quizTitle: string;
     totalViolations: number;
-    participants: Map<string, { name: string; email: string; violations: { type: string; count: number; timestamp: string }[] }>;
+    participants: Map<string, ParticipantEntry>;
   };
 
   const bySession = new Map<string, SessionSummary>();
@@ -62,19 +66,20 @@ export async function GET(req: Request) {
     const entry = bySession.get(sid)!;
     entry.totalViolations += v.count;
 
-    const uid = v.participant.userId;
-    if (!entry.participants.has(uid)) {
-      entry.participants.set(uid, {
+    const pid = v.participantId;
+    if (!entry.participants.has(pid)) {
+      entry.participants.set(pid, {
+        participantId: pid,
         name: v.participant.user.name,
         email: v.participant.user.email,
+        note: v.note ?? null,
         violations: [],
       });
     }
-    entry.participants.get(uid)!.violations.push({
-      type: v.type,
-      count: v.count,
-      timestamp: v.timestamp.toISOString(),
-    });
+    const p = entry.participants.get(pid)!;
+    // Keep the first non-null note found (most recent first due to orderBy)
+    if (v.note && !p.note) p.note = v.note;
+    p.violations.push({ type: v.type, count: v.count, timestamp: v.timestamp.toISOString() });
   }
 
   const sessionSummaries = Array.from(bySession.values()).map((s) => ({
@@ -84,3 +89,25 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ sessionSummaries, total, page, totalPages: Math.ceil(total / limit) });
 }
+
+// PATCH: save an admin note on all violation logs for a participant
+// Uses @@index([participantId]) on ViolationLog — fast update
+export async function PATCH(req: Request) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { participantId, note } = await req.json();
+  if (!participantId) {
+    return NextResponse.json({ error: "participantId required" }, { status: 400 });
+  }
+
+  await prisma.violationLog.updateMany({
+    where: { participantId },
+    data: { note: String(note ?? "").trim() || null },
+  });
+
+  return NextResponse.json({ ok: true });
+}
+

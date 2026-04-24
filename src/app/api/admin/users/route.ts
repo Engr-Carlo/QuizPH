@@ -2,60 +2,27 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
-import type { Role, SessionStatus } from "@prisma/client";
 
-const ONLINE_WINDOW_MS = 2 * 60 * 1000;
+const ONLINE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 const CHART_DAYS = 7;
-
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  isActive: boolean;
-  lastSeenAt: Date | null;
-  createdAt: Date;
-  _count: { quizzes: number; participants: number };
-};
-
-type UserWithPresence = UserRow & { isOnline: boolean };
-
-type SessionRow = {
-  createdAt: Date;
-  status: SessionStatus;
-  archivedAt: Date | null;
-};
-
-function isOnline(lastSeenAt: Date | null) {
-  return Boolean(lastSeenAt && Date.now() - lastSeenAt.getTime() <= ONLINE_WINDOW_MS);
-}
 
 function buildDailySeries<T extends Record<string, unknown>>(
   items: T[],
   dateKey: keyof T,
-  roleFilter?: string
 ) {
-  const labels = Array.from({ length: CHART_DAYS }, (_, index) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - (CHART_DAYS - index - 1));
-    return date;
+  const labels = Array.from({ length: CHART_DAYS }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (CHART_DAYS - i - 1));
+    return d;
   });
-
-  return labels.map((date) => {
-    const count = items.filter((item) => {
-      const itemDate = item[dateKey];
-      if (!(itemDate instanceof Date)) return false;
-      const sameDay = itemDate.toDateString() === date.toDateString();
-      const sameRole = roleFilter ? (item as Record<string, unknown>).role === roleFilter : true;
-      return sameDay && sameRole;
-    }).length;
-
-    return {
-      label: date.toLocaleDateString("en-PH", { month: "short", day: "numeric" }),
-      count,
-    };
-  });
+  return labels.map((date) => ({
+    label: date.toLocaleDateString("en-PH", { month: "short", day: "numeric" }),
+    count: items.filter((item) => {
+      const v = item[dateKey];
+      return v instanceof Date && v.toDateString() === date.toDateString();
+    }).length,
+  }));
 }
 
 export async function GET(req: Request) {
@@ -71,12 +38,32 @@ export async function GET(req: Request) {
   const since = new Date();
   since.setHours(0, 0, 0, 0);
   since.setDate(since.getDate() - (CHART_DAYS - 1));
+  const twoMinsAgo = new Date(Date.now() - ONLINE_WINDOW_MS);
 
-  const [usersRaw, totalUsers] = await Promise.all([
+  // All queries run in parallel — count aggregates are cheap index scans,
+  // 7-day window queries are time-bounded, recent-activity queries use take:5.
+  const [
+    pagedUsers,
+    totalUsers,
+    roleCounts,       // groupBy: single aggregation — replaces filtering the paginated array
+    onlineRoles,      // only users active in last 2 min — tiny result set
+    recentUsers,      // only 7-day window — small result set for charts
+    quizCount,
+    sessionCount,
+    participantCount,
+    recentSessions,   // take:5 for activity feed
+    recentViolations, // take:5 for activity feed
+    sessionsByDay,
+    participantsByDay,
+    waitingCount,
+    activeCount,
+    endedCount,
+    archivedCount,
+  ] = await Promise.all([
     prisma.user.findMany({
       select: {
         id: true, name: true, email: true, role: true, isActive: true,
-        lastSeenAt: true, createdAt: true,
+        lastSeenAt: true, createdAt: true, emailVerifiedAt: true,
         _count: { select: { quizzes: true, participants: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -84,44 +71,86 @@ export async function GET(req: Request) {
       take: limit,
     }),
     prisma.user.count(),
-  ]);
-  const users: UserRow[] = usersRaw;
-
-  const [quizCount, sessionCount, participantCount] = await Promise.all([
+    prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
+    prisma.user.findMany({
+      where: { lastSeenAt: { gte: twoMinsAgo } },
+      select: { role: true },
+    }),
+    prisma.user.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true, role: true },
+    }),
     prisma.quiz.count(),
     prisma.quizSession.count(),
     prisma.participant.count(),
+    prisma.quizSession.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, code: true, status: true, createdAt: true, startedAt: true, endedAt: true,
+        quiz: { select: { title: true } },
+      },
+    }),
+    prisma.violationLog.findMany({
+      take: 5,
+      orderBy: { timestamp: "desc" },
+      select: {
+        id: true, type: true, timestamp: true,
+        participant: { select: { user: { select: { name: true } } } },
+        session: { select: { quiz: { select: { title: true } } } },
+      },
+    }),
+    prisma.quizSession.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true },
+    }),
+    prisma.participant.findMany({
+      where: { joinedAt: { gte: since } },
+      select: { joinedAt: true },
+    }),
+    prisma.quizSession.count({ where: { status: "WAITING" } }),
+    prisma.quizSession.count({ where: { status: "ACTIVE" } }),
+    prisma.quizSession.count({ where: { status: "ENDED" } }),
+    prisma.quizSession.count({ where: { archivedAt: { not: null } } }),
   ]);
 
-  const sessions: SessionRow[] = await prisma.quizSession.findMany({
-    where: { createdAt: { gte: since } },
-    select: { createdAt: true, status: true, archivedAt: true },
-  });
+  // Derive counts from proper full-table aggregates
+  const roleMap = Object.fromEntries(roleCounts.map((r) => [r.role, r._count._all]));
+  const teacherCount = roleMap["TEACHER"] ?? 0;
+  const studentCount = roleMap["STUDENT"] ?? 0;
+  const adminCount = roleMap["SUPER_ADMIN"] ?? 0;
 
-  const participants: { joinedAt: Date }[] = await prisma.participant.findMany({
-    where: { joinedAt: { gte: since } },
-    select: { joinedAt: true },
-  });
+  const onlineAll = onlineRoles.length;
+  const onlineTeachers = onlineRoles.filter((u) => u.role === "TEACHER").length;
+  const onlineStudents = onlineRoles.filter((u) => u.role === "STUDENT").length;
+  const onlineAdmins = onlineRoles.filter((u) => u.role === "SUPER_ADMIN").length;
 
-  const usersWithPresence = users.map((user) => ({
-    ...user,
-    isOnline: isOnline(user.lastSeenAt),
+  const pagedWithPresence = pagedUsers.map((u) => ({
+    ...u,
+    isOnline: Boolean(u.lastSeenAt && Date.now() - new Date(u.lastSeenAt).getTime() <= ONLINE_WINDOW_MS),
   }));
 
-  const teacherCount = usersWithPresence.filter((user) => user.role === "TEACHER").length;
-  const studentCount = usersWithPresence.filter((user) => user.role === "STUDENT").length;
-  const adminCount = usersWithPresence.filter((user) => user.role === "SUPER_ADMIN").length;
-  const onlineUsers = usersWithPresence.filter((user) => user.isOnline).length;
-  const onlineTeachers = usersWithPresence.filter((user) => user.role === "TEACHER" && user.isOnline).length;
-  const onlineStudents = usersWithPresence.filter((user) => user.role === "STUDENT" && user.isOnline).length;
-  const onlineAdmins = usersWithPresence.filter((user) => user.role === "SUPER_ADMIN" && user.isOnline).length;
-  const archivedSessionCount = sessions.filter((item) => item.archivedAt).length;
-  const waitingSessionCount = sessions.filter((item) => item.status === "WAITING" && !item.archivedAt).length;
-  const activeSessionCount = sessions.filter((item) => item.status === "ACTIVE" && !item.archivedAt).length;
-  const endedSessionCount = sessions.filter((item) => item.status === "ENDED" && !item.archivedAt).length;
+  const recentActivity = [
+    ...recentSessions.map((s) => ({
+      type: "session" as const,
+      label: s.status === "ENDED" ? "Session ended" : s.status === "ACTIVE" ? "Session started" : "Session created",
+      desc: s.quiz.title,
+      code: s.code,
+      at: (s.endedAt ?? s.startedAt ?? s.createdAt).toISOString(),
+    })),
+    ...recentViolations.map((v) => ({
+      type: "violation" as const,
+      label: "Violation detected",
+      desc: `${v.participant.user.name} · ${v.session.quiz.title}`,
+      violationType: v.type,
+      at: v.timestamp.toISOString(),
+    })),
+  ]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 8);
 
   return NextResponse.json({
-    users: usersWithPresence,
+    users: pagedWithPresence,
     total: totalUsers,
     page,
     totalPages: Math.ceil(totalUsers / limit),
@@ -129,29 +158,29 @@ export async function GET(req: Request) {
       quizCount,
       sessionCount,
       participantCount,
-      archivedSessionCount,
-      onlineUsers,
+      archivedSessionCount: archivedCount,
+      onlineUsers: onlineAll,
       teacherCount,
       studentCount,
       adminCount,
       onlineTeachers,
       onlineStudents,
       onlineAdmins,
-      waitingSessionCount,
-      activeSessionCount,
-      endedSessionCount,
+      waitingSessionCount: waitingCount,
+      activeSessionCount: activeCount,
+      endedSessionCount: endedCount,
     },
     charts: {
-      usersByDay: buildDailySeries(usersWithPresence, "createdAt"),
-      teachersByDay: buildDailySeries(usersWithPresence, "createdAt", "TEACHER"),
-      studentsByDay: buildDailySeries(usersWithPresence, "createdAt", "STUDENT"),
-      sessionsByDay: buildDailySeries(sessions.map((item) => ({ date: item.createdAt })), "date"),
-      participantsByDay: buildDailySeries(participants.map((item) => ({ date: item.joinedAt })), "date"),
+      usersByDay: buildDailySeries(recentUsers, "createdAt"),
+      teachersByDay: buildDailySeries(recentUsers.filter((u) => u.role === "TEACHER"), "createdAt"),
+      studentsByDay: buildDailySeries(recentUsers.filter((u) => u.role === "STUDENT"), "createdAt"),
+      sessionsByDay: buildDailySeries(sessionsByDay, "createdAt"),
+      participantsByDay: buildDailySeries(participantsByDay, "joinedAt"),
       sessionStatus: [
-        { label: "Waiting", count: waitingSessionCount },
-        { label: "Active", count: activeSessionCount },
-        { label: "Ended", count: endedSessionCount },
-        { label: "Archived", count: archivedSessionCount },
+        { label: "Waiting", count: waitingCount },
+        { label: "Active", count: activeCount },
+        { label: "Ended", count: endedCount },
+        { label: "Archived", count: archivedCount },
       ],
       onlineByRole: [
         { label: "Admins", online: onlineAdmins, total: adminCount },
@@ -159,6 +188,7 @@ export async function GET(req: Request) {
         { label: "Students", online: onlineStudents, total: studentCount },
       ],
     },
+    recentActivity,
   });
 }
 

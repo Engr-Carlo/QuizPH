@@ -12,6 +12,15 @@ interface QuizData {
   _count: { questions: number; sessions: number };
 }
 
+interface QuizOption { id: string; text: string; isCorrect: boolean; }
+interface QuizQuestion { id: string; text: string; type: string; order: number; options: QuizOption[]; }
+interface QuizDetail {
+  id: string; title: string; timerType: string; duration: number;
+  antiCheatEnabled: boolean; randomizeQuestions: boolean; randomizeAnswers: boolean;
+  allowSkip: boolean; questionSelectionMode: string;
+  questions: QuizQuestion[];
+}
+
 export default function AdminQuizzesPage() {
   const [quizzes, setQuizzes] = useState<QuizData[]>([]);
   const [total, setTotal] = useState(0);
@@ -21,6 +30,24 @@ export default function AdminQuizzesPage() {
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<QuizData | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [expandedQuiz, setExpandedQuiz] = useState<string | null>(null);
+  const [quizDetails, setQuizDetails] = useState<Record<string, QuizDetail>>({});
+  const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
+
+  async function openDetail(id: string) {
+    if (quizDetails[id]) {
+      setExpandedQuiz((prev) => (prev === id ? null : id));
+      return;
+    }
+    setLoadingDetail(id);
+    setExpandedQuiz(id);
+    const res = await fetch(`/api/admin/quizzes/${id}`);
+    if (res.ok) {
+      const data: QuizDetail = await res.json();
+      setQuizDetails((prev) => ({ ...prev, [id]: data }));
+    }
+    setLoadingDetail(null);
+  }
 
   // Debounce search
   useEffect(() => {
@@ -113,14 +140,75 @@ export default function AdminQuizzesPage() {
                       {new Date(quiz.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => setDeleteTarget(quiz)}
-                        className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/8"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openDetail(quiz.id)}
+                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:border-primary/30 hover:text-primary"
+                        >
+                          {expandedQuiz === quiz.id ? "Hide" : "Questions"}
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(quiz)}
+                          className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/8"
+                        >
+                          </button>
+                      </div>
                     </td>
                   </tr>
+
+                  {/* Quiz detail accordion */}
+                  {expandedQuiz === quiz.id && (
+                    <tr>
+                      <td colSpan={6} className="bg-surface/60 px-5 pb-5 pt-3">
+                        {loadingDetail === quiz.id ? (
+                          <div className="flex items-center gap-2 py-4 text-sm text-muted">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
+                            Loading questions…
+                          </div>
+                        ) : quizDetails[quiz.id] ? (
+                          <div>
+                            {/* Settings strip */}
+                            <div className="mb-3 flex flex-wrap gap-2">
+                              {[
+                                quizDetails[quiz.id].timerType === "PER_QUESTION" ? "Per-question timer" : `${Math.floor(quizDetails[quiz.id].duration / 60)}m timer`,
+                                quizDetails[quiz.id].antiCheatEnabled ? "Anti-cheat ON" : "Anti-cheat off",
+                                quizDetails[quiz.id].randomizeQuestions ? "Randomized questions" : null,
+                                quizDetails[quiz.id].randomizeAnswers ? "Randomized answers" : null,
+                                !quizDetails[quiz.id].allowSkip ? "No skip" : null,
+                              ].filter(Boolean).map((tag) => (
+                                <span key={tag} className="rounded-full bg-primary/8 px-2.5 py-0.5 text-[11px] font-semibold text-primary">{tag}</span>
+                              ))}
+                            </div>
+                            {/* Questions */}
+                            <div className="space-y-2">
+                              {quizDetails[quiz.id].questions.map((q, idx) => (
+                                <div key={q.id} className="rounded-xl border border-border bg-white p-3">
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <span className="flex-shrink-0 rounded bg-surface px-1.5 py-0.5 text-[11px] font-bold text-muted">Q{idx + 1}</span>
+                                    <span className="text-sm font-medium text-foreground">{q.text}</span>
+                                    <span className="ml-auto flex-shrink-0 rounded-full bg-muted/10 px-2 py-0.5 text-[10px] font-semibold text-muted">{q.type.replace("_", " ")}</span>
+                                  </div>
+                                  {q.options.length > 0 && (
+                                    <div className="grid grid-cols-2 gap-1 pl-7">
+                                      {q.options.map((opt) => (
+                                        <div key={opt.id} className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs ${opt.isCorrect ? "bg-success/10 font-semibold text-success" : "text-muted"}`}>
+                                          <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${opt.isCorrect ? "bg-success" : "bg-muted/40"}`} />
+                                          {opt.text}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              {quizDetails[quiz.id].questions.length === 0 && (
+                                <p className="text-xs text-muted">No questions in this quiz.</p>
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  )}
                 ))}
                 {quizzes.length === 0 && (
                   <tr>

@@ -12,6 +12,7 @@ interface UserData {
   isOnline: boolean;
   lastSeenAt: string | null;
   createdAt: string;
+  emailVerifiedAt: string | null;
   _count: { quizzes: number; participants: number };
 }
 
@@ -50,6 +51,20 @@ export default function AdminUsersPage() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Sort
+  const [sortKey, setSortKey] = useState<"name" | "role" | "createdAt" | "lastSeenAt" | "">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(key: "name" | "role" | "createdAt" | "lastSeenAt") {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  function SortIcon({ col }: { col: string }) {
+    if (sortKey !== col) return <span className="ml-1 opacity-30">↕</span>;
+    return <span className="ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+  }
 
   async function fetchData() {
     const res = await fetch("/api/admin/users?limit=200", { cache: "no-store" });
@@ -141,11 +156,25 @@ export default function AdminUsersPage() {
     );
   }
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) || user.email.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = userTab === "ALL" ? true : user.role === userTab;
-    return matchesSearch && matchesRole;
-  });
+  const filteredUsers = users
+    .filter((user) => {
+      const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) || user.email.toLowerCase().includes(search.toLowerCase());
+      const matchesRole = userTab === "ALL" ? true : user.role === userTab;
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      if (!sortKey) return 0;
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortKey === "name") return a.name.localeCompare(b.name) * dir;
+      if (sortKey === "role") return a.role.localeCompare(b.role) * dir;
+      if (sortKey === "createdAt") return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
+      if (sortKey === "lastSeenAt") {
+        const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+        const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
+        return (at - bt) * dir;
+      }
+      return 0;
+    });
 
   const tabs = [
     { value: "ALL" as const, label: `All (${users.length})` },
@@ -202,12 +231,20 @@ export default function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface text-left text-xs font-semibold uppercase tracking-wide text-muted">
-                <th className="px-5 py-3">User</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3 text-center">Presence</th>
+                <th className="cursor-pointer select-none px-5 py-3 hover:text-foreground" onClick={() => handleSort("name")}>
+                  User <SortIcon col="name" />
+                </th>
+                <th className="cursor-pointer select-none px-4 py-3 hover:text-foreground" onClick={() => handleSort("role")}>
+                  Role <SortIcon col="role" />
+                </th>
+                <th className="cursor-pointer select-none px-4 py-3 text-center hover:text-foreground" onClick={() => handleSort("lastSeenAt")}>
+                  Presence <SortIcon col="lastSeenAt" />
+                </th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-center">Workload</th>
-                <th className="px-4 py-3">Joined</th>
+                <th className="cursor-pointer select-none px-4 py-3 hover:text-foreground" onClick={() => handleSort("createdAt")}>
+                  Joined <SortIcon col="createdAt" />
+                </th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -219,7 +256,14 @@ export default function AdminUsersPage() {
                       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{getInitials(user.name)}</div>
                       <div>
                         <p className="font-medium text-foreground">{user.name}</p>
-                        <p className="text-xs text-muted">{user.email}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs text-muted">{user.email}</p>
+                          {user.emailVerifiedAt ? (
+                            <span className="rounded-full bg-success/10 px-1.5 py-px text-[9px] font-bold text-success">✓</span>
+                          ) : (
+                            <span className="rounded-full bg-muted/10 px-1.5 py-px text-[9px] font-bold text-muted">✗</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
