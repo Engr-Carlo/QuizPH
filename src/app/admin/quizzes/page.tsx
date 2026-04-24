@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 interface QuizData {
@@ -125,7 +125,8 @@ export default function AdminQuizzesPage() {
               </thead>
               <tbody>
                 {quizzes.map((quiz) => (
-                  <tr key={quiz.id} className="border-b border-border/50 transition hover:bg-surface/60 last:border-0">
+                  <Fragment key={quiz.id}>
+                  <tr className="border-b border-border/50 transition hover:bg-surface/60 last:border-0">
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-foreground">{quiz.title}</p>
                       {quiz.description && <p className="mt-0.5 text-xs text-muted line-clamp-1">{quiz.description}</p>}
@@ -155,7 +156,6 @@ export default function AdminQuizzesPage() {
                       </div>
                     </td>
                   </tr>
-
                   {/* Quiz detail accordion */}
                   {expandedQuiz === quiz.id && (
                     <tr>
@@ -209,6 +209,7 @@ export default function AdminQuizzesPage() {
                       </td>
                     </tr>
                   )}
+                  </Fragment>
                 ))}
                 {quizzes.length === 0 && (
                   <tr>
