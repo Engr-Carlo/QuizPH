@@ -69,6 +69,7 @@ model User {
   participants Participant[]
   verificationCodes EmailVerificationCode[]
   passwordResetTokens PasswordResetToken[]
+  patchNoteReads PatchNoteRead[]
 
   @@index([lastSeenAt])
 }
@@ -223,4 +224,29 @@ model ViolationLog {
   @@index([participantId])
   @@index([participantId, timestamp])
   @@index([sessionId])
+}
+
+model PatchNote {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reads PatchNoteRead[]
+}
+
+model PatchNoteRead {
+  id      String   @id @default(cuid())
+  readAt  DateTime @default(now())
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patchNoteId String
+  patchNote   PatchNote @relation(fields: [patchNoteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, patchNoteId])
+  @@index([userId])
+  @@index([patchNoteId])
 }

@@ -8,10 +8,10 @@ focus loss algorithm and psychological deterrence)
 6. ✅If the teacher change an answer key the student score will reflect the changes
 7. ✅In the CSV download can we separate the full name? to last name and first name? 
 so that when we sort it the last name will be sorted
-8. A monitor for lobby while waiting for the session 
+8. ✅ A monitor for lobby while waiting for the session 
 to start so that the teacher will know who already entered the waiting lobby, 
-make sure the appearance of the waiting lobby is good enough 
-9. The teacher can have a settings for heart rate monitor and oxygen level
+make sure the appear ance of the waiting lobby is good enough 
+9. ✅ The teacher can have a settings for heart rate monitor and oxygen level
 though it will be a pretend data for students  to feel more anxious
 10. ✅In the quiz student monitor while taking quiz the progress bar, 
 timer and monitor (volation/clean run) and the green and blue bar 
@@ -20,3 +20,12 @@ can we make it smaller?
 11. ✅A smooth animation in the teacher monitor while the score changes for students
 show picture
 12. ✅When timer times out the questions will be lock for that specific number
+13. ✅To ensure the long-term free usage of QuizPH for all users, the developer
+have implemented a series of server-side performance optimizations aimed at
+significantly reducing cloud compute consumption on our hosting platform.
+This includes adding database indexes to eliminate full table scans,
+slimming down API response payloads to return only the fields the
+application actually needs, and replacing inefficient query loops with
+batched database operations. These changes reduce active CPU usage by an
+estimated 70%, helping us stay well within our hosting limits so the
+service remains fast, stable, and free for everyone.

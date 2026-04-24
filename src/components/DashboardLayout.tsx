@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import PatchNoteModal from "@/components/PatchNoteModal";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -110,6 +111,14 @@ function IconShield() {
     </svg>
   );
 }
+function IconMegaphone() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l18-5v12L3 14v-3z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
 
 // ── Nav config ──────────────────────────────────────────────────────────────
 type NavItem = { href: string; label: string; icon: () => React.ReactElement; matchPrefix?: boolean };
@@ -126,6 +135,7 @@ const adminNav: NavItem[] = [
   { href: "/admin/quizzes", label: "Quizzes", icon: IconClipboard, matchPrefix: true },
   { href: "/admin/sessions", label: "Sessions", icon: IconPlay, matchPrefix: true },
   { href: "/admin/violations", label: "Violations", icon: IconShield, matchPrefix: true },
+  { href: "/admin/patch-notes", label: "Patch Notes", icon: IconMegaphone, matchPrefix: true },
 ];
 const studentNav: NavItem[] = [
   { href: "/student", label: "Dashboard", icon: IconHome, matchPrefix: true },
@@ -159,6 +169,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session } = useSession();
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [patchNote, setPatchNote] = useState<{ id: string; title: string; body: string } | null>(null);
+  const hasFetchedPatchNote = useRef(false);
   const role = session?.user?.role;
   const navItems =
     role === "SUPER_ADMIN" ? adminNav : role === "TEACHER" ? teacherNav : studentNav;
@@ -171,6 +183,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!session?.user || hasFetchedPatchNote.current) return;
+    hasFetchedPatchNote.current = true;
+    fetch("/api/patch-notes/active")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.note && !data.hasRead) {
+          setPatchNote(data.note);
+        }
+      })
+      .catch(() => {});
+  }, [session?.user]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] lg:flex">
@@ -349,6 +374,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         <div className="px-4 pb-6 pt-5 sm:px-6 lg:px-8 lg:pt-8 lg:pb-12">{children}</div>
       </main>
+
+      {patchNote && (
+        <PatchNoteModal
+          noteId={patchNote.id}
+          title={patchNote.title}
+          body={patchNote.body}
+          onDismiss={() => setPatchNote(null)}
+        />
+      )}
     </div>
   );
 }
