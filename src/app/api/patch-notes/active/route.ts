@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
+import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  const t0 = performance.now();
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,6 +16,7 @@ export async function GET() {
   });
 
   if (!note) {
+    await logCompute("/api/patch-notes/active", "patch-note", performance.now() - t0, session.user.id);
     return NextResponse.json({ note: null, hasRead: true });
   }
 
@@ -24,5 +27,6 @@ export async function GET() {
     select: { id: true },
   });
 
+  await logCompute("/api/patch-notes/active", "patch-note", performance.now() - t0, session.user.id);
   return NextResponse.json({ note, hasRead: !!read });
 }

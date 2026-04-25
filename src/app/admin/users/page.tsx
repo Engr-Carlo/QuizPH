@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 interface UserData {
@@ -31,10 +31,15 @@ const SELECT_CLS = "w-full rounded-lg border border-border bg-white px-3.5 py-2.
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({ teacherCount: 0, studentCount: 0, adminCount: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [userTab, setUserTab] = useState<"ALL" | "TEACHER" | "STUDENT" | "SUPER_ADMIN">("ALL");
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
@@ -66,21 +71,55 @@ export default function AdminUsersPage() {
     return <span className="ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
   }
 
-  async function fetchData() {
-    const res = await fetch("/api/admin/users?limit=200", { cache: "no-store" });
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 400);
+  }
+
+  const fetchData = useCallback(async () => {
+    const params = new URLSearchParams({
+      mode: "list",
+      page: String(page),
+      limit: "25",
+      sortBy: sortKey || "name",
+      sortDir,
+    });
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (userTab !== "ALL") params.set("role", userTab);
+    const res = await fetch(`/api/admin/users?${params}`, { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
       setUsers(data.users);
-      setStats(data.stats);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+      if (data.stats) setStats(data.stats);
     }
     setLoading(false);
-  }
+  }, [page, debouncedSearch, userTab, sortKey, sortDir]);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
-    return () => clearInterval(interval);
-  }, []);
+    let interval = setInterval(fetchData, 60_000);
+
+    function onVisibilityChange() {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchData();
+        interval = setInterval(fetchData, 60_000);
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [fetchData]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -146,7 +185,7 @@ export default function AdminUsersPage() {
     fetchData();
   }
 
-  if (loading) {
+  if (loading && users.length === 0) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center py-24">
@@ -156,32 +195,15 @@ export default function AdminUsersPage() {
     );
   }
 
-  const filteredUsers = users
-    .filter((user) => {
-      const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) || user.email.toLowerCase().includes(search.toLowerCase());
-      const matchesRole = userTab === "ALL" ? true : user.role === userTab;
-      return matchesSearch && matchesRole;
-    })
-    .sort((a, b) => {
-      if (!sortKey) return 0;
-      const dir = sortDir === "asc" ? 1 : -1;
-      if (sortKey === "name") return a.name.localeCompare(b.name) * dir;
-      if (sortKey === "role") return a.role.localeCompare(b.role) * dir;
-      if (sortKey === "createdAt") return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
-      if (sortKey === "lastSeenAt") {
-        const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
-        const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
-        return (at - bt) * dir;
-      }
-      return 0;
-    });
-
   const tabs = [
-    { value: "ALL" as const, label: `All (${users.length})` },
+    { value: "ALL" as const, label: `All (${total})` },
     { value: "TEACHER" as const, label: `Teachers (${stats.teacherCount})` },
     { value: "STUDENT" as const, label: `Students (${stats.studentCount})` },
     { value: "SUPER_ADMIN" as const, label: `Admins (${stats.adminCount})` },
   ];
+
+  const pageStart = total === 0 ? 0 : (page - 1) * 25 + 1;
+  const pageEnd = Math.min(page * 25, total);
 
   return (
     <DashboardLayout>
@@ -209,7 +231,7 @@ export default function AdminUsersPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by name or email..."
             className="w-64 rounded-lg border border-border px-3 py-1.5 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -219,7 +241,7 @@ export default function AdminUsersPage() {
           {tabs.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => setUserTab(tab.value)}
+              onClick={() => { setUserTab(tab.value); setPage(1); }}
               className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${userTab === tab.value ? "bg-primary text-white" : "bg-white text-muted hover:text-foreground"}`}
             >
               {tab.label}
@@ -249,7 +271,7 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className={`border-b border-border/50 transition hover:bg-surface/60 last:border-0 ${!user.isActive ? "opacity-60" : ""}`}>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
@@ -321,16 +343,59 @@ export default function AdminUsersPage() {
                   </td>
                 </tr>
               ))}
-              {filteredUsers.length === 0 && (
+              {users.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-sm text-muted">
-                    No users found{search ? ` matching "${search}"` : ""}.
+                    No users found{debouncedSearch ? ` matching "${debouncedSearch}"` : ""}.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border px-5 py-3">
+            <p className="text-xs text-muted">
+              Showing {pageStart}–{pageEnd} of {total} users
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:text-foreground disabled:opacity-40"
+              >
+                ← Prev
+              </button>
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 7) p = i + 1;
+                else if (page <= 4) p = i + 1;
+                else if (page >= totalPages - 3) p = totalPages - 6 + i;
+                else p = page - 3 + i;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`h-7 w-7 rounded-lg text-xs font-semibold transition ${
+                      p === page ? "bg-primary text-white" : "border border-border text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:text-foreground disabled:opacity-40"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Modal */}

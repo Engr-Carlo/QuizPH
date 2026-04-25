@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
@@ -26,6 +27,7 @@ function buildDailySeries<T extends Record<string, unknown>>(
 }
 
 export async function GET(req: Request) {
+  const t0 = performance.now();
   const session = await auth();
   if (!session?.user || session.user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,14 +36,70 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || "50")));
+  // mode=list: skip heavy chart/activity queries — just user list + role counts
+  const mode = url.searchParams.get("mode"); // "list" | null
+  const roleFilter = url.searchParams.get("role") ?? ""; // TEACHER | STUDENT | SUPER_ADMIN | ""
+  const search = url.searchParams.get("search") ?? "";
+  const sortBy = url.searchParams.get("sortBy") ?? "createdAt"; // name|role|createdAt|lastSeenAt
+  const sortDir = url.searchParams.get("sortDir") === "asc" ? "asc" : "desc";
+
+  const VALID_ROLES = ["TEACHER", "STUDENT", "SUPER_ADMIN"];
+  const whereUser: Record<string, unknown> = {};
+  if (roleFilter && VALID_ROLES.includes(roleFilter)) whereUser.role = roleFilter;
+  if (search) {
+    whereUser.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const VALID_SORT = ["name", "role", "createdAt", "lastSeenAt"];
+  const orderBy: Record<string, string> = VALID_SORT.includes(sortBy)
+    ? { [sortBy]: sortDir }
+    : { createdAt: "desc" };
 
   const since = new Date();
   since.setHours(0, 0, 0, 0);
   since.setDate(since.getDate() - (CHART_DAYS - 1));
   const twoMinsAgo = new Date(Date.now() - ONLINE_WINDOW_MS);
 
-  // All queries run in parallel — count aggregates are cheap index scans,
-  // 7-day window queries are time-bounded, recent-activity queries use take:5.
+  // mode=list: 3 cheap queries — no charts/activity
+  if (mode === "list") {
+    const [pagedUsers, totalUsers, roleCounts] = await Promise.all([
+      prisma.user.findMany({
+        where: whereUser,
+        select: {
+          id: true, name: true, email: true, role: true, isActive: true,
+          lastSeenAt: true, createdAt: true, emailVerifiedAt: true,
+          _count: { select: { quizzes: true, participants: true } },
+        },
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.user.count({ where: whereUser }),
+      prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
+    ]);
+    const roleMap = Object.fromEntries(roleCounts.map((r) => [r.role, r._count._all]));
+    const pagedWithPresence = pagedUsers.map((u) => ({
+      ...u,
+      isOnline: Boolean(u.lastSeenAt && Date.now() - new Date(u.lastSeenAt).getTime() <= ONLINE_WINDOW_MS),
+    }));
+    await logCompute("/api/admin/users", "admin", performance.now() - t0, session.user.id);
+    return NextResponse.json({
+      users: pagedWithPresence,
+      total: totalUsers,
+      page,
+      totalPages: Math.ceil(totalUsers / limit),
+      stats: {
+        teacherCount: roleMap["TEACHER"] ?? 0,
+        studentCount: roleMap["STUDENT"] ?? 0,
+        adminCount: roleMap["SUPER_ADMIN"] ?? 0,
+      },
+    });
+  }
+
+  // Full mode: all 16 queries for dashboard
   const [
     pagedUsers,
     totalUsers,
@@ -61,12 +119,13 @@ export async function GET(req: Request) {
     archivedCount,
   ] = await Promise.all([
     prisma.user.findMany({
+      where: whereUser,
       select: {
         id: true, name: true, email: true, role: true, isActive: true,
         lastSeenAt: true, createdAt: true, emailVerifiedAt: true,
         _count: { select: { quizzes: true, participants: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -149,7 +208,7 @@ export async function GET(req: Request) {
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 8);
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     users: pagedWithPresence,
     total: totalUsers,
     page,
@@ -190,7 +249,10 @@ export async function GET(req: Request) {
     },
     recentActivity,
   });
+  await logCompute("/api/admin/users", "admin", performance.now() - t0, session.user.id);
+  return response;
 }
+
 
 export async function POST(req: Request) {
   const session = await auth();

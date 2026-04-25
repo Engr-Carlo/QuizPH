@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
+import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  const t0 = performance.now();
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
       }
     );
 
+    await logCompute("/api/answers/submit", "session", performance.now() - t0, session.user.id);
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(

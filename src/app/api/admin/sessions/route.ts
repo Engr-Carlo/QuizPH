@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
+import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
+  const t0 = performance.now();
   const session = await auth();
   if (!session?.user || session.user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,5 +46,6 @@ export async function GET(req: Request) {
     prisma.quizSession.count({ where }),
   ]);
 
+  await logCompute("/api/admin/sessions", "admin", performance.now() - t0, session.user.id);
   return NextResponse.json({ sessions, total, page, totalPages: Math.ceil(total / limit) });
 }

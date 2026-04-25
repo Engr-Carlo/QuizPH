@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getQuizWithLegacyFallback } from "@/lib/legacy-quiz-api";
+import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -7,6 +8,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t0 = performance.now();
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -39,6 +41,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    await logCompute("/api/quiz/[id]", "quiz", performance.now() - t0, session.user.id);
     return NextResponse.json(quiz);
   } catch (error) {
     console.error(`Failed to load quiz ${id} via Prisma, trying legacy fallback`, error);

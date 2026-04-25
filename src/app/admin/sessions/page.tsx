@@ -90,8 +90,22 @@ export default function AdminSessionsPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30_000);
-    return () => clearInterval(interval);
+    let interval = setInterval(fetchData, 30_000);
+
+    function onVisibilityChange() {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchData();
+        interval = setInterval(fetchData, 30_000);
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [fetchData]);
 
   async function handleForceEnd() {

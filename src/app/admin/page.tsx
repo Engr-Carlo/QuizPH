@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 interface UserData {
@@ -27,6 +27,22 @@ interface ActivityEvent {
   code?: string;
   violationType?: string;
   at: string;
+}
+
+interface RouteRow {
+  route: string;
+  category: string;
+  calls: number;
+  totalMs: number;
+  avgMs: number;
+  peakMs: number;
+}
+
+interface ComputeData {
+  today: { date: string; totalCalls: number; totalMs: number; routes: RouteRow[] };
+  categories: Record<string, { calls: number; totalMs: number }>;
+  topContributors: { userId: string; name: string; email: string; role: string; route: string; calls: number }[];
+  trend: { date: string; totalMs: number; calls: number }[];
 }
 
 interface AdminData {
@@ -240,6 +256,10 @@ function IconShield() {
 export default function AdminDashboard() {
   const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [computeData, setComputeData] = useState<ComputeData | null>(null);
+  const [computeOpen, setComputeOpen] = useState(false);
+  const [computeLoading, setComputeLoading] = useState(false);
+  const computeFetched = useRef(false);
 
   async function fetchData() {
     const res = await fetch("/api/admin/users", { cache: "no-store" });
@@ -247,10 +267,38 @@ export default function AdminDashboard() {
     setLoading(false);
   }
 
+  async function fetchCompute() {
+    if (computeFetched.current) return;
+    computeFetched.current = true;
+    setComputeLoading(true);
+    const res = await fetch("/api/admin/compute");
+    if (res.ok) setComputeData(await res.json());
+    setComputeLoading(false);
+  }
+
+  function toggleCompute() {
+    setComputeOpen((o) => !o);
+    fetchCompute();
+  }
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
-    return () => clearInterval(interval);
+    let interval = setInterval(fetchData, 60_000);
+
+    function onVisibilityChange() {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchData();
+        interval = setInterval(fetchData, 60_000);
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   if (loading) {
@@ -357,6 +405,166 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Compute Usage Widget */}
+      <div className="mt-6 overflow-hidden rounded-xl border border-border bg-white">
+        <button
+          onClick={toggleCompute}
+          className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-surface/40"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="14" x2="4" y2="14"/></svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Compute Usage</p>
+              <p className="text-xs text-muted">Track CPU usage by route, feature, and user — click to expand</p>
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`text-muted transition-transform ${computeOpen ? "rotate-180" : ""}`}><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+
+        {computeOpen && (
+          <div className="border-t border-border p-5">
+            {computeLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-warning" />
+              </div>
+            ) : computeData ? (
+              <div className="space-y-6">
+                {/* Today summary */}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: "Total Calls Today", value: computeData.today.totalCalls.toLocaleString(), color: "text-foreground" },
+                    { label: "Total Server Time", value: computeData.today.totalMs >= 60000 ? `${Math.floor(computeData.today.totalMs / 60000)}m ${Math.round((computeData.today.totalMs % 60000) / 1000)}s` : `${(computeData.today.totalMs / 1000).toFixed(1)}s`, color: computeData.today.totalMs > 30000 ? "text-danger" : computeData.today.totalMs > 10000 ? "text-warning" : "text-success" },
+                    { label: "Avg per Call", value: computeData.today.totalCalls > 0 ? `${Math.round(computeData.today.totalMs / computeData.today.totalCalls)}ms` : "—", color: "text-muted" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-border bg-surface p-3 text-center">
+                      <div className={`text-xl font-bold ${stat.color}`}>{stat.value}</div>
+                      <div className="mt-0.5 text-xs text-muted">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Category breakdown */}
+                {Object.keys(computeData.categories).length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">By Feature Category</h3>
+                    <div className="space-y-2">
+                      {Object.entries(computeData.categories)
+                        .sort(([, a], [, b]) => b.totalMs - a.totalMs)
+                        .map(([cat, v]) => {
+                          const pct = computeData.today.totalMs > 0 ? (v.totalMs / computeData.today.totalMs) * 100 : 0;
+                          const CAT_COLOR: Record<string, string> = { admin: "#2563EB", session: "#059669", quiz: "#7C3AED", "patch-note": "#D97706", auth: "#DC2626", other: "#6B7280" };
+                          return (
+                            <div key={cat}>
+                              <div className="mb-1 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="h-2 w-2 rounded-full" style={{ background: CAT_COLOR[cat] ?? "#6B7280" }} />
+                                  <span className="font-medium text-foreground capitalize">{cat}</span>
+                                </div>
+                                <span className="text-muted">{v.calls} calls · {(v.totalMs / 1000).toFixed(1)}s ({pct.toFixed(0)}%)</span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: CAT_COLOR[cat] ?? "#6B7280" }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Route breakdown table */}
+                {computeData.today.routes.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Top Routes Today</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted">
+                            <th className="pb-2 pr-4">Route</th>
+                            <th className="pb-2 pr-4 text-right">Calls</th>
+                            <th className="pb-2 pr-4 text-right">Avg ms</th>
+                            <th className="pb-2 pr-4 text-right">Peak ms</th>
+                            <th className="pb-2 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {[...computeData.today.routes].sort((a, b) => b.totalMs - a.totalMs).map((r) => (
+                            <tr key={r.route}>
+                              <td className="py-2 pr-4 font-mono text-[11px] text-foreground">{r.route}</td>
+                              <td className="py-2 pr-4 text-right text-xs text-muted">{r.calls}</td>
+                              <td className={`py-2 pr-4 text-right text-xs font-medium ${r.avgMs > 800 ? "text-danger" : r.avgMs > 400 ? "text-warning" : "text-success"}`}>{r.avgMs}ms</td>
+                              <td className="py-2 pr-4 text-right text-xs text-muted">{r.peakMs}ms</td>
+                              <td className="py-2 text-right text-xs text-muted">{(r.totalMs / 1000).toFixed(2)}s</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top contributors */}
+                {computeData.topContributors.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Top Callers Today</h3>
+                    <div className="space-y-2">
+                      {computeData.topContributors.slice(0, 10).map((u, idx) => (
+                        <div key={idx} className="flex items-center gap-3 rounded-lg border border-border/50 px-3 py-2">
+                          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                            {u.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{u.name}</p>
+                            <p className="text-[11px] text-muted">{u.email}</p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-xs font-semibold text-foreground">{u.calls}×</p>
+                            <p className="text-[10px] font-mono text-muted">{u.route.replace("/api/", "")}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 7-day trend */}
+                {computeData.trend.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">7-Day Server Time Trend</h3>
+                    <div className="flex h-20 items-end gap-2">
+                      {(() => {
+                        const maxMs = Math.max(...computeData.trend.map((t) => t.totalMs), 1);
+                        return computeData.trend.map((t) => (
+                          <div key={t.date} className="flex flex-1 flex-col items-center gap-1" title={`${t.date}: ${(t.totalMs / 1000).toFixed(1)}s`}>
+                            <div className="flex w-full items-end justify-center" style={{ height: 56 }}>
+                              <div
+                                className="w-full rounded-t-lg"
+                                style={{
+                                  height: `${Math.max((t.totalMs / maxMs) * 100, t.totalMs > 0 ? 8 : 3)}%`,
+                                  background: t.totalMs > 30000 ? "var(--danger)" : t.totalMs > 10000 ? "var(--warning)" : "var(--success)",
+                                }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-muted">{t.date.slice(5)}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <p className="mt-2 text-[10px] text-muted">Green = low · Yellow = medium · Red = high usage</p>
+                  </div>
+                )}
+
+                {computeData.today.routes.length === 0 && (
+                  <p className="py-4 text-center text-sm text-muted">No compute data yet today. Data appears once instrumented routes are called.</p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
 }

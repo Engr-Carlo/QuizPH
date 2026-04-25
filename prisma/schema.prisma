@@ -70,6 +70,7 @@ model User {
   verificationCodes EmailVerificationCode[]
   passwordResetTokens PasswordResetToken[]
   patchNoteReads PatchNoteRead[]
+  routeLogUsers RouteLogUser[]
 
   @@index([lastSeenAt])
 }
@@ -249,4 +250,32 @@ model PatchNoteRead {
   @@unique([userId, patchNoteId])
   @@index([userId])
   @@index([patchNoteId])
+}
+
+// Tracks compute cost per API route per day (daily aggregate upsert — single row per route per day)
+model RouteLog {
+  id       String @id @default(cuid())
+  date     String // "2026-04-25" ISO date bucket
+  route    String // e.g. "/api/admin/users"
+  category String // "admin" | "session" | "quiz" | "patch-note" | "auth" | "other"
+  count    Int    @default(0)  // total calls today
+  totalMs  Int    @default(0)  // sum of response times in ms
+  peakMs   Int    @default(0)  // slowest single call today
+
+  @@unique([date, route])
+  @@index([date])
+}
+
+// Tracks which user triggered compute per route per day
+model RouteLogUser {
+  id     String @id @default(cuid())
+  date   String // "2026-04-25"
+  route  String
+  count  Int    @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([date, route, userId])
+  @@index([date, userId])
 }
