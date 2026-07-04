@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface Props {
   noteId: string;
@@ -11,13 +12,22 @@ interface Props {
 
 export default function PatchNoteModal({ noteId, title, body, onDismiss }: Props) {
   const [dismissing, setDismissing] = useState(false);
+  const safeBody = useMemo(() => sanitizeHtml(body), [body]);
 
   async function handleDismiss() {
     setDismissing(true);
     try {
-      await fetch(`/api/patch-notes/${noteId}/read`, { method: "POST" });
+      const res = await fetch(`/api/patch-notes/${noteId}/read`, { method: "POST" });
+      if (!res.ok) {
+        // Mark-as-read failed — don't close so the modal doesn't reappear next load
+        console.error("Failed to mark patch note as read");
+        setDismissing(false);
+        return;
+      }
     } catch {
-      // non-critical — modal still closes
+      // Network error — don't close to avoid the modal reappearing on next visit
+      setDismissing(false);
+      return;
     }
     onDismiss();
   }
@@ -36,11 +46,11 @@ export default function PatchNoteModal({ noteId, title, body, onDismiss }: Props
           <h2 className="text-xl font-extrabold text-foreground leading-snug">{title}</h2>
         </div>
 
-        {/* Body — SUPER_ADMIN-authored HTML only, safe to render */}
+        {/* Body — sanitized before rendering to prevent XSS */}
         <div className="px-6 py-5 max-h-72 overflow-y-auto">
           <div
             className="text-sm text-foreground/80 leading-relaxed space-y-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:font-bold [&_em]:italic"
-            dangerouslySetInnerHTML={{ __html: body }}
+            dangerouslySetInnerHTML={{ __html: safeBody }}
           />
         </div>
 

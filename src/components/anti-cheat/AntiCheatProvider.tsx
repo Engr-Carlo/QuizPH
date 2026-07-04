@@ -40,6 +40,15 @@ export default function AntiCheatProvider({
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
 
+  // iOS does not support the Fullscreen API — skip the fullscreen gate entirely.
+  const [isIOS] = useState<boolean>(() => {
+    if (typeof navigator === "undefined") return false;
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+  });
+
   const logViolation = useCallback(
     async (type: string) => {
       if (!participantId || !sessionId) return;
@@ -66,6 +75,9 @@ export default function AntiCheatProvider({
   useEffect(() => {
     if (!active) return;
 
+    // iOS does not support the Fullscreen API — skip fullscreen enforcement.
+    if (isIOS) return;
+
     const enterFullscreen = async () => {
       try {
         await document.documentElement.requestFullscreen();
@@ -85,7 +97,7 @@ export default function AntiCheatProvider({
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [active, showWarning]);
+  }, [active, showWarning, isIOS]);
 
   // 2. Tab switch / visibility detection
   useEffect(() => {
@@ -158,6 +170,8 @@ export default function AntiCheatProvider({
 
   function handleReenterFullscreen() {
     setWarningVisible(false);
+    // iOS cannot request fullscreen — just dismiss the modal.
+    if (isIOS) return;
     document.documentElement.requestFullscreen().catch(() => {});
   }
 

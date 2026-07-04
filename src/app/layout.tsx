@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "QuizPH - Smart Quiz Platform",
   description: "A quiz platform with anti-cheat monitoring for Philippine educators",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "QuizPH",
+  },
 };
 
 export default function RootLayout({

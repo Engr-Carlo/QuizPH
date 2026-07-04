@@ -86,6 +86,24 @@ function StudentQuizContent() {
   const [focusLost, setFocusLost] = useState(false);
   const [isFullscreenActive, setIsFullscreenActive] = useState(false);
   const [secureModeError, setSecureModeError] = useState<string | null>(null);
+
+  // iOS (iPhone / iPad) does not support the Fullscreen API at all.
+  // In PWA / standalone mode (opened from Add-to-Home-Screen), the browser chrome
+  // is hidden and the app runs fullscreen natively — detectable via navigator.standalone.
+  const [isIOS] = useState<boolean>(() => {
+    if (typeof navigator === "undefined") return false;
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      // iPadOS 13+ reports itself as MacIntel with touch points
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+  });
+  // navigator.standalone is an iOS Safari–only property: true when the page was
+  // launched from an Add-to-Home-Screen shortcut (i.e. real fullscreen mode).
+  const [isStandalone] = useState<boolean>(() => {
+    if (typeof navigator === "undefined") return false;
+    return (navigator as { standalone?: boolean }).standalone === true;
+  });
   const [lockedQuestionIds, setLockedQuestionIds] = useState<Set<string>>(new Set());
 
   // ── Fake biometrics (psychological pressure display) ──────────────────
@@ -207,6 +225,20 @@ function StudentQuizContent() {
         handleSubmitQuiz();
       }
     });
+
+  // Warn before closing/refreshing the browser while quiz is active
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasFinishedRef.current) return;
+      e.preventDefault();
+      // Modern browsers show their own generic message; setting returnValue
+      // triggers the dialog in all supported environments.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
     return () => {
       channel.unbind_all();
@@ -345,10 +377,20 @@ function StudentQuizContent() {
   );
 
   // 1. Fullscreen enforcement — every exit immediately triggers a violation.
-  // Deps: only [status, postViolation].  antiCheatEnabled is read from a ref at
-  // call-time so this effect is NOT re-registered on every fetchSession().
+  // Deps: only [status, postViolation, isIOS].  antiCheatEnabled is read from a
+  // ref at call-time so this effect is NOT re-registered on every fetchSession().
   useEffect(() => {
     if (status !== "active") return;
+
+    // iOS does not support the Fullscreen API.
+    // In standalone mode (opened from Home Screen) the browser chrome is hidden
+    // so the app is effectively fullscreen — mark it as active.
+    // If not in standalone, the guide overlay will instruct the student to install the PWA.
+    if (isIOS) {
+      if (isStandalone) setIsFullscreenActive(true);
+      return;
+    }
+
     setIsFullscreenActive(Boolean(document.fullscreenElement));
 
     const handleFullscreenChange = () => {
@@ -375,7 +417,7 @@ function StudentQuizContent() {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [status, postViolation]);
+  }, [status, postViolation, isIOS, isStandalone]);
 
   // 2. Tab switch / focus-loss shield — every focus-loss event reported immediately.
   // Registered once when status becomes "active"; antiCheatEnabled checked at call-time.
@@ -556,6 +598,18 @@ function StudentQuizContent() {
   async function enterSecureMode() {
     setSecureModeError(null);
 
+    // iOS does not support requestFullscreen.
+    // In standalone mode, the app is already fullscreen — just clear any warnings.
+    if (isIOS) {
+      if (isStandalone) {
+        setIsFullscreenActive(true);
+        focusLostRef.current = false;
+        setFocusLost(false);
+        setWarningVisible(false);
+      }
+      return;
+    }
+
     if (typeof document.documentElement.requestFullscreen !== "function") {
       setSecureModeError("This browser does not support fullscreen secure mode.");
       return;
@@ -714,7 +768,9 @@ function StudentQuizContent() {
   const displayTimeLeft = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft : timeLeft;
   const isTimeLow = sessionData.quiz.timerType === "PER_QUESTION" ? perQuestionTimeLeft < 10 : timeLeft < 60;
   const secureModeRequired = Boolean(sessionData.quiz.antiCheatEnabled);
-  const secureModeBlocked = secureModeRequired && (!isFullscreenActive || focusLost);
+  // iOS non-standalone users get a dedicated "Add to Home Screen" guide overlay.
+  const iosGuideRequired = isIOS && !isStandalone && secureModeRequired;
+  const secureModeBlocked = !iosGuideRequired && secureModeRequired && (!isFullscreenActive || focusLost);
   const secureModeTitle = focusLost || warningCount > 0 ? "Secure Mode Interrupted" : "Enter Secure Mode";
   const secureModeMessage = focusLost || warningCount > 0
     ? "The quiz was covered because fullscreen or focus was lost. Your teacher has been notified. Return to secure mode to continue."
@@ -733,6 +789,56 @@ function StudentQuizContent() {
       onPaste={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
     >
+      {/* ── iOS PWA Guide Overlay ── */}
+      {iosGuideRequired && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/97 backdrop-blur-sm px-6 text-center">
+          <div className="w-full max-w-sm">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center mx-auto mb-5">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2">Open in Fullscreen Mode</h2>
+            <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto leading-6">
+              iPhone&apos;s Safari doesn&apos;t support fullscreen. Add QuizPH to your Home Screen — it opens without the browser bar, enabling secure mode automatically.
+            </p>
+            <div className="bg-white/8 rounded-[20px] border border-white/10 p-5 text-left space-y-4 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0 mt-0.5">1</span>
+                <div>
+                  <p className="text-white text-sm font-semibold">Tap the Share button in Safari</p>
+                  <p className="text-slate-400 text-xs mt-0.5">The <span className="font-bold text-slate-300">↑</span> icon in the toolbar at the bottom of your screen</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0 mt-0.5">2</span>
+                <div>
+                  <p className="text-white text-sm font-semibold">Tap &ldquo;Add to Home Screen&rdquo;</p>
+                  <p className="text-slate-400 text-xs mt-0.5">Scroll down the share sheet to find this option, then tap <span className="font-bold text-slate-300">Add</span></p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0 mt-0.5">3</span>
+                <div>
+                  <p className="text-white text-sm font-semibold">Open QuizPH from your Home Screen</p>
+                  <p className="text-slate-400 text-xs mt-0.5">Navigate back to this quiz link — you&apos;ll be in fullscreen secure mode automatically</p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-6 py-3.5 rounded-2xl bg-primary text-white font-black text-sm shadow-lg hover:bg-primary/90 transition"
+            >
+              I&apos;ve added it — Check Again
+            </button>
+            <p className="text-slate-500 text-xs mt-3">
+              Already opened from Home Screen? Tap above to verify.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Secure-mode / Focus-loss overlay ── */}
       {secureModeBlocked && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/97 backdrop-blur-sm px-6 text-center">

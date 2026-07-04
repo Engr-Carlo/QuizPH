@@ -48,19 +48,9 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res?.error) {
-      const statusRes = await fetch("/api/email-verification/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const statusData = await statusRes.json();
-
-      if (statusData.exists && !statusData.verified) {
-        setError("Your email is not verified yet. Please verify your email first.");
-        setShowResend(true);
-      } else {
-        setError("Invalid email or password. Please try again.");
-      }
+      setError("Invalid email or password. Please try again.");
+      // Show a passive resend hint — we never confirm whether the email exists.
+      setShowResend(true);
       return;
     }
 

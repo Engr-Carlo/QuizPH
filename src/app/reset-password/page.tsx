@@ -14,6 +14,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -25,8 +26,8 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError("");
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("Password must be at least 8 characters and include a letter and a number.");
       return;
     }
 
@@ -50,7 +51,16 @@ export default function ResetPasswordPage() {
     }
 
     setSuccess(true);
-    setTimeout(() => router.push("/login"), 3000);
+    // Count down visibly before redirecting so the user can read the confirmation
+    let count = 5;
+    const interval = setInterval(() => {
+      count -= 1;
+      setRedirectCountdown(count);
+      if (count <= 0) {
+        clearInterval(interval);
+        router.push("/login");
+      }
+    }, 1000);
   }
 
   if (!token || !email) {
@@ -107,12 +117,12 @@ export default function ResetPasswordPage() {
 
           <h1 className="text-2xl font-extrabold text-foreground mb-1">Create new password</h1>
           <p className="text-muted text-sm mb-8">
-            Your new password must be at least 6 characters
+            Your new password must be at least 8 characters and include a letter and a number.
           </p>
 
           {success ? (
             <div className="flex items-start gap-2.5 bg-success/6 border border-success/25 text-success text-sm p-3.5 rounded-xl">
-              <span>Password reset successfully! Redirecting to sign in...</span>
+              <span>Password reset successfully! Redirecting to sign in in {redirectCountdown}s...</span>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">

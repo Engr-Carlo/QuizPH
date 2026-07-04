@@ -73,6 +73,14 @@ export default function VerifyEmailPage() {
     const data = await res.json();
     setResending(false);
 
+    if (res.status === 429) {
+      // Server told us exactly how long to wait — use that value
+      const waitSecs = data.waitForSeconds ?? 60;
+      setResendCooldown(waitSecs);
+      setError(`Please wait ${waitSecs} seconds before requesting a new code.`);
+      return;
+    }
+
     if (!res.ok || data.deliveryFailed) {
       setError(data.error || "Failed to resend code");
       if (data.previewCode) {
@@ -83,7 +91,8 @@ export default function VerifyEmailPage() {
 
     setSuccess(data.message || "Verification code sent");
     setDeliveryWarning("");
-    setResendCooldown(30);
+    // Sync with backend cooldown (60s) — use server value if available
+    setResendCooldown(data.waitForSeconds ?? 60);
     if (data.previewCode) {
       setPreviewCode(data.previewCode);
     }

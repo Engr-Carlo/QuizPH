@@ -76,8 +76,9 @@ export default function ForgotPasswordPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {message && (
-              <div className="flex items-start gap-2.5 bg-success/6 border border-success/25 text-success text-sm p-3.5 rounded-xl">
+              <div className="flex flex-col gap-1 bg-success/6 border border-success/25 text-success text-sm p-3.5 rounded-xl">
                 <span>{message}</span>
+                <span className="text-xs opacity-75">The link expires in 15 minutes.</span>
               </div>
             )}
 

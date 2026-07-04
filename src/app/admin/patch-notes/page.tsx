@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface PatchNote {
   id: string;
@@ -15,6 +16,18 @@ interface EditorState {
   id?: string;
   title: string;
   body: string;
+}
+
+function AdminPatchNotePreview({ body }: { body: string }) {
+  const safeHtml = useMemo(() => sanitizeHtml(body || ""), [body]);
+  return (
+    <div
+      className="min-h-[200px] max-h-[320px] overflow-auto rounded-xl border border-border bg-surface px-5 py-4 text-sm text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:font-bold [&_em]:italic [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-2 [&_hr]:border-border [&_hr]:my-3"
+      dangerouslySetInnerHTML={{
+        __html: safeHtml || '<span style="color:var(--muted)"><em>Nothing to preview yet…</em></span>',
+      }}
+    />
+  );
 }
 
 export default function PatchNotesAdminPage() {
@@ -258,14 +271,7 @@ export default function PatchNotesAdminPage() {
                     <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5">
                       Preview
                     </label>
-                    <div
-                      className="min-h-[200px] max-h-[320px] overflow-auto rounded-xl border border-border bg-surface px-5 py-4 text-sm text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:font-bold [&_em]:italic [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-2 [&_hr]:border-border [&_hr]:my-3"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          editor.body ||
-                          '<span style="color:var(--muted)"><em>Nothing to preview yet…</em></span>',
-                      }}
-                    />
+                    <AdminPatchNotePreview body={editor.body} />
                   </div>
                 )}
               </div>

@@ -27,7 +27,10 @@ export async function POST(req: Request) {
 
     if (!result.sent && result.waitForSeconds) {
       return NextResponse.json(
-        { error: `Please wait ${result.waitForSeconds}s before requesting another code` },
+        {
+          error: `Please wait ${result.waitForSeconds}s before requesting another code`,
+          waitForSeconds: result.waitForSeconds,
+        },
         { status: 429 }
       );
     }

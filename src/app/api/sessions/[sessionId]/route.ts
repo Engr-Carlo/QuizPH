@@ -43,7 +43,7 @@ export async function PATCH(
     include: { quiz: true },
   });
 
-  if (!quizSession || quizSession.quiz.teacherId !== session.user.id) {
+  if (!quizSession || (quizSession.quiz.teacherId !== session.user.id && session.user.role !== "SUPER_ADMIN")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -96,7 +96,7 @@ export async function DELETE(
     include: { quiz: true },
   });
 
-  if (!quizSession || quizSession.quiz.teacherId !== session.user.id) {
+  if (!quizSession || (quizSession.quiz.teacherId !== session.user.id && session.user.role !== "SUPER_ADMIN")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -187,6 +187,18 @@ export async function GET(
 
   if (!quizSession) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Authorization: caller must be the quiz teacher, a SUPER_ADMIN, or an
+  // active participant in this specific session.
+  const isTeacher = quizSession.quiz.teacherId === session.user.id;
+  const isAdmin = session.user.role === "SUPER_ADMIN";
+  const isParticipant = quizSession.participants.some(
+    (p: (typeof quizSession.participants)[number]) => p.userId === session.user.id
+  );
+
+  if (!isTeacher && !isAdmin && !isParticipant) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const participantId = new URL(req.url).searchParams.get("participantId") || "";

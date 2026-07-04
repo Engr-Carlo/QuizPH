@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_AVATAR_ID, normalizeAvatarId } from "@/lib/avatar-presets";
+import { loginLimiter } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -16,6 +17,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         const normalizedEmail = (credentials.email as string).toLowerCase().trim();
+
+        // Brute-force protection: max 10 failed attempts per email per 15 min
+        const rateCheck = loginLimiter.hit(normalizedEmail);
+        if (!rateCheck.allowed) {
+          // Returning null causes NextAuth to emit a generic CredentialsSignin error
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
@@ -33,6 +41,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isValid) return null;
+
+        // Successful login — reset the counter
+        loginLimiter.reset(normalizedEmail);
 
         await prisma.user.update({
           where: { id: user.id },

@@ -82,7 +82,7 @@ export async function PUT(
     const body = await req.json();
 
     const quiz = await prisma.quiz.findUnique({ where: { id } });
-    if (!quiz || quiz.teacherId !== session.user.id) {
+    if (!quiz || (quiz.teacherId !== session.user.id && session.user.role !== "SUPER_ADMIN")) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -129,7 +129,7 @@ export async function DELETE(
   const { id } = await params;
 
   const quiz = await prisma.quiz.findUnique({ where: { id } });
-  if (!quiz || quiz.teacherId !== session.user.id) {
+  if (!quiz || (quiz.teacherId !== session.user.id && session.user.role !== "SUPER_ADMIN")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

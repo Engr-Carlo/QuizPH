@@ -23,6 +23,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Idempotent: if already finished, return existing state without side effects
+    if (participant.isFinished) {
+      return NextResponse.json(participant);
+    }
+
     const updated = await prisma.participant.update({
       where: { id: participantId },
       data: { isFinished: true },
