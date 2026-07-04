@@ -226,6 +226,13 @@ function StudentQuizContent() {
       }
     });
 
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe(`session-${sessionId}`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
   // Warn before closing/refreshing the browser while quiz is active
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -238,14 +245,7 @@ function StudentQuizContent() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-    return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(`session-${sessionId}`);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [])
 
   // Timer (PER_QUIZ only — PER_QUESTION handled separately below)
   useEffect(() => {
