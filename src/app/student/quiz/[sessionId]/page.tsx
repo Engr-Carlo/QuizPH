@@ -750,7 +750,13 @@ function StudentQuizContent() {
 
   // ACTIVE state — Quiz in progress
   const currentQuestion = questions[currentIndex];
-  if (!currentQuestion) return null;
+  if (questions.length === 0 || !currentQuestion) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted text-sm">Loading questions...</p>
+      </div>
+    );
+  }
 
   const allowSkip = sessionData.quiz.allowSkip !== false;
   const currentAnswer = answers[currentQuestion.id] || "";

@@ -17,11 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "QuizPH - Smart Quiz Platform",
   description: "A quiz platform with anti-cheat monitoring for Philippine educators",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "QuizPH",
-  },
 };
 
 export default function RootLayout({
@@ -33,6 +28,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="manifest" href="/api/manifest" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="QuizPH" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
