@@ -33,14 +33,17 @@ export default function SettingsPage() {
   async function handleSave() {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
+    const originalName = sessionUser?.name ?? "";
+    const originalEmail = (sessionUser?.email ?? "").toLowerCase();
+    const originalAvatar = normalizeAvatarId(sessionUser?.avatar) ?? DEFAULT_AVATAR_ID;
 
-    if (trimmedName.length < 2) {
+    if (trimmedName.length < 2 && trimmedName !== originalName) {
       setToast({ msg: "Name must be at least 2 characters.", ok: false });
       setTimeout(() => setToast(null), 3000);
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail) && trimmedEmail !== originalEmail) {
       setToast({ msg: "Enter a valid email address.", ok: false });
       setTimeout(() => setToast(null), 3000);
       return;
@@ -59,21 +62,22 @@ export default function SettingsPage() {
       }
     }
 
-    setSaving(true);
-
-    const payload: Record<string, string> = {
-      name: trimmedName,
-      email: trimmedEmail,
-    };
-
+    const payload: Record<string, string> = {};
+    if (trimmedName !== originalName) payload.name = trimmedName;
+    if (trimmedEmail !== originalEmail) payload.email = trimmedEmail;
+    if (selectedAvatar !== originalAvatar) payload.avatar = selectedAvatar;
     if (newPassword) {
       payload.password = newPassword;
       payload.currentPassword = currentPassword;
     }
 
-    if (selectedAvatar !== normalizeAvatarId(session?.user?.avatar)) {
-      payload.avatar = selectedAvatar;
+    if (Object.keys(payload).length === 0) {
+      setToast({ msg: "No changes to save yet.", ok: false });
+      setTimeout(() => setToast(null), 2200);
+      return;
     }
+
+    setSaving(true);
 
     const res = await fetch("/api/users/me", {
       method: "PATCH",
