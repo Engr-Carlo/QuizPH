@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -25,10 +25,21 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [changePassword, setChangePassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const selectedPreset = useMemo(() => getAvatarPreset(selectedAvatar), [selectedAvatar]);
+
+  useEffect(() => {
+    if (!sessionUser) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(sessionUser.name ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEmail(sessionUser.email ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedAvatar(normalizeAvatarId(sessionUser.avatar) ?? DEFAULT_AVATAR_ID);
+  }, [sessionUser?.id, sessionUser?.name, sessionUser?.email, sessionUser?.avatar]);
 
   async function handleSave() {
     const trimmedName = name.trim();
@@ -49,7 +60,7 @@ export default function SettingsPage() {
       return;
     }
 
-    if (newPassword || currentPassword || confirmPassword) {
+    if (changePassword) {
       if (!currentPassword || newPassword.length < 8) {
         setToast({ msg: "Use your current password and set a new password with at least 8 characters.", ok: false });
         setTimeout(() => setToast(null), 3000);
@@ -66,7 +77,7 @@ export default function SettingsPage() {
     if (trimmedName !== originalName) payload.name = trimmedName;
     if (trimmedEmail !== originalEmail) payload.email = trimmedEmail;
     if (selectedAvatar !== originalAvatar) payload.avatar = selectedAvatar;
-    if (newPassword) {
+    if (changePassword && newPassword) {
       payload.password = newPassword;
       payload.currentPassword = currentPassword;
     }
@@ -114,7 +125,7 @@ export default function SettingsPage() {
     trimmedName !== baseName ||
     email.trim().toLowerCase() !== baseEmail.toLowerCase() ||
     selectedAvatar !== currentAvatar ||
-    Boolean(newPassword || currentPassword || confirmPassword);
+    (changePassword && Boolean(newPassword || currentPassword || confirmPassword));
 
   return (
     <DashboardLayout key={sessionUser?.id ?? "guest"}>
@@ -163,42 +174,61 @@ export default function SettingsPage() {
               </div>
 
               <div className="rounded-2xl border border-border bg-surface p-4">
-                <h3 className="text-sm font-black text-foreground">Change password</h3>
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">Current password</label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      autoComplete="current-password"
-                      placeholder="Required only when changing password"
-                      className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">New password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      autoComplete="new-password"
-                      placeholder="At least 8 characters"
-                      className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">Confirm password</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      autoComplete="new-password"
-                      placeholder="Re-type the new password"
-                      className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-black text-foreground">Change password</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChangePassword((prev) => !prev);
+                      if (changePassword) {
+                        setCurrentPassword("");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                      }
+                    }}
+                    className="text-xs font-bold text-primary underline-offset-2 hover:underline"
+                  >
+                    {changePassword ? "Hide" : "Edit"}
+                  </button>
                 </div>
+
+                {changePassword && (
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">Current password</label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        autoComplete="current-password"
+                        placeholder="Required only when changing password"
+                        className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">New password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder="At least 8 characters"
+                        className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">Confirm password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder="Re-type the new password"
+                        className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
