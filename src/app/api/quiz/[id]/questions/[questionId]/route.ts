@@ -21,13 +21,12 @@ export async function PUT(
 
   // Snapshot old options before deleting — needed to map stored answerText (old option IDs) → text
   const oldOptions = await prisma.option.findMany({ where: { questionId } });
-  const oldIdToText = new Map(oldOptions.map((o) => [o.id, o.text]));
+  const oldIdToText = new Map(oldOptions.map((o: (typeof oldOptions)[number]) => [o.id, o.text]));
 
   // Delete old options and recreate + update question inside one transaction
-  const updated = await prisma.$transaction(async (tx) => {
-    await tx.option.deleteMany({ where: { questionId } });
-
-    return tx.question.update({
+  const [, updated] = await prisma.$transaction([
+    prisma.option.deleteMany({ where: { questionId } }),
+    prisma.question.update({
       where: { id: questionId },
       data: {
         type: body.type,
@@ -44,12 +43,12 @@ export async function PUT(
         },
       },
       include: { options: true },
-    });
-  });
+    }),
+  ]);
 
   // ── Re-grade existing answers ───────────────────────────────────────────
   // Find the new correct option
-  const newCorrectOption = updated.options.find((o) => o.isCorrect);
+  const newCorrectOption = updated.options.find((o: (typeof updated.options)[number]) => o.isCorrect);
 
   // All answers ever submitted for this question (across all sessions)
   const existingAnswers = await prisma.answer.findMany({

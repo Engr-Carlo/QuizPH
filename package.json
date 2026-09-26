@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && export DIRECT_URL=${DIRECT_URL:-$DATABASE_URL} && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && node -e \"const { execSync } = require('node:child_process'); const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''; const isValid = /^postgres(?:ql)?:\/\//i.test(url); if (isValid) { process.env.DIRECT_URL = process.env.DIRECT_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL; execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' }); } else { console.log('Skipping prisma db push because DATABASE_URL is missing or not a valid Postgres URL.'); }\" && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",

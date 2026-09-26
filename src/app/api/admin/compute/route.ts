@@ -26,9 +26,9 @@ export async function GET() {
     }),
   ]);
 
-  const todayLogs = logs.filter((l) => l.date === today);
-  const totalCallsToday = todayLogs.reduce((s, l) => s + l.count, 0);
-  const totalMsToday = todayLogs.reduce((s, l) => s + l.totalMs, 0);
+  const todayLogs = logs.filter((l: (typeof logs)[number]) => l.date === today);
+  const totalCallsToday = todayLogs.reduce((s: number, l: (typeof todayLogs)[number]) => s + l.count, 0);
+  const totalMsToday = todayLogs.reduce((s: number, l: (typeof todayLogs)[number]) => s + l.totalMs, 0);
 
   // Category breakdown for today
   const categories: Record<string, { calls: number; totalMs: number }> = {};
@@ -50,7 +50,7 @@ export async function GET() {
     .map(([date, v]) => ({ date, ...v }));
 
   // Top contributors (who triggered the most calls today by total ms)
-  const topContributors = userLogs.map((u) => ({
+  const topContributors = userLogs.map((u: (typeof userLogs)[number]) => ({
     userId: u.userId,
     name: u.user.name,
     email: u.user.email,
@@ -64,7 +64,7 @@ export async function GET() {
       date: today,
       totalCalls: totalCallsToday,
       totalMs: totalMsToday,
-      routes: todayLogs.map((l) => ({
+      routes: todayLogs.map((l: (typeof todayLogs)[number]) => ({
         route: l.route,
         category: l.category,
         calls: l.count,

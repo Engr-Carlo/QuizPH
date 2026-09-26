@@ -81,13 +81,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.university = (user as { university?: string | null }).university ?? null;
         token.universityVerified = Boolean((user as { universityVerified?: boolean }).universityVerified);
         const userUniversities = Array.isArray((user as { universities?: unknown[] }).universities)
-          ? ((user as { universities: unknown[] }).universities as string[])
+          ? ((user as { universities: unknown[] }).universities as unknown[])
           : [];
         tokenWithUniversities.universities = userUniversities
           .map((value: unknown) => String(value).trim())
-          .filter(Boolean);
-        if (!tokenWithUniversities.universities.length && token.university) {
-          tokenWithUniversities.universities = [token.university];
+          .filter((value): value is string => value.length > 0);
+        if (!tokenWithUniversities.universities.length && typeof token.university === "string" && token.university.trim()) {
+          tokenWithUniversities.universities = [token.university.trim()];
         }
       }
       if (trigger === "update") {
@@ -107,7 +107,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (Array.isArray(session?.universities)) {
           const sessionUniversities = (session.universities as unknown[])
             .map((value: unknown) => String(value).trim())
-            .filter(Boolean);
+            .filter((value): value is string => value.length > 0);
           tokenWithUniversities.universities = sessionUniversities;
           if (tokenWithUniversities.universities.length > 0) {
             token.university = tokenWithUniversities.universities[0] ?? token.university ?? null;
@@ -152,7 +152,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         }
         if (!Array.isArray(tokenWithUniversities.universities) || tokenWithUniversities.universities.length === 0) {
-          tokenWithUniversities.universities = token.university ? [token.university] : [];
+          tokenWithUniversities.universities = typeof token.university === "string" && token.university.trim()
+            ? [token.university.trim()]
+            : [];
         }
       }
       return token;

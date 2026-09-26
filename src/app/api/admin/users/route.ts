@@ -81,8 +81,12 @@ export async function GET(req: Request) {
       prisma.user.count({ where: whereUser }),
       prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
     ]);
-    const roleMap = Object.fromEntries(roleCounts.map((r) => [r.role, r._count._all]));
-    const pagedWithPresence = pagedUsers.map((u) => ({
+    const roleMap = Object.fromEntries(
+      (roleCounts as Array<{ role: string; _count: { _all: number } }>).map(
+        (r: { role: string; _count: { _all: number } }) => [r.role, r._count._all],
+      ),
+    );
+    const pagedWithPresence = pagedUsers.map((u: (typeof pagedUsers)[number]) => ({
       ...u,
       isOnline: Boolean(u.lastSeenAt && Date.now() - new Date(u.lastSeenAt).getTime() <= ONLINE_WINDOW_MS),
     }));
@@ -175,30 +179,34 @@ export async function GET(req: Request) {
   ]);
 
   // Derive counts from proper full-table aggregates
-  const roleMap = Object.fromEntries(roleCounts.map((r) => [r.role, r._count._all]));
+  const roleMap = Object.fromEntries(
+    (roleCounts as Array<{ role: string; _count: { _all: number } }>).map(
+      (r: { role: string; _count: { _all: number } }) => [r.role, r._count._all],
+    ),
+  );
   const teacherCount = roleMap["TEACHER"] ?? 0;
   const studentCount = roleMap["STUDENT"] ?? 0;
   const adminCount = roleMap["SUPER_ADMIN"] ?? 0;
 
   const onlineAll = onlineRoles.length;
-  const onlineTeachers = onlineRoles.filter((u) => u.role === "TEACHER").length;
-  const onlineStudents = onlineRoles.filter((u) => u.role === "STUDENT").length;
-  const onlineAdmins = onlineRoles.filter((u) => u.role === "SUPER_ADMIN").length;
+  const onlineTeachers = onlineRoles.filter((u: (typeof onlineRoles)[number]) => u.role === "TEACHER").length;
+  const onlineStudents = onlineRoles.filter((u: (typeof onlineRoles)[number]) => u.role === "STUDENT").length;
+  const onlineAdmins = onlineRoles.filter((u: (typeof onlineRoles)[number]) => u.role === "SUPER_ADMIN").length;
 
-  const pagedWithPresence = pagedUsers.map((u) => ({
+  const pagedWithPresence = pagedUsers.map((u: (typeof pagedUsers)[number]) => ({
     ...u,
     isOnline: Boolean(u.lastSeenAt && Date.now() - new Date(u.lastSeenAt).getTime() <= ONLINE_WINDOW_MS),
   }));
 
   const recentActivity = [
-    ...recentSessions.map((s) => ({
+    ...recentSessions.map((s: (typeof recentSessions)[number]) => ({
       type: "session" as const,
       label: s.status === "ENDED" ? "Session ended" : s.status === "ACTIVE" ? "Session started" : "Session created",
       desc: s.quiz.title,
       code: s.code,
       at: (s.endedAt ?? s.startedAt ?? s.createdAt).toISOString(),
     })),
-    ...recentViolations.map((v) => ({
+    ...recentViolations.map((v: (typeof recentViolations)[number]) => ({
       type: "violation" as const,
       label: "Violation detected",
       desc: `${v.participant.user.name} · ${v.session.quiz.title}`,
@@ -232,8 +240,8 @@ export async function GET(req: Request) {
     },
     charts: {
       usersByDay: buildDailySeries(recentUsers, "createdAt"),
-      teachersByDay: buildDailySeries(recentUsers.filter((u) => u.role === "TEACHER"), "createdAt"),
-      studentsByDay: buildDailySeries(recentUsers.filter((u) => u.role === "STUDENT"), "createdAt"),
+      teachersByDay: buildDailySeries(recentUsers.filter((u: (typeof recentUsers)[number]) => u.role === "TEACHER"), "createdAt"),
+      studentsByDay: buildDailySeries(recentUsers.filter((u: (typeof recentUsers)[number]) => u.role === "STUDENT"), "createdAt"),
       sessionsByDay: buildDailySeries(sessionsByDay, "createdAt"),
       participantsByDay: buildDailySeries(participantsByDay, "joinedAt"),
       sessionStatus: [
