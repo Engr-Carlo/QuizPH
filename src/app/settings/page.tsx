@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarPresetId>(() => normalizeAvatarId(sessionUser?.avatar) ?? DEFAULT_AVATAR_ID);
   const [name, setName] = useState(() => sessionUser?.name ?? "");
   const [email, setEmail] = useState(() => sessionUser?.email ?? "");
+  const [university, setUniversity] = useState(() => sessionUser?.university ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,8 +39,10 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEmail(sessionUser.email ?? "");
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setUniversity(sessionUser.university ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedAvatar(normalizeAvatarId(sessionUser.avatar) ?? DEFAULT_AVATAR_ID);
-  }, [sessionUser?.id, sessionUser?.name, sessionUser?.email, sessionUser?.avatar]);
+  }, [sessionUser?.id, sessionUser?.name, sessionUser?.email, sessionUser?.avatar, sessionUser?.university]);
 
   async function handleSave() {
     const trimmedName = name.trim();
@@ -77,6 +80,7 @@ export default function SettingsPage() {
     if (trimmedName !== originalName) payload.name = trimmedName;
     if (trimmedEmail !== originalEmail) payload.email = trimmedEmail;
     if (selectedAvatar !== originalAvatar) payload.avatar = selectedAvatar;
+    if (university.trim() !== (sessionUser?.university ?? "")) payload.university = university.trim();
     if (changePassword && newPassword) {
       payload.password = newPassword;
       payload.currentPassword = currentPassword;
@@ -104,6 +108,7 @@ export default function SettingsPage() {
         name: trimmedName,
         email: trimmedEmail,
         avatar: selectedAvatar,
+        university: university.trim(),
       });
       setCurrentPassword("");
       setNewPassword("");
@@ -125,6 +130,7 @@ export default function SettingsPage() {
     trimmedName !== baseName ||
     email.trim().toLowerCase() !== baseEmail.toLowerCase() ||
     selectedAvatar !== currentAvatar ||
+    university.trim() !== (session?.user?.university ?? "") ||
     (changePassword && Boolean(newPassword || currentPassword || confirmPassword));
 
   return (
@@ -169,6 +175,18 @@ export default function SettingsPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold text-foreground">University <span className="font-normal text-muted">(optional)</span></label>
+                <input
+                  type="text"
+                  value={university}
+                  onChange={(e) => setUniversity(e.target.value)}
+                  autoComplete="organization"
+                  placeholder="e.g. University of the Philippines"
                   className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>

@@ -16,6 +16,7 @@ export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: passwordSchema,
   role: z.enum(["TEACHER", "STUDENT"]),
+  university: z.string().trim().max(150, "University name is too long").optional(),
 });
 
 export const quizSchema = z.object({
@@ -66,6 +67,7 @@ export const profileUpdateSchema = z
     password: z.string().min(8, "Password must be at least 8 characters").optional(),
     currentPassword: z.string().min(8, "Current password is required when changing password").optional(),
     avatar: z.string().optional(),
+    university: z.string().trim().max(150, "University name is too long").optional(),
   })
   .refine(
     (data) => {

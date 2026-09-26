@@ -13,7 +13,7 @@ export async function PATCH(
 
   const { userId } = await params;
   const body = await req.json();
-  const { isActive, name, email, role } = body;
+  const { isActive, name, email, role, university } = body;
 
   if (userId === session.user.id && isActive === false) {
     return NextResponse.json({ error: "Cannot deactivate your own account" }, { status: 400 });
@@ -34,6 +34,7 @@ export async function PATCH(
     if (conflict) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
     updateData.email = normalizedEmail;
   }
+  if (typeof university === "string") updateData.university = university.trim() || null;
   if (typeof role === "string" && ["TEACHER", "STUDENT", "SUPER_ADMIN"].includes(role)) {
     if (userId === session.user.id && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 });

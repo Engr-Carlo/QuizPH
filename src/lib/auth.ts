@@ -56,6 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           role: user.role,
           avatar: normalizeAvatarId(user.avatar) ?? DEFAULT_AVATAR_ID,
+          university: user.university,
         };
       },
     }),
@@ -68,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.name = user.name;
         token.email = user.email;
         token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
+        token.university = (user as { university?: string | null }).university ?? null;
       }
       if (trigger === "update") {
         if (typeof session?.name === "string" && session.name.trim().length > 0) {
@@ -80,10 +82,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (typeof nextAvatar === "string" && nextAvatar.length > 0) {
           token.avatar = normalizeAvatarId(nextAvatar);
         }
+        if (typeof session?.university === "string") {
+          token.university = session.university.trim() || null;
+        }
 
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { avatar: true, name: true, email: true },
+          select: { avatar: true, name: true, email: true, university: true },
         });
 
         if (fresh) {
@@ -96,6 +101,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (!session?.avatar || session.avatar.length === 0) {
             token.avatar = normalizeAvatarId(fresh.avatar);
           }
+          if (typeof session?.university !== "string") {
+            token.university = fresh.university;
+          }
         }
       }
       return token;
@@ -107,6 +115,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.name = (token.name as string | undefined) ?? session.user.name;
         session.user.email = (token.email as string | undefined) ?? session.user.email;
         session.user.avatar = token.avatar as string | undefined;
+        session.user.university = (token.university as string | null | undefined) ?? null;
       }
       return session;
     },

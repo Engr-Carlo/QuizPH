@@ -13,6 +13,7 @@ interface UserData {
   lastSeenAt: string | null;
   createdAt: string;
   emailVerifiedAt: string | null;
+  university: string | null;
   _count: { quizzes: number; participants: number };
 }
 
@@ -49,7 +50,7 @@ export default function AdminUsersPage() {
 
   // Edit modal
   const [editUser, setEditUser] = useState<UserData | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", email: "", role: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "", university: "" });
   const [editError, setEditError] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
@@ -152,7 +153,7 @@ export default function AdminUsersPage() {
 
   function openEdit(user: UserData) {
     setEditUser(user);
-    setEditForm({ name: user.name, email: user.email, role: user.role });
+    setEditForm({ name: user.name, email: user.email, role: user.role, university: user.university ?? "" });
     setEditError("");
   }
 
@@ -263,6 +264,7 @@ export default function AdminUsersPage() {
                   Presence <SortIcon col="lastSeenAt" />
                 </th>
                 <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3">University</th>
                 <th className="px-4 py-3 text-center">Workload</th>
                 <th className="cursor-pointer select-none px-4 py-3 hover:text-foreground" onClick={() => handleSort("createdAt")}>
                   Joined <SortIcon col="createdAt" />
@@ -309,6 +311,9 @@ export default function AdminUsersPage() {
                       {user.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
+                  <td className="px-4 py-3.5 text-xs text-muted">
+                    {user.university || "—"}
+                  </td>
                   <td className="px-4 py-3.5 text-center text-xs text-muted">
                     {user.role === "TEACHER" ? `${user._count.quizzes} quizzes` : `${user._count.participants} joins`}
                   </td>
@@ -345,7 +350,7 @@ export default function AdminUsersPage() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-sm text-muted">
+                  <td colSpan={8} className="py-12 text-center text-sm text-muted">
                     No users found{debouncedSearch ? ` matching "${debouncedSearch}"` : ""}.
                   </td>
                 </tr>
@@ -459,6 +464,10 @@ export default function AdminUsersPage() {
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">Email address</label>
                 <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className={INPUT_CLS} required />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">University</label>
+                <input type="text" value={editForm.university} onChange={(e) => setEditForm({ ...editForm, university: e.target.value })} className={INPUT_CLS} placeholder="e.g. University of the Philippines" />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">Role</label>

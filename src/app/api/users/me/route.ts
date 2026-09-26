@@ -20,7 +20,7 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const { name, email, password, currentPassword, avatar } = parsed.data;
+  const { name, email, password, currentPassword, avatar, university } = parsed.data;
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -71,6 +71,10 @@ export async function PATCH(request: Request) {
     updateData.avatar = normalizedAvatar;
   }
 
+  if (typeof university === "string") {
+    updateData.university = university.trim() || null;
+  }
+
   if (Object.keys(updateData).length === 0) {
     return NextResponse.json({ error: "No valid profile changes supplied" }, { status: 400 });
   }
@@ -104,6 +108,7 @@ export async function PATCH(request: Request) {
       name: updatedUser.name,
       email: updatedUser.email,
       avatar: normalizeAvatarId(updatedUser.avatar) || "Wave",
+      university: updatedUser.university,
     },
   });
 }

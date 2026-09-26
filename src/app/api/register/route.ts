@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role } = parsed.data;
+    const { name, email, password, role, university } = parsed.data;
     const normalizedEmail = email.toLowerCase().trim();
 
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const passwordHash = await hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { name, email: normalizedEmail, passwordHash, role },
+      data: { name, email: normalizedEmail, passwordHash, role, university: university || null },
     });
 
     const verificationResult = await createAndSendVerificationCode({
