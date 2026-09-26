@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -13,57 +13,119 @@ import {
   type AvatarPresetId,
 } from "@/lib/avatar-presets";
 
+const avatarGroups = ["Men", "Women"] as const;
+
 export default function SettingsPage() {
   const { data: session, update } = useSession();
   const router = useRouter();
-  const [selectedAvatar, setSelectedAvatar] = useState<AvatarPresetId>(DEFAULT_AVATAR_ID);
+  const sessionUser = session?.user;
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarPresetId>(() => normalizeAvatarId(sessionUser?.avatar) ?? DEFAULT_AVATAR_ID);
+  const [name, setName] = useState(() => sessionUser?.name ?? "");
+  const [email, setEmail] = useState(() => sessionUser?.email ?? "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-  const avatarGroups = ["Men", "Women"] as const;
-  const selectedPreset = getAvatarPreset(selectedAvatar);
 
-  useEffect(() => {
-    setSelectedAvatar(normalizeAvatarId(session?.user?.avatar));
-  }, [session?.user?.avatar]);
+  const selectedPreset = useMemo(() => getAvatarPreset(selectedAvatar), [selectedAvatar]);
 
   async function handleSave() {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (trimmedName.length < 2) {
+      setToast({ msg: "Name must be at least 2 characters.", ok: false });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setToast({ msg: "Enter a valid email address.", ok: false });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    if (newPassword || currentPassword || confirmPassword) {
+      if (!currentPassword || newPassword.length < 8) {
+        setToast({ msg: "Use your current password and set a new password with at least 8 characters.", ok: false });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setToast({ msg: "New password and confirmation do not match.", ok: false });
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+    }
+
     setSaving(true);
+
+    const payload: Record<string, string> = {
+      name: trimmedName,
+      email: trimmedEmail,
+    };
+
+    if (newPassword) {
+      payload.password = newPassword;
+      payload.currentPassword = currentPassword;
+    }
+
+    if (selectedAvatar !== normalizeAvatarId(session?.user?.avatar)) {
+      payload.avatar = selectedAvatar;
+    }
+
     const res = await fetch("/api/users/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ avatar: selectedAvatar }),
+      body: JSON.stringify(payload),
     });
+    const data = await res.json().catch(() => ({}));
+
     setSaving(false);
+
     if (res.ok) {
-      await update({ avatar: selectedAvatar });
+      await update({
+        name: trimmedName,
+        email: trimmedEmail,
+        avatar: selectedAvatar,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
       router.refresh();
-      setToast({ msg: "Avatar updated!", ok: true });
-      setTimeout(() => setToast(null), 3000);
+      setToast({ msg: data.message || "Profile updated successfully.", ok: true });
+      setTimeout(() => setToast(null), 4000);
     } else {
-      setToast({ msg: "Failed to save. Try again.", ok: false });
-      setTimeout(() => setToast(null), 3000);
+      setToast({ msg: data.error || "Failed to update your profile.", ok: false });
+      setTimeout(() => setToast(null), 4000);
     }
   }
 
-  const hasChanges = selectedAvatar !== normalizeAvatarId(session?.user?.avatar);
+  const trimmedName = name.trim();
+  const baseName = session?.user?.name ?? "";
+  const baseEmail = session?.user?.email ?? "";
+  const currentAvatar = normalizeAvatarId(session?.user?.avatar);
+  const hasChanges =
+    trimmedName !== baseName ||
+    email.trim().toLowerCase() !== baseEmail.toLowerCase() ||
+    selectedAvatar !== currentAvatar ||
+    Boolean(newPassword || currentPassword || confirmPassword);
 
   return (
-    <DashboardLayout>
-      <div className="mx-auto max-w-2xl">
+    <DashboardLayout key={sessionUser?.id ?? "guest"}>
+      <div className="mx-auto max-w-4xl space-y-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-black text-foreground">Settings</h1>
-          <p className="mt-1 text-sm text-muted">Manage your profile and preferences.</p>
+          <h1 className="text-2xl font-black text-foreground">Profile settings</h1>
+          <p className="mt-1 text-sm text-muted">Edit your personal details, password, and avatar.</p>
         </div>
 
         <div className="rounded-[28px] bg-card border border-border p-6 shadow-sm">
-          <h2 className="text-base font-black text-foreground mb-1">Avatar</h2>
-          <p className="text-sm text-muted mb-6">Choose from curated young adult avatars with separate men and women options.</p>
-
-          <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl bg-surface border border-border/60">
+          <div className="mb-6 flex items-center gap-4 rounded-2xl bg-surface border border-border/60 p-4">
             <img
               src={getAvatarUrl(selectedAvatar)}
               alt={selectedPreset.label}
-              className="w-16 h-16 rounded-full border-2 border-primary/30 bg-background"
+              className="h-16 w-16 rounded-full border-2 border-primary/30 bg-background"
             />
             <div>
               <p className="text-sm font-semibold text-foreground">{selectedPreset.label}</p>
@@ -73,52 +135,119 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            {avatarGroups.map((group) => (
-              <section key={group}>
-                <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-foreground">Full name</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold text-foreground">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-border bg-surface p-4">
+                <h3 className="text-sm font-black text-foreground">Change password</h3>
+                <div className="mt-4 space-y-3">
                   <div>
-                    <h3 className="text-sm font-black text-foreground">{group}</h3>
-                    <p className="text-xs text-muted">
-                      {group === "Men" ? "Handsome, clean-cut young adult looks." : "Pretty, polished young adult looks."}
-                    </p>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">Current password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Required only when changing password"
+                      className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">New password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="At least 8 characters"
+                      className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-muted">Confirm password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Re-type the new password"
+                      className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-                  {AVATAR_PRESETS.filter((preset) => preset.group === group).map((preset) => {
-                    const isSelected = selectedAvatar === preset.id;
-                    const p = preset as typeof preset & { style?: string };
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => setSelectedAvatar(preset.id)}
-                        className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2.5 transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/8 shadow-sm"
-                            : "border-border bg-white hover:border-primary/35 hover:bg-surface"
-                        }`}
-                      >
-                        <img
-                          src={getAvatarUrl(preset.id)}
-                          alt={preset.label}
-                          className="h-14 w-14 rounded-full bg-surface"
-                        />
-                        <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-primary" : "text-foreground"}`}>
-                          {preset.label}
-                        </span>
-                        <span className={`text-[10px] leading-tight ${isSelected ? "text-primary/70" : "text-muted"}`}>
-                          {p.style}
-                        </span>
-                      </button>
-                    );
-                  })}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <h2 className="mb-3 text-base font-black text-foreground">Avatar</h2>
+                <div className="space-y-6">
+                  {avatarGroups.map((group) => (
+                    <section key={group}>
+                      <div className="mb-3">
+                        <h3 className="text-sm font-black text-foreground">{group}</h3>
+                        <p className="text-xs text-muted">
+                          {group === "Men" ? "Clean-cut young adult looks." : "Polished young adult looks."}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {AVATAR_PRESETS.filter((preset) => preset.group === group).map((preset) => {
+                          const isSelected = selectedAvatar === preset.id;
+                          const p = preset as typeof preset & { style?: string };
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => setSelectedAvatar(preset.id)}
+                              className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2.5 transition-all ${
+                                isSelected
+                                  ? "border-primary bg-primary/8 shadow-sm"
+                                  : "border-border bg-white hover:border-primary/35 hover:bg-surface"
+                              }`}
+                            >
+                              <img
+                                src={getAvatarUrl(preset.id)}
+                                alt={preset.label}
+                                className="h-12 w-12 rounded-full bg-surface"
+                              />
+                              <span className={`text-[11px] font-bold leading-tight ${isSelected ? "text-primary" : "text-foreground"}`}>
+                                {preset.label}
+                              </span>
+                              <span className={`text-[10px] leading-tight ${isSelected ? "text-primary/70" : "text-muted"}`}>
+                                {p.style}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
                 </div>
-              </section>
-            ))}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3">
+          <div className="mt-8 flex items-center justify-end gap-3">
             {toast && (
               <p className={`text-sm font-medium ${toast.ok ? "text-success" : "text-danger"}`}>
                 {toast.msg}

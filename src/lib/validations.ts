@@ -59,8 +59,30 @@ export const violationSchema = z.object({
   ]),
 });
 
+export const profileUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2, "Name must be at least 2 characters").optional(),
+    email: z.string().trim().email("Invalid email address").optional(),
+    password: z.string().min(8, "Password must be at least 8 characters").optional(),
+    currentPassword: z.string().min(8, "Current password is required when changing password").optional(),
+    avatar: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if ((data.password && !data.currentPassword) || (!data.password && data.currentPassword)) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Both the current password and the new password are required to change your password.",
+      path: ["password"],
+    }
+  );
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type QuizInput = z.infer<typeof quizSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;
 export type ViolationInput = z.infer<typeof violationSchema>;
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

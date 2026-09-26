@@ -65,15 +65,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.role = (user as { role: string }).role;
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
         token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
       }
       if (trigger === "update") {
+        if (typeof session?.name === "string" && session.name.trim().length > 0) {
+          token.name = session.name.trim();
+        }
+        if (typeof session?.email === "string" && session.email.trim().length > 0) {
+          token.email = session.email.trim().toLowerCase();
+        }
         const nextAvatar = session?.avatar;
         if (typeof nextAvatar === "string" && nextAvatar.length > 0) {
           token.avatar = normalizeAvatarId(nextAvatar);
-        } else {
-          const fresh = await prisma.user.findUnique({ where: { id: token.id as string }, select: { avatar: true } });
-          if (fresh) token.avatar = normalizeAvatarId(fresh.avatar);
+        }
+
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { avatar: true, name: true, email: true },
+        });
+
+        if (fresh) {
+          if (!session?.name || session.name.trim().length === 0) {
+            token.name = fresh.name;
+          }
+          if (!session?.email || session.email.trim().length === 0) {
+            token.email = fresh.email;
+          }
+          if (!session?.avatar || session.avatar.length === 0) {
+            token.avatar = normalizeAvatarId(fresh.avatar);
+          }
         }
       }
       return token;
@@ -82,6 +104,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
+        session.user.name = (token.name as string | undefined) ?? session.user.name;
+        session.user.email = (token.email as string | undefined) ?? session.user.email;
         session.user.avatar = token.avatar as string | undefined;
       }
       return session;
