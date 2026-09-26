@@ -19,6 +19,13 @@ export async function POST(req: Request) {
     const { name, email, password, role, university } = parsed.data;
     const normalizedEmail = email.toLowerCase().trim();
 
+    if (role === "TEACHER" && !university?.trim()) {
+      return NextResponse.json(
+        { error: "University is required for teacher accounts." },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       if (!existing.emailVerifiedAt) {
@@ -61,7 +68,14 @@ export async function POST(req: Request) {
     const passwordHash = await hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { name, email: normalizedEmail, passwordHash, role, university: university || null },
+      data: {
+        name,
+        email: normalizedEmail,
+        passwordHash,
+        role,
+        university: university?.trim() || null,
+        universityVerified: false,
+      },
     });
 
     const verificationResult = await createAndSendVerificationCode({

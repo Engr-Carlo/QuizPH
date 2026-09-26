@@ -62,6 +62,20 @@ export async function POST(req: Request) {
       );
     }
 
+    if (session.user.role === "TEACHER") {
+      const teacherProfile = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { university: true },
+      });
+
+      if (!teacherProfile?.university?.trim()) {
+        return NextResponse.json(
+          { error: "Please register your university before creating a quiz." },
+          { status: 403 }
+        );
+      }
+    }
+
     const quiz = await prisma.quiz.create({
       data: {
         ...parsed.data,

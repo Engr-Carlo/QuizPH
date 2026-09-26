@@ -57,6 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           avatar: normalizeAvatarId(user.avatar) ?? DEFAULT_AVATAR_ID,
           university: user.university,
+          universityVerified: user.universityVerified,
         };
       },
     }),
@@ -70,6 +71,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.email = user.email;
         token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
         token.university = (user as { university?: string | null }).university ?? null;
+        token.universityVerified = Boolean((user as { universityVerified?: boolean }).universityVerified);
       }
       if (trigger === "update") {
         if (typeof session?.name === "string" && session.name.trim().length > 0) {
@@ -85,10 +87,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (typeof session?.university === "string") {
           token.university = session.university.trim() || null;
         }
+        if (typeof session?.universityVerified === "boolean") {
+          token.universityVerified = session.universityVerified;
+        }
 
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { avatar: true, name: true, email: true, university: true },
+          select: { avatar: true, name: true, email: true, university: true, universityVerified: true },
         });
 
         if (fresh) {
@@ -104,6 +109,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (typeof session?.university !== "string") {
             token.university = fresh.university;
           }
+          if (typeof session?.universityVerified !== "boolean") {
+            token.universityVerified = fresh.universityVerified;
+          }
         }
       }
       return token;
@@ -116,6 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.email = (token.email as string | undefined) ?? session.user.email;
         session.user.avatar = token.avatar as string | undefined;
         session.user.university = (token.university as string | null | undefined) ?? null;
+        session.user.universityVerified = Boolean(token.universityVerified);
       }
       return session;
     },

@@ -1,12 +1,14 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 
 export default function CreateQuizPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +28,12 @@ export default function CreateQuizPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (session?.user?.role === "TEACHER" && !session.user.university?.trim()) {
+      setError("Please register your university before creating a quiz.");
+      return;
+    }
+
     setLoading(true);
 
     const duration = (durationMinutes * 60) + durationSeconds;
@@ -73,6 +81,12 @@ export default function CreateQuizPage() {
       <div className="max-w-2xl">
         <h1 className="text-2xl font-extrabold text-foreground mb-1">Create New Quiz</h1>
         <p className="text-muted text-sm mb-8">Configure your quiz settings. You can add questions after creating it.</p>
+
+        {session?.user?.role === "TEACHER" && !session.user.university?.trim() && (
+          <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
+            Please register your university before creating a quiz.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (

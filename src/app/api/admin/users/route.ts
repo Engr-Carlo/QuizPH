@@ -71,7 +71,7 @@ export async function GET(req: Request) {
         where: whereUser,
         select: {
           id: true, name: true, email: true, role: true, isActive: true,
-          lastSeenAt: true, createdAt: true, emailVerifiedAt: true, university: true,
+          lastSeenAt: true, createdAt: true, emailVerifiedAt: true, university: true, universityVerified: true,
           _count: { select: { quizzes: true, participants: true } },
         },
         orderBy,
@@ -123,7 +123,7 @@ export async function GET(req: Request) {
       where: whereUser,
       select: {
         id: true, name: true, email: true, role: true, isActive: true,
-        lastSeenAt: true, createdAt: true, emailVerifiedAt: true, university: true,
+        lastSeenAt: true, createdAt: true, emailVerifiedAt: true, university: true, universityVerified: true,
         _count: { select: { quizzes: true, participants: true } },
       },
       orderBy,

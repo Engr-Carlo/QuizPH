@@ -23,6 +23,10 @@ export default function RegisterPage() {
       setError("Passwords do not match.");
       return;
     }
+    if (role === "TEACHER" && !university.trim()) {
+      setError("University is required for teacher accounts.");
+      return;
+    }
     setLoading(true);
 
     const res = await fetch("/api/register", {
@@ -189,11 +193,15 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">University <span className="font-normal text-muted">(optional)</span></label>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">
+                University
+                {role === "TEACHER" ? <span className="text-danger"> *</span> : <span className="font-normal text-muted"> (optional)</span>}
+              </label>
               <input
                 type="text"
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
+                required={role === "TEACHER"}
                 className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
                 placeholder="e.g. University of the Philippines"
               />

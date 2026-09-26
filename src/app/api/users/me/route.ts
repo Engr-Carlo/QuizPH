@@ -26,7 +26,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const updateData: Record<string, string | Date | null> = {};
+  const updateData: Record<string, string | Date | boolean | null> = {};
   let shouldReverifyEmail = false;
 
   if (typeof name === "string") {
@@ -72,7 +72,17 @@ export async function PATCH(request: Request) {
   }
 
   if (typeof university === "string") {
-    updateData.university = university.trim() || null;
+    const trimmedUniversity = university.trim();
+
+    if (user.role === "TEACHER" && !trimmedUniversity) {
+      return NextResponse.json({ error: "University is required for teachers." }, { status: 400 });
+    }
+
+    updateData.university = trimmedUniversity || null;
+
+    if (user.role === "TEACHER" && trimmedUniversity !== user.university) {
+      updateData.universityVerified = false;
+    }
   }
 
   if (Object.keys(updateData).length === 0) {
@@ -109,6 +119,7 @@ export async function PATCH(request: Request) {
       email: updatedUser.email,
       avatar: normalizeAvatarId(updatedUser.avatar) || "Wave",
       university: updatedUser.university,
+      universityVerified: updatedUser.universityVerified,
     },
   });
 }

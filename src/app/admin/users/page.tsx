@@ -14,6 +14,7 @@ interface UserData {
   createdAt: string;
   emailVerifiedAt: string | null;
   university: string | null;
+  universityVerified: boolean;
   _count: { quizzes: number; participants: number };
 }
 
@@ -50,7 +51,7 @@ export default function AdminUsersPage() {
 
   // Edit modal
   const [editUser, setEditUser] = useState<UserData | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", email: "", role: "", university: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "", university: "", universityVerified: false });
   const [editError, setEditError] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
@@ -153,7 +154,13 @@ export default function AdminUsersPage() {
 
   function openEdit(user: UserData) {
     setEditUser(user);
-    setEditForm({ name: user.name, email: user.email, role: user.role, university: user.university ?? "" });
+    setEditForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      university: user.university ?? "",
+      universityVerified: user.universityVerified,
+    });
     setEditError("");
   }
 
@@ -312,7 +319,15 @@ export default function AdminUsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-xs text-muted">
-                    {user.university || "—"}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{user.university || "—"}</span>
+                      {user.role === "TEACHER" && user.university && user.universityVerified && (
+                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-[9px] font-bold text-success">Verified</span>
+                      )}
+                      {user.role === "TEACHER" && user.university && !user.universityVerified && (
+                        <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[9px] font-bold text-warning">Pending</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3.5 text-center text-xs text-muted">
                     {user.role === "TEACHER" ? `${user._count.quizzes} quizzes` : `${user._count.participants} joins`}
@@ -469,6 +484,17 @@ export default function AdminUsersPage() {
                 <label className="mb-1.5 block text-sm font-medium text-foreground">University</label>
                 <input type="text" value={editForm.university} onChange={(e) => setEditForm({ ...editForm, university: e.target.value })} className={INPUT_CLS} placeholder="e.g. University of the Philippines" />
               </div>
+              {editForm.role === "TEACHER" && (
+                <label className="flex items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground">
+                  <span>University verified</span>
+                  <input
+                    type="checkbox"
+                    checked={editForm.universityVerified}
+                    onChange={(e) => setEditForm({ ...editForm, universityVerified: e.target.checked })}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  />
+                </label>
+              )}
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">Role</label>
                 <select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })} className={SELECT_CLS}>
