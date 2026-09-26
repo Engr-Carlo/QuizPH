@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -11,6 +11,7 @@ export default function CreateQuizPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState<{ message: string; tone: "error" | "info" } | null>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -25,12 +26,21 @@ export default function CreateQuizPage() {
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(false);
   const [allowSkip, setAllowSkip] = useState(true);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     if (session?.user?.role === "TEACHER" && !session.user.university?.trim()) {
-      setError("Please register your university before creating a quiz.");
+      setToast({
+        message: "Please register your university in Settings before creating a quiz.",
+        tone: "error",
+      });
       return;
     }
 
@@ -84,7 +94,37 @@ export default function CreateQuizPage() {
 
         {session?.user?.role === "TEACHER" && !session.user.university?.trim() && (
           <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
-            Please register your university before creating a quiz.
+            Please register your university in Settings before creating a quiz.
+          </div>
+        )}
+
+        {toast && (
+          <div className="toast-enter fixed right-5 top-5 z-50 w-[min(420px,calc(100vw-2rem))]">
+            <div className={`rounded-2xl border p-4 shadow-lg ${toast.tone === "error" ? "border-danger/30 bg-danger/6 text-danger" : "border-warning/30 bg-warning/8 text-warning"}`}>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-lg">⚠️</div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold leading-5">{toast.message}</p>
+                  {toast.tone === "error" && (
+                    <button
+                      type="button"
+                      onClick={() => router.push("/settings")}
+                      className="mt-2 inline-flex items-center text-xs font-bold underline underline-offset-2"
+                    >
+                      Open Settings
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToast(null)}
+                  className="ml-2 text-sm font-bold opacity-70 transition hover:opacity-100"
+                  aria-label="Dismiss notification"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
