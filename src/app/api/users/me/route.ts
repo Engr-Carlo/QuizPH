@@ -20,8 +20,17 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const { name, email, password, currentPassword, avatar, university } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const { name, email, password, currentPassword, avatar, university, universities: selectedUniversitiesFromPayload } = parsed.data;
+  const normalizeUniversityNames = (value: unknown): string[] => {
+    const list = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+    return [...new Set(list.map((entry) => String(entry).trim()).filter(Boolean))];
+  };
+  const requestedUniversities = normalizeUniversityNames(selectedUniversitiesFromPayload ?? university);
+  const primaryUniversity = requestedUniversities[0] ?? "";
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: { universities: { include: { university: true } } },
+  });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
@@ -71,8 +80,8 @@ export async function PATCH(request: Request) {
     updateData.avatar = normalizedAvatar;
   }
 
-  if (typeof university === "string") {
-    const trimmedUniversity = university.trim();
+  if (typeof university === "string" || Array.isArray(selectedUniversitiesFromPayload)) {
+    const trimmedUniversity = primaryUniversity.trim();
 
     if (user.role === "TEACHER" && !trimmedUniversity) {
       return NextResponse.json({ error: "University is required for teachers." }, { status: 400 });
@@ -94,6 +103,34 @@ export async function PATCH(request: Request) {
     data: updateData,
   });
 
+  if (typeof university === "string" || Array.isArray(selectedUniversitiesFromPayload)) {
+    await prisma.userUniversity.deleteMany({ where: { userId: session.user.id } });
+
+    if (user.role === "TEACHER" && requestedUniversities.length > 0) {
+      for (const universityName of requestedUniversities) {
+        const universityRecord = await prisma.university.upsert({
+          where: { name: universityName },
+          create: { name: universityName },
+          update: {},
+        });
+
+        await prisma.userUniversity.create({
+          data: {
+            userId: session.user.id,
+            universityId: universityRecord.id,
+            isPrimary: universityName === primaryUniversity,
+            isVerified: false,
+          },
+        });
+      }
+    }
+  }
+
+  const refreshedUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: { universities: { include: { university: true } } },
+  });
+
   let message = "Profile updated successfully";
 
   if (shouldReverifyEmail) {
@@ -110,6 +147,10 @@ export async function PATCH(request: Request) {
     }
   }
 
+  const linkedUniversities = (refreshedUser?.universities ?? [])
+    .map((link: { university?: { name?: string | null } | null }) => link.university?.name?.trim())
+    .filter((name: string | undefined | null): name is string => Boolean(name));
+
   return NextResponse.json({
     ok: true,
     message,
@@ -118,7 +159,8 @@ export async function PATCH(request: Request) {
       name: updatedUser.name,
       email: updatedUser.email,
       avatar: normalizeAvatarId(updatedUser.avatar) || "Wave",
-      university: updatedUser.university,
+      university: updatedUser.university ?? linkedUniversities[0] ?? null,
+      universities: linkedUniversities,
       universityVerified: updatedUser.universityVerified,
     },
   });

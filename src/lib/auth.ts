@@ -27,6 +27,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
+          include: { universities: { include: { university: true } } },
         });
 
         if (!user) return null;
@@ -50,20 +51,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           data: { lastSeenAt: new Date() },
         });
 
+        const universities = (user.universities ?? [])
+          .map((link: { university?: { name?: string | null } | null }) => link.university?.name?.trim())
+          .filter((name: string | undefined | null): name is string => Boolean(name));
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
           avatar: normalizeAvatarId(user.avatar) ?? DEFAULT_AVATAR_ID,
-          university: user.university,
+          university: user.university ?? universities[0] ?? null,
           universityVerified: user.universityVerified,
+          universities,
         };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user, trigger, session }) {
+      const tokenWithUniversities = token as typeof token & { universities?: string[] };
+
       if (user) {
         token.role = (user as { role: string }).role;
         token.id = user.id;
@@ -72,6 +80,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
         token.university = (user as { university?: string | null }).university ?? null;
         token.universityVerified = Boolean((user as { universityVerified?: boolean }).universityVerified);
+        const userUniversities = Array.isArray((user as { universities?: unknown[] }).universities)
+          ? ((user as { universities: unknown[] }).universities as string[])
+          : [];
+        tokenWithUniversities.universities = userUniversities
+          .map((value: unknown) => String(value).trim())
+          .filter(Boolean);
+        if (!tokenWithUniversities.universities.length && token.university) {
+          tokenWithUniversities.universities = [token.university];
+        }
       }
       if (trigger === "update") {
         if (typeof session?.name === "string" && session.name.trim().length > 0) {
@@ -87,13 +104,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (typeof session?.university === "string") {
           token.university = session.university.trim() || null;
         }
+        if (Array.isArray(session?.universities)) {
+          const sessionUniversities = (session.universities as unknown[])
+            .map((value: unknown) => String(value).trim())
+            .filter(Boolean);
+          tokenWithUniversities.universities = sessionUniversities;
+          if (tokenWithUniversities.universities.length > 0) {
+            token.university = tokenWithUniversities.universities[0] ?? token.university ?? null;
+          }
+        }
         if (typeof session?.universityVerified === "boolean") {
           token.universityVerified = session.universityVerified;
         }
 
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { avatar: true, name: true, email: true, university: true, universityVerified: true },
+          select: {
+            avatar: true,
+            name: true,
+            email: true,
+            university: true,
+            universityVerified: true,
+            universities: { include: { university: true } },
+          },
         });
 
         if (fresh) {
@@ -109,22 +142,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (typeof session?.university !== "string") {
             token.university = fresh.university;
           }
+          if (!Array.isArray(session?.universities) || session.universities.length === 0) {
+            tokenWithUniversities.universities = (fresh.universities ?? [])
+              .map((link: { university?: { name?: string | null } | null }) => link.university?.name?.trim())
+              .filter((name: string | undefined | null): name is string => Boolean(name));
+          }
           if (typeof session?.universityVerified !== "boolean") {
             token.universityVerified = fresh.universityVerified;
           }
+        }
+        if (!Array.isArray(tokenWithUniversities.universities) || tokenWithUniversities.universities.length === 0) {
+          tokenWithUniversities.universities = token.university ? [token.university] : [];
         }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
+        const sessionToken = token as typeof token & { universities?: string[] };
         session.user.role = token.role as string;
         session.user.id = token.id as string;
         session.user.name = (token.name as string | undefined) ?? session.user.name;
         session.user.email = (token.email as string | undefined) ?? session.user.email;
         session.user.avatar = token.avatar as string | undefined;
-        session.user.university = (token.university as string | null | undefined) ?? null;
+        session.user.university = (token.university as string | null | undefined) ?? ((Array.isArray(sessionToken.universities) && sessionToken.universities[0]) || null);
         session.user.universityVerified = Boolean(token.universityVerified);
+        session.user.universities = Array.isArray(sessionToken.universities)
+          ? (sessionToken.universities as unknown[]).map((value: unknown) => String(value).trim()).filter(Boolean)
+          : session.user.university ? [session.user.university] : [];
       }
       return session;
     },

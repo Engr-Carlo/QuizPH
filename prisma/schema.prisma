@@ -67,14 +67,41 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  quizzes      Quiz[]
-  participants Participant[]
+  quizzes           Quiz[]
+  participants      Participant[]
+  universities      UserUniversity[]
   verificationCodes EmailVerificationCode[]
   passwordResetTokens PasswordResetToken[]
-  patchNoteReads PatchNoteRead[]
-  routeLogUsers RouteLogUser[]
+  patchNoteReads    PatchNoteRead[]
+  routeLogUsers     RouteLogUser[]
 
   @@index([lastSeenAt])
+}
+
+model University {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userLinks UserUniversity[]
+}
+
+model UserUniversity {
+  id         String   @id @default(cuid())
+  userId     String
+  universityId String
+  isPrimary  Boolean  @default(false)
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  university University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, universityId])
+  @@index([userId])
+  @@index([universityId])
 }
 
 model EmailVerificationCode {

@@ -65,10 +65,19 @@ export async function POST(req: Request) {
     if (session.user.role === "TEACHER") {
       const teacherProfile = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { university: true },
+        select: {
+          university: true,
+          universities: { include: { university: true } },
+        },
       });
 
-      if (!teacherProfile?.university?.trim()) {
+      const teacherUniversityNames = (teacherProfile?.universities ?? [])
+        .map((link: { university?: { name?: string | null } | null }) => link.university?.name?.trim())
+        .filter((value: string | null | undefined): value is string => Boolean(value));
+
+      const hasTeacherUniversity = Boolean(teacherProfile?.university?.trim()) || teacherUniversityNames.length > 0;
+
+      if (!hasTeacherUniversity) {
         return NextResponse.json(
           { error: "Please register your university before creating a quiz." },
           { status: 403 }

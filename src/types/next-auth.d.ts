@@ -9,6 +9,7 @@ declare module "next-auth" {
       role: string;
       avatar?: string;
       university?: string | null;
+      universities?: string[];
       universityVerified?: boolean;
     };
   }
@@ -17,6 +18,7 @@ declare module "next-auth" {
     role: string;
     avatar?: string;
     university?: string | null;
+    universities?: string[];
     universityVerified?: boolean;
   }
 }
@@ -29,6 +31,7 @@ declare module "next-auth/jwt" {
     email?: string;
     avatar?: string;
     university?: string | null;
+    universities?: string[];
     universityVerified?: boolean;
   }
 }

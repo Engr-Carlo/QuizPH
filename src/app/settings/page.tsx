@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import UniversitySelector from "@/components/UniversitySelector";
 import {
   AVATAR_PRESETS,
   DEFAULT_AVATAR_ID,
@@ -22,7 +23,11 @@ export default function SettingsPage() {
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarPresetId>(() => normalizeAvatarId(sessionUser?.avatar) ?? DEFAULT_AVATAR_ID);
   const [name, setName] = useState(() => sessionUser?.name ?? "");
   const [email, setEmail] = useState(() => sessionUser?.email ?? "");
-  const [university, setUniversity] = useState(() => sessionUser?.university ?? "");
+  const [universities, setUniversities] = useState<string[]>(() => {
+    const sessionUniversities = sessionUser?.universities ?? [];
+    if (sessionUniversities.length > 0) return sessionUniversities;
+    return sessionUser?.university ? [sessionUser.university] : [];
+  });
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,19 +44,20 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEmail(sessionUser.email ?? "");
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUniversity(sessionUser.university ?? "");
+    setUniversities(sessionUser.universities && sessionUser.universities.length > 0 ? sessionUser.universities : sessionUser.university ? [sessionUser.university] : []);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedAvatar(normalizeAvatarId(sessionUser.avatar) ?? DEFAULT_AVATAR_ID);
-  }, [sessionUser?.id, sessionUser?.name, sessionUser?.email, sessionUser?.avatar, sessionUser?.university]);
+  }, [sessionUser?.id, sessionUser?.name, sessionUser?.email, sessionUser?.avatar, sessionUser?.university, sessionUser?.universities]);
 
   async function handleSave() {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
-    const trimmedUniversity = university.trim();
+    const normalizedUniversities = [...new Set(universities.map((item) => item.trim()).filter(Boolean))];
+    const primaryUniversity = normalizedUniversities[0] ?? "";
     const originalName = sessionUser?.name ?? "";
     const originalEmail = (sessionUser?.email ?? "").toLowerCase();
     const originalAvatar = normalizeAvatarId(sessionUser?.avatar) ?? DEFAULT_AVATAR_ID;
-    const originalUniversity = sessionUser?.university ?? "";
+    const originalUniversities = sessionUser?.universities && sessionUser.universities.length > 0 ? [...sessionUser.universities] : sessionUser?.university ? [sessionUser.university] : [];
 
     if (trimmedName.length < 2 && trimmedName !== originalName) {
       setToast({ msg: "Name must be at least 2 characters.", ok: false });
@@ -65,8 +71,8 @@ export default function SettingsPage() {
       return;
     }
 
-    if (sessionUser?.role === "TEACHER" && !trimmedUniversity) {
-      setToast({ msg: "University is required for teachers.", ok: false });
+    if (sessionUser?.role === "TEACHER" && normalizedUniversities.length === 0) {
+      setToast({ msg: "At least one university is required for teachers.", ok: false });
       setTimeout(() => setToast(null), 3000);
       return;
     }
@@ -84,11 +90,16 @@ export default function SettingsPage() {
       }
     }
 
-    const payload: Record<string, string> = {};
+    const payload: Record<string, string | string[]> = {};
     if (trimmedName !== originalName) payload.name = trimmedName;
     if (trimmedEmail !== originalEmail) payload.email = trimmedEmail;
     if (selectedAvatar !== originalAvatar) payload.avatar = selectedAvatar;
-    if (trimmedUniversity !== originalUniversity) payload.university = trimmedUniversity;
+    const universityListChanged = normalizedUniversities.length !== originalUniversities.length ||
+      normalizedUniversities.some((item, index) => item !== originalUniversities[index]);
+    if (universityListChanged) {
+      payload.university = primaryUniversity;
+      payload.universities = normalizedUniversities;
+    }
     if (changePassword && newPassword) {
       payload.password = newPassword;
       payload.currentPassword = currentPassword;
@@ -112,12 +123,14 @@ export default function SettingsPage() {
     setSaving(false);
 
     if (res.ok) {
+      const primaryUniversityChanged = primaryUniversity !== (sessionUser?.university ?? "");
       await update({
         name: trimmedName,
         email: trimmedEmail,
         avatar: selectedAvatar,
-        university: trimmedUniversity,
-        universityVerified: sessionUser?.role === "TEACHER" && trimmedUniversity === originalUniversity
+        university: primaryUniversity,
+        universities: normalizedUniversities,
+        universityVerified: sessionUser?.role === "TEACHER" && !primaryUniversityChanged
           ? (sessionUser?.universityVerified ?? false)
           : false,
       });
@@ -134,15 +147,20 @@ export default function SettingsPage() {
   }
 
   const trimmedName = name.trim();
-  const trimmedUniversity = university.trim();
+  const normalizedUniversities = [...new Set(universities.map((item) => item.trim()).filter(Boolean))];
+  const primaryUniversity = normalizedUniversities[0] ?? "";
   const baseName = session?.user?.name ?? "";
   const baseEmail = session?.user?.email ?? "";
   const currentAvatar = normalizeAvatarId(session?.user?.avatar);
+  const baseUniversities = session?.user?.universities && session.user.universities.length > 0
+    ? [...session.user.universities]
+    : session?.user?.university ? [session.user.university] : [];
   const hasChanges =
     trimmedName !== baseName ||
     email.trim().toLowerCase() !== baseEmail.toLowerCase() ||
     selectedAvatar !== currentAvatar ||
-    trimmedUniversity !== (session?.user?.university ?? "") ||
+    normalizedUniversities.length !== baseUniversities.length ||
+    normalizedUniversities.some((item, index) => item !== baseUniversities[index]) ||
     (changePassword && Boolean(newPassword || currentPassword || confirmPassword));
 
   return (
@@ -191,25 +209,13 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-bold text-foreground">
-                  University
-                  {sessionUser?.role === "TEACHER" ? (
-                    <span className="text-danger"> *</span>
-                  ) : (
-                    <span className="font-normal text-muted"> (optional)</span>
-                  )}
-                </label>
-                <input
-                  type="text"
-                  value={university}
-                  onChange={(e) => setUniversity(e.target.value)}
-                  autoComplete="organization"
-                  placeholder="e.g. University of the Philippines"
-                  required={sessionUser?.role === "TEACHER"}
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+              <UniversitySelector
+                value={universities}
+                onChange={setUniversities}
+                required={sessionUser?.role === "TEACHER"}
+                label="University"
+                placeholder="Search or add your university"
+              />
 
               <div className="rounded-2xl border border-border bg-surface p-4">
                 <div className="flex items-center justify-between gap-3">

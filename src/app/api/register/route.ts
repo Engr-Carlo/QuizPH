@@ -16,10 +16,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role, university } = parsed.data;
+    const { name, email, password, role, university, universities } = parsed.data;
     const normalizedEmail = email.toLowerCase().trim();
+    const normalizeUniversityNames = (value: unknown): string[] => {
+      const list = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+      return [...new Set(list.map((entry) => String(entry).trim()).filter(Boolean))];
+    };
+    const selectedUniversities = normalizeUniversityNames(universities ?? university);
+    const primaryUniversity = selectedUniversities[0] ?? "";
 
-    if (role === "TEACHER" && !university?.trim()) {
+    if (role === "TEACHER" && !primaryUniversity) {
       return NextResponse.json(
         { error: "University is required for teacher accounts." },
         { status: 400 }
@@ -73,10 +79,36 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         passwordHash,
         role,
-        university: university?.trim() || null,
+        university: primaryUniversity || null,
         universityVerified: false,
       },
     });
+
+    if (role === "TEACHER" && selectedUniversities.length > 0) {
+      for (const universityName of selectedUniversities) {
+        const universityRecord = await prisma.university.upsert({
+          where: { name: universityName },
+          create: { name: universityName },
+          update: {},
+        });
+
+        await prisma.userUniversity.upsert({
+          where: {
+            userId_universityId: {
+              userId: user.id,
+              universityId: universityRecord.id,
+            },
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            universityId: universityRecord.id,
+            isPrimary: universityName === primaryUniversity,
+            isVerified: false,
+          },
+        });
+      }
+    }
 
     const verificationResult = await createAndSendVerificationCode({
       id: user.id,

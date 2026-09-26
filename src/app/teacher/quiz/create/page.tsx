@@ -9,6 +9,9 @@ import Link from "next/link";
 export default function CreateQuizPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const teacherHasUniversity = session?.user?.role === "TEACHER"
+    ? ((session.user.universities?.length ?? 0) > 0 || Boolean(session.user.university?.trim()))
+    : true;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState<{ message: string; tone: "error" | "info" } | null>(null);
@@ -36,7 +39,7 @@ export default function CreateQuizPage() {
     e.preventDefault();
     setError("");
 
-    if (session?.user?.role === "TEACHER" && !session.user.university?.trim()) {
+    if (!teacherHasUniversity) {
       setToast({
         message: "Please register your university in Settings before creating a quiz.",
         tone: "error",
@@ -92,7 +95,7 @@ export default function CreateQuizPage() {
         <h1 className="text-2xl font-extrabold text-foreground mb-1">Create New Quiz</h1>
         <p className="text-muted text-sm mb-8">Configure your quiz settings. You can add questions after creating it.</p>
 
-        {session?.user?.role === "TEACHER" && !session.user.university?.trim() && (
+        {!teacherHasUniversity && (
           <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
             Please register your university in Settings before creating a quiz.
           </div>

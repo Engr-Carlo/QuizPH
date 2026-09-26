@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import UniversitySelector from "@/components/UniversitySelector";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [university, setUniversity] = useState("");
+  const [universities, setUniversities] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -23,8 +24,8 @@ export default function RegisterPage() {
       setError("Passwords do not match.");
       return;
     }
-    if (role === "TEACHER" && !university.trim()) {
-      setError("University is required for teacher accounts.");
+    if (role === "TEACHER" && universities.length === 0) {
+      setError("At least one university is required for teacher accounts.");
       return;
     }
     setLoading(true);
@@ -32,7 +33,14 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role, university }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        role,
+        university: universities[0] ?? "",
+        universities,
+      }),
     });
 
     const data = await res.json();
@@ -192,20 +200,28 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">
-                University
-                {role === "TEACHER" ? <span className="text-danger"> *</span> : <span className="font-normal text-muted"> (optional)</span>}
-              </label>
-              <input
-                type="text"
-                value={university}
-                onChange={(e) => setUniversity(e.target.value)}
-                required={role === "TEACHER"}
-                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
-                placeholder="e.g. University of the Philippines"
+            {role === "TEACHER" ? (
+              <UniversitySelector
+                value={universities}
+                onChange={setUniversities}
+                required
+                label="University"
+                placeholder="Search or add your university"
               />
-            </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                  University
+                  <span className="font-normal text-muted"> (optional)</span>
+                </label>
+                <UniversitySelector
+                  value={universities}
+                  onChange={setUniversities}
+                  placeholder="Optional university"
+                  label="University"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1.5">Password</label>
