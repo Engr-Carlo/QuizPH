@@ -152,6 +152,23 @@ export default function AdminUsersPage() {
     fetchData();
   }
 
+  async function handleApproveUniversity(user: UserData) {
+    if (user.role !== "TEACHER" || !user.university) return;
+
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        university: user.university,
+        universityVerified: !user.universityVerified,
+      }),
+    });
+
+    if (res.ok) {
+      fetchData();
+    }
+  }
+
   function openEdit(user: UserData) {
     setEditUser(user);
     setEditForm({
@@ -210,6 +227,10 @@ export default function AdminUsersPage() {
     { value: "SUPER_ADMIN" as const, label: `Admins (${stats.adminCount})` },
   ];
 
+  const pendingUniversityReviews = users.filter(
+    (user) => user.role === "TEACHER" && user.university && !user.universityVerified
+  );
+
   const pageStart = total === 0 ? 0 : (page - 1) * 25 + 1;
   const pageEnd = Math.min(page * 25, total);
 
@@ -229,6 +250,38 @@ export default function AdminUsersPage() {
           New User
         </button>
       </div>
+
+      {pendingUniversityReviews.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-warning/25 bg-warning/6 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-foreground">University review queue</p>
+              <p className="text-xs text-muted">Teachers waiting for admin verification</p>
+            </div>
+            <span className="rounded-full bg-warning/15 px-2.5 py-1 text-[11px] font-bold text-warning">
+              {pendingUniversityReviews.length} pending
+            </span>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {pendingUniversityReviews.slice(0, 4).map((user) => (
+              <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-warning/20 bg-white/70 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                  <p className="truncate text-xs text-muted">{user.university}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleApproveUniversity(user)}
+                  className="rounded-lg border border-primary/30 bg-primary/6 px-3 py-1.5 text-[11px] font-bold text-primary transition hover:bg-primary/10"
+                >
+                  Approve university
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-border bg-white">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
@@ -337,6 +390,14 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-2">
+                      {user.role === "TEACHER" && user.university && (
+                        <button
+                          onClick={() => handleApproveUniversity(user)}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${user.universityVerified ? "border-success/30 text-success hover:bg-success/8" : "border-primary/30 text-primary hover:bg-primary/8"}`}
+                        >
+                          {user.universityVerified ? "Approved" : "Approve"}
+                        </button>
+                      )}
                       <button
                         onClick={() => openEdit(user)}
                         className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:border-primary/30 hover:text-primary"
