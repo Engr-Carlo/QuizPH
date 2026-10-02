@@ -891,36 +891,45 @@ export default function QuizDetailPage() {
           ) : (
             <div className="divide-y divide-border/50">
               {visibleSessions.map((s) => (
-                <div key={s.id} className="px-6 py-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <SessionJoinQr code={s.code} size={72} compact />
-                    {/* Join code */}
-                    <button
-                      onClick={() => copyCode(s.code)}
-                      className="font-mono text-xl font-extrabold tracking-[0.25em] text-primary hover:text-primary-dark transition flex items-center gap-2"
-                      title="Click to copy"
-                    >
-                      {s.code}
-                      <span className="text-xs font-sans font-normal text-muted">
-                        {copiedCode === s.code ? "Copied!" : "copy"}
+                <div key={s.id} className="px-6 py-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                      <SessionJoinQr code={s.code} size={86} compact />
+
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <button
+                          onClick={() => copyCode(s.code)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                          title="Click to copy"
+                        >
+                          <span className="font-mono text-2xl sm:text-3xl font-black tracking-[0.22em] text-primary leading-none">
+                            {s.code}
+                          </span>
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                            {copiedCode === s.code ? "Copied!" : "copy"}
+                          </span>
+                        </button>
+
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${SESSION_STATUS_STYLE[s.status] || ""}`}>
+                          {s.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 md:justify-end">
+                      <span className="font-medium">
+                        {s._count.participants} participant{s._count.participants !== 1 ? "s" : ""}
                       </span>
-                    </button>
-                    {/* Status badge */}
-                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${SESSION_STATUS_STYLE[s.status] || ""}`}>
-                      {s.status}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {s._count.participants} participant{s._count.participants !== 1 ? "s" : ""}
-                    </span>
-                    {(s.startedAt || s.endedAt) && (
-                      <span className="text-[11px] text-muted hidden sm:inline">
-                        {s.startedAt && <>Started {formatDate(s.startedAt)}</>}
-                        {s.endedAt && <> · Ended {formatDate(s.endedAt)}</>}
-                      </span>
-                    )}
+                      {(s.startedAt || s.endedAt) && (
+                        <span className="text-[11px] text-slate-500 hidden sm:inline">
+                          {s.startedAt && <>Started {formatDate(s.startedAt)}</>}
+                          {s.endedAt && <> · Ended {formatDate(s.endedAt)}</>}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2 md:justify-end">
                     {s.status === "WAITING" && (
                       <>
                         <Link
