@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import SessionJoinQr from "@/components/SessionJoinQr";
 import Link from "next/link";
 
 interface Option {
@@ -894,32 +893,34 @@ export default function QuizDetailPage() {
                 <div key={s.id} className="px-6 py-4">
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                      <SessionJoinQr code={s.code} size={86} compact />
-
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <button
-                          onClick={() => copyCode(s.code)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
-                          title="Click to copy"
-                        >
-                          <span className="font-mono text-2xl sm:text-3xl font-black tracking-[0.22em] text-primary leading-none">
-                            {s.code}
-                          </span>
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                            {copiedCode === s.code ? "Copied!" : "copy"}
-                          </span>
-                        </button>
-
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${SESSION_STATUS_STYLE[s.status] || ""}`}>
-                          {s.status}
+                      <button
+                        onClick={() => copyCode(s.code)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                        title="Click to copy"
+                      >
+                        <span className="font-mono text-2xl sm:text-3xl font-black tracking-[0.22em] text-primary leading-none">
+                          {s.code}
                         </span>
-                      </div>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                          {copiedCode === s.code ? "Copied!" : "copy"}
+                        </span>
+                      </button>
+
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${SESSION_STATUS_STYLE[s.status] || ""}`}>
+                        {s.status}
+                      </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 md:justify-end">
                       <span className="font-medium">
                         {s._count.participants} participant{s._count.participants !== 1 ? "s" : ""}
                       </span>
+                      <Link
+                        href={`/teacher/quiz/${quizId}/qr/${s.id}`}
+                        className="inline-flex items-center justify-center rounded-xl border border-primary/25 bg-primary/6 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                      >
+                        Generate QR Code
+                      </Link>
                       {(s.startedAt || s.endedAt) && (
                         <span className="text-[11px] text-slate-500 hidden sm:inline">
                           {s.startedAt && <>Started {formatDate(s.startedAt)}</>}
