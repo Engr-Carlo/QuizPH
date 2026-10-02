@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 
-export default function JoinQuizPage() {
+function JoinQuizPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [chars, setChars] = useState(Array(6).fill(""));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,6 +14,44 @@ export default function JoinQuizPage() {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const code = chars.join("");
+
+  async function joinWithCode(nextCode: string) {
+    if (nextCode.length < 6) return;
+    setError("");
+    setLoading(true);
+
+    const res = await fetch("/api/sessions/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: nextCode }),
+    });
+
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Failed to join quiz");
+      return;
+    }
+
+    setPendingUrl(`/student/quiz/${data.session.id}?participantId=${data.participant.id}`);
+  }
+
+  useEffect(() => {
+    const qrCode = searchParams.get("code") || searchParams.get("sessionCode");
+    if (!qrCode) return;
+
+    const normalized = qrCode.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    if (!normalized) return;
+
+    setChars(Array.from({ length: 6 }, (_, idx) => normalized[idx] ?? ""));
+
+    const timer = window.setTimeout(() => {
+      void joinWithCode(normalized);
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
 
   function handleChar(idx: number, val: string) {
     const c = val.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(-1);
@@ -39,26 +78,7 @@ export default function JoinQuizPage() {
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
-    if (code.length < 6) return;
-    setError("");
-    setLoading(true);
-
-    const res = await fetch("/api/sessions/join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error || "Failed to join quiz");
-      return;
-    }
-
-    // Show violation warning before entering quiz
-    setPendingUrl(`/student/quiz/${data.session.id}?participantId=${data.participant.id}`);
+    await joinWithCode(code);
   }
 
   return (
@@ -183,5 +203,17 @@ export default function JoinQuizPage() {
         </form>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function JoinQuizPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="mx-auto max-w-3xl py-20 text-center text-sm text-muted">Loading join form…</div>
+      </DashboardLayout>
+    }>
+      <JoinQuizPageContent />
+    </Suspense>
   );
 }

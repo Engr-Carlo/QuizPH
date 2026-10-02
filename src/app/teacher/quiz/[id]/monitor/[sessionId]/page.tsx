@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react
 import { useParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
 import { formatTime } from "@/lib/utils";
+import SessionJoinQr from "@/components/SessionJoinQr";
 import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -306,6 +307,7 @@ export default function MonitorPage() {
           <div>
             <h1 className="font-extrabold text-foreground">{sessionData.quiz.title}</h1>
             <div className="flex items-center gap-3 mt-0.5">
+              <SessionJoinQr code={sessionData.code} size={72} compact />
               <button
                 type="button"
                 onClick={() => copySessionCode(sessionData.code)}
@@ -368,18 +370,21 @@ export default function MonitorPage() {
                     {sessionData.participants.length} waiting
                   </span>
                 </div>
-                <div>
-                  <p className="text-xs text-muted">Share this code with your students</p>
-                  <button
-                    type="button"
-                    onClick={() => copySessionCode(sessionData.code)}
-                    className="font-mono font-black text-2xl tracking-[0.25em] text-primary hover:text-primary/70 transition flex items-center gap-2 leading-none mt-0.5"
-                  >
-                    {sessionData.code}
-                    <span className="text-[11px] font-sans font-normal text-muted normal-case tracking-normal">
-                      {codeCopied ? "Copied!" : "copy"}
-                    </span>
-                  </button>
+                <div className="flex items-center gap-3">
+                  <SessionJoinQr code={sessionData.code} size={88} />
+                  <div>
+                    <p className="text-xs text-muted">Share this code with your students</p>
+                    <button
+                      type="button"
+                      onClick={() => copySessionCode(sessionData.code)}
+                      className="font-mono font-black text-2xl tracking-[0.25em] text-primary hover:text-primary/70 transition flex items-center gap-2 leading-none mt-0.5"
+                    >
+                      {sessionData.code}
+                      <span className="text-[11px] font-sans font-normal text-muted normal-case tracking-normal">
+                        {codeCopied ? "Copied!" : "copy"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

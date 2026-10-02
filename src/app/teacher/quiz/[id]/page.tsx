@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import SessionJoinQr from "@/components/SessionJoinQr";
 import Link from "next/link";
 
 interface Option {
@@ -892,6 +893,7 @@ export default function QuizDetailPage() {
               {visibleSessions.map((s) => (
                 <div key={s.id} className="px-6 py-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
+                    <SessionJoinQr code={s.code} size={72} compact />
                     {/* Join code */}
                     <button
                       onClick={() => copyCode(s.code)}
