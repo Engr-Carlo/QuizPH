@@ -14,6 +14,7 @@ interface ParticipantData {
 interface AnswerData {
   id: string;
   answerText: string;
+  displayAnswerText?: string;
   isCorrect: boolean;
   answeredAt: string;
   question: { text: string; order: number; type: string };
@@ -333,7 +334,7 @@ export default function AdminSessionsPage() {
                           <p className="text-sm font-medium text-foreground mb-1">{a.question.text}</p>
                           <p className="text-xs text-muted">Answer: <span className={`font-semibold ${
                             a.isCorrect ? "text-success" : "text-danger"
-                          }`}>{a.answerText || "(no answer)"}</span></p>
+                          }`}>{a.displayAnswerText ?? a.answerText ?? "(no answer)"}</span></p>
                         </div>
                       </div>
                     </div>

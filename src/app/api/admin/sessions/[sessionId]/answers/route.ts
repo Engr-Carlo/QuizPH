@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getAnswerDisplayText } from "@/lib/answer-display";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -27,10 +28,22 @@ export async function GET(
       answerText: true,
       isCorrect: true,
       answeredAt: true,
-      question: { select: { text: true, order: true, type: true } },
+      question: {
+        select: {
+          text: true,
+          order: true,
+          type: true,
+          options: { select: { id: true, text: true } },
+        },
+      },
     },
     orderBy: { question: { order: "asc" } },
   });
 
-  return NextResponse.json(answers);
+  const mappedAnswers = answers.map((answer: (typeof answers)[number]) => ({
+    ...answer,
+    displayAnswerText: getAnswerDisplayText(answer.answerText, answer.question),
+  }));
+
+  return NextResponse.json(mappedAnswers);
 }

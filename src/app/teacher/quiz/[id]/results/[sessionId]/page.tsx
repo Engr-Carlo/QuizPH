@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Fragment } from "react";
 import { useParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import { getAnswerDisplayText } from "@/lib/answer-display";
 
 interface Participant {
   id: string;
@@ -212,6 +213,7 @@ export default function ResultsPage() {
                         {data.quiz.questions.map((q, qi) => {
                           const ans = p.answers.find((a) => a.questionId === q.id);
                           const correctOption = q.options.find((o) => o.isCorrect)?.text;
+                          const displayAnswer = ans ? getAnswerDisplayText(ans.answerText, q) : "No answer";
                           return (
                             <div
                               key={q.id}
@@ -229,7 +231,7 @@ export default function ResultsPage() {
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-danger flex-shrink-0" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                 )}
                                 <span className={ans?.isCorrect ? "text-success" : "text-danger"}>
-                                  {ans?.answerText || <em className="text-muted">No answer</em>}
+                                  {displayAnswer}
                                 </span>
                                 {!ans?.isCorrect && correctOption && (
                                   <span className="text-muted">
