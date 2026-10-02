@@ -75,11 +75,13 @@ export async function POST(req: Request) {
         .map((link: { university?: { name?: string | null } | null }) => link.university?.name?.trim())
         .filter((value: string | null | undefined): value is string => Boolean(value));
 
+      // Rule: teacher must have at least one university entered before creating a quiz.
+      // Approval status is not required for creation; it only affects review/admin status.
       const hasTeacherUniversity = Boolean(teacherProfile?.university?.trim()) || teacherUniversityNames.length > 0;
 
       if (!hasTeacherUniversity) {
         return NextResponse.json(
-          { error: "Please register your university before creating a quiz." },
+          { error: "Please add at least one university in Settings before creating a quiz." },
           { status: 403 }
         );
       }

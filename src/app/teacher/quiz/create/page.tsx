@@ -41,7 +41,7 @@ export default function CreateQuizPage() {
 
     if (!teacherHasUniversity) {
       setToast({
-        message: "Please register your university in Settings before creating a quiz.",
+        message: "Please add at least one university in Settings before creating a quiz.",
         tone: "error",
       });
       return;
@@ -97,7 +97,7 @@ export default function CreateQuizPage() {
 
         {!teacherHasUniversity && (
           <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
-            Please register your university in Settings before creating a quiz.
+            Please add at least one university in Settings before creating a quiz.
           </div>
         )}
 
