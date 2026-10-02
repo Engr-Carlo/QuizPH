@@ -43,7 +43,10 @@ export default function SessionJoinQr({ code, size = 72, compact = false }: Sess
       className={`flex items-center ${compact ? "gap-3" : "gap-4"} rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-2 shadow-[0_8px_18px_rgba(15,23,42,0.04)]`}
       title={`Scan to join session ${code}`}
     >
-      <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-inner ${compact ? "h-[84px] w-[84px]" : "h-[102px] w-[102px]"}`}>
+      <div
+        className="flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-inner"
+        style={{ height: size, width: size }}
+      >
         {hasError ? (
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">QR</span>
         ) : dataUrl ? (
