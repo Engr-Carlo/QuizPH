@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 
 type SessionJoinQrProps = {
   code: string;
@@ -14,28 +13,45 @@ export default function SessionJoinQr({ code, size = 72, compact = false }: Sess
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    const trimmedCode = code.trim();
-    if (!trimmedCode) {
-      setDataUrl("");
-      setHasError(false);
-      return;
+    let isActive = true;
+
+    async function generateQr() {
+      const trimmedCode = code.trim();
+      if (!trimmedCode) {
+        if (isActive) {
+          setDataUrl("");
+          setHasError(false);
+        }
+        return;
+      }
+
+      try {
+        const { default: QRCode } = await import("qrcode");
+        const joinUrl = `${window.location.origin}/student/join?code=${encodeURIComponent(trimmedCode)}`;
+        const url = await QRCode.toDataURL(joinUrl, {
+          width: size * 2,
+          margin: 1,
+          errorCorrectionLevel: "M",
+          color: { dark: "#0f172a", light: "#ffffff" },
+        });
+
+        if (isActive) {
+          setDataUrl(url);
+          setHasError(false);
+        }
+      } catch {
+        if (isActive) {
+          setDataUrl("");
+          setHasError(true);
+        }
+      }
     }
 
-    const joinUrl = `${window.location.origin}/student/join?code=${encodeURIComponent(trimmedCode)}`;
-    QRCode.toDataURL(joinUrl, {
-      width: size * 2,
-      margin: 1,
-      errorCorrectionLevel: "M",
-      color: { dark: "#0f172a", light: "#ffffff" },
-    })
-      .then((url) => {
-        setDataUrl(url);
-        setHasError(false);
-      })
-      .catch(() => {
-        setDataUrl("");
-        setHasError(true);
-      });
+    void generateQr();
+
+    return () => {
+      isActive = false;
+    };
   }, [code, size]);
 
   return (
