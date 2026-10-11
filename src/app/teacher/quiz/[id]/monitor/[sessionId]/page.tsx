@@ -80,6 +80,7 @@ export default function MonitorPage() {
 
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ViolationEvent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"participants" | "leaderboard">("participants");
@@ -112,9 +113,25 @@ export default function MonitorPage() {
   }
 
   const fetchSession = useCallback(async () => {
-    const res = await fetch(`/api/sessions/${sessionId}`);
-    if (res.ok) setSessionData(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`);
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        setFetchError(payload?.error || "Session could not be loaded.");
+        setSessionData(null);
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setSessionData(data);
+      setFetchError(null);
+      setLoading(false);
+    } catch {
+      setFetchError("Session could not be loaded.");
+      setSessionData(null);
+      setLoading(false);
+    }
   }, [sessionId]);
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
@@ -285,8 +302,16 @@ export default function MonitorPage() {
 
   if (!sessionData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted">Session not found.</p>
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="text-center max-w-md">
+          <p className="text-muted text-lg font-medium">{fetchError || "Session not found."}</p>
+          <Link
+            href={`/teacher/quiz/${quizId}`}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition"
+          >
+            Back to quiz
+          </Link>
+        </div>
       </div>
     );
   }

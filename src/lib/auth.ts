@@ -74,7 +74,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (user) {
         token.role = (user as { role: string }).role;
-        token.id = user.id;
+        token.id = (user as { id?: string }).id ?? (token.sub as string | undefined) ?? token.id;
         token.name = user.name;
         token.email = user.email;
         token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
@@ -163,7 +163,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         const sessionToken = token as typeof token & { universities?: string[] };
         session.user.role = token.role as string;
-        session.user.id = token.id as string;
+        session.user.id = (token.id as string | undefined) ?? (token.sub as string | undefined) ?? session.user.id;
         session.user.name = (token.name as string | undefined) ?? session.user.name;
         session.user.email = (token.email as string | undefined) ?? session.user.email;
         session.user.avatar = token.avatar as string | undefined;

@@ -118,6 +118,19 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let currentUserId = session.user.id;
+  if (!currentUserId && session.user.email) {
+    const userByEmail = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      select: { id: true },
+    });
+    currentUserId = userByEmail?.id ?? null;
+  }
+
+  if (!currentUserId) {
+    return NextResponse.json({ error: "Session user identity unavailable" }, { status: 401 });
+  }
+
   const { sessionId } = await params;
 
   const quizSession = await prisma.quizSession.findUnique({
@@ -192,10 +205,10 @@ export async function GET(
 
   // Authorization: caller must be the quiz teacher, a SUPER_ADMIN, or an
   // active participant in this specific session.
-  const isTeacher = quizSession.quiz.teacherId === session.user.id;
+  const isTeacher = quizSession.quiz.teacherId === currentUserId;
   const isAdmin = session.user.role === "SUPER_ADMIN";
   const isParticipant = quizSession.participants.some(
-    (p: (typeof quizSession.participants)[number]) => p.userId === session.user.id
+    (p: (typeof quizSession.participants)[number]) => p.userId === currentUserId
   );
 
   if (!isTeacher && !isAdmin && !isParticipant) {
@@ -247,7 +260,7 @@ export async function GET(
     // a finished student navigates without participantId in the query string.
     const participant = participantId
       ? await prisma.participant.findFirst({ where: { id: participantId, sessionId } })
-      : await prisma.participant.findFirst({ where: { userId: session.user.id, sessionId } });
+      : await prisma.participant.findFirst({ where: { userId: currentUserId, sessionId } });
 
     if (participant && participant.isFinished) {
       // Student already submitted — send finished signal so the client shows score,
