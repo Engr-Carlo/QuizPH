@@ -76,49 +76,41 @@ export default function TeacherDashboard() {
   const recentQuizzes = [...quizzes]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
-  const questionTrend = [...quizzes]
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .slice(-6)
-    .map((quiz) => quiz._count.questions);
-  const sessionTrend = [...quizzes]
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .slice(-6)
-    .map((quiz) => quiz._count.sessions);
+  const chartData = [...quizzes]
+    .sort((a, b) => b._count.sessions - a._count.sessions)
+    .slice(0, 6)
+    .map((quiz) => ({
+      label: quiz.title.length > 12 ? `${quiz.title.slice(0, 12)}…` : quiz.title,
+      value: quiz._count.sessions,
+      accent: `linear-gradient(180deg, ${CARD_ACCENTS[(quiz.id.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) + 1) % CARD_ACCENTS.length][0]}, ${CARD_ACCENTS[(quiz.id.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) + 1) % CARD_ACCENTS.length][1]})`,
+    }));
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const filteredQuizzes = searchQuery
     ? quizzes.filter((q) => q.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : quizzes;
 
-  function SparklineChart({ values, color }: { values: number[]; color: string }) {
-    const max = Math.max(...values, 1);
-    const min = Math.min(...values, 0);
-    const span = max - min || 1;
-    const points = values
-      .map((value, index) => {
-        const x = (index / Math.max(values.length - 1, 1)) * 100;
-        const y = 100 - ((value - min) / span) * 70 - 15;
-        return `${x},${y}`;
-      })
-      .join(" ");
+  function BarChart({ data }: { data: { label: string; value: number; accent: string }[] }) {
+    const maxValue = Math.max(...data.map((point) => point.value), 1);
 
     return (
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-28 w-full">
-        <defs>
-          <linearGradient id={`fill-${color.replace(/[^a-zA-Z0-9]/g, "")}`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.35" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        <polyline
-          fill="none"
-          stroke={color}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          points={points}
-        />
-      </svg>
+      <div className="mt-5 flex h-44 items-end gap-3">
+        {data.map((point) => (
+          <div key={point.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+            <div className="text-[10px] font-bold text-muted tabular-nums">{point.value}</div>
+            <div className="flex h-32 w-full items-end rounded-t-2xl bg-slate-100/80 p-1.5 shadow-inner">
+              <div
+                className="w-full rounded-t-xl transition-all duration-300"
+                style={{
+                  height: `${Math.max((point.value / maxValue) * 100, point.value > 0 ? 18 : 4)}%`,
+                  background: point.accent,
+                }}
+              />
+            </div>
+            <span className="max-w-full truncate text-[9px] font-medium text-muted" title={point.label}>{point.label}</span>
+          </div>
+        ))}
+      </div>
     );
   }
 
@@ -171,7 +163,7 @@ export default function TeacherDashboard() {
       <div className="mx-auto max-w-6xl space-y-5">
 
         {/* ── Hero banner ── */}
-        <div className="relative overflow-hidden rounded-2xl min-h-[240px] sm:min-h-[268px] flex items-end shadow-2xl">
+        <div id="dashboard" className="relative overflow-hidden rounded-2xl min-h-[240px] sm:min-h-[268px] flex items-end shadow-2xl">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-[1.02]"
             style={{ backgroundImage: "url('https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=1600&q=80')" }}
@@ -267,10 +259,10 @@ export default function TeacherDashboard() {
 
                 <div className="mt-5 rounded-2xl border border-border bg-slate-50 p-3">
                   <div className="mb-2 flex items-center justify-between text-[11px] text-muted">
-                    <span>Portfolio trend</span>
-                    <span className="font-semibold text-foreground">Last 6 quizzes</span>
+                    <span>Quiz activity</span>
+                    <span className="font-semibold text-foreground">Top sessions</span>
                   </div>
-                  <SparklineChart values={questionTrend} color="var(--primary)" />
+                  <BarChart data={chartData} />
                 </div>
               </div>
 
@@ -298,13 +290,6 @@ export default function TeacherDashboard() {
                   <div className="mt-4 rounded-2xl bg-slate-100 p-4 text-sm text-muted">No quiz activity yet.</div>
                 )}
 
-                <div className="mt-5 rounded-2xl border border-border bg-slate-50 p-3">
-                  <div className="mb-2 flex items-center justify-between text-[11px] text-muted">
-                    <span>Session flow</span>
-                    <span className="font-semibold text-foreground">Last 6 entries</span>
-                  </div>
-                  <SparklineChart values={sessionTrend} color="var(--success)" />
-                </div>
               </div>
             </div>
           </section>
@@ -336,7 +321,7 @@ export default function TeacherDashboard() {
             </Link>
           </div>
         ) : (
-          <section className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+          <section id="my-quizzes" className="rounded-2xl border border-border bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-sm font-bold text-foreground">My Quizzes</h2>
