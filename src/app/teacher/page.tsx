@@ -76,46 +76,92 @@ export default function TeacherDashboard() {
   const recentQuizzes = [...quizzes]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
-  const questionsChart = [...quizzes]
-    .sort((a, b) => b._count.questions - a._count.questions)
-    .slice(0, 6)
-    .map((quiz) => ({
-      label: quiz.title.length > 12 ? `${quiz.title.slice(0, 12)}…` : quiz.title,
-      value: quiz._count.questions,
-    }));
-  const sessionsChart = [...quizzes]
-    .sort((a, b) => b._count.sessions - a._count.sessions)
-    .slice(0, 6)
-    .map((quiz) => ({
-      label: quiz.title.length > 12 ? `${quiz.title.slice(0, 12)}…` : quiz.title,
-      value: quiz._count.sessions,
-    }));
+  const questionTrend = [...quizzes]
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-6)
+    .map((quiz) => quiz._count.questions);
+  const sessionTrend = [...quizzes]
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-6)
+    .map((quiz) => quiz._count.sessions);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const filteredQuizzes = searchQuery
     ? quizzes.filter((q) => q.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : quizzes;
 
-  function MiniBarChart({ data, color }: { data: { label: string; value: number }[]; color: string }) {
-    const maxValue = Math.max(...data.map((point) => point.value), 1);
+  function SparklineChart({ values, color }: { values: number[]; color: string }) {
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const span = max - min || 1;
+    const points = values
+      .map((value, index) => {
+        const x = (index / Math.max(values.length - 1, 1)) * 100;
+        const y = 100 - ((value - min) / span) * 70 - 15;
+        return `${x},${y}`;
+      })
+      .join(" ");
 
     return (
-      <div className="mt-5 flex h-40 items-end gap-2">
-        {data.map((point) => (
-          <div key={point.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <span className="text-[10px] font-semibold text-muted">{point.value}</span>
-            <div className="flex h-28 w-full items-end rounded-t-xl bg-slate-100/80 px-1">
-              <div
-                className="w-full rounded-t-xl transition-all"
-                style={{
-                  height: `${Math.max((point.value / maxValue) * 100, point.value > 0 ? 18 : 5)}%`,
-                  background: color,
-                }}
-              />
-            </div>
-            <span className="max-w-full truncate text-[9px] text-muted" title={point.label}>{point.label}</span>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-28 w-full">
+        <defs>
+          <linearGradient id={`fill-${color.replace(/[^a-zA-Z0-9]/g, "")}`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <polyline
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={points}
+        />
+      </svg>
+    );
+  }
+
+  function DonutMetric({
+    label,
+    value,
+    total,
+    accent,
+    suffix = "",
+  }: {
+    label: string;
+    value: number;
+    total: number;
+    accent: string;
+    suffix?: string;
+  }) {
+    const safeTotal = Math.max(total, 1);
+    const ratio = Math.min(value / safeTotal, 1);
+    const radius = 34;
+    const circumference = 2 * Math.PI * radius;
+    const dash = circumference * ratio;
+
+    return (
+      <div className="rounded-2xl border border-border bg-slate-50 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">{label}</div>
+            <div className="mt-2 text-3xl font-black text-foreground tabular-nums">{value}{suffix}</div>
           </div>
-        ))}
+          <svg viewBox="0 0 120 120" className="h-20 w-20 -rotate-90" aria-label={`${label} metric`}>
+            <circle cx="60" cy="60" r={radius} stroke="#E2E8F0" strokeWidth="12" fill="none" />
+            <circle
+              cx="60"
+              cy="60"
+              r={radius}
+              stroke={accent}
+              strokeWidth="12"
+              fill="none"
+              strokeDasharray={`${dash} ${circumference - dash}`}
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
       </div>
     );
   }
@@ -174,10 +220,10 @@ export default function TeacherDashboard() {
         </div>
 
         {!loading && !error && quizzes.length > 0 && (
-          <div className="space-y-4">
+          <section className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {[
-                { label: "Total Quizzes", value: quizzes.length, note: `${totalLiveTopics} with activity`, accent: "bg-primary/10 text-primary" },
+                { label: "Total Quizzes", value: quizzes.length, note: `${totalLiveTopics} active`, accent: "bg-primary/10 text-primary" },
                 { label: "Question Bank", value: totalQuestions, note: `${avgQuestionsPerQuiz} avg. each`, accent: "bg-success/10 text-success" },
                 { label: "Sessions Run", value: totalSessions, note: "Across all quizzes", accent: "bg-secondary/10 text-secondary" },
                 { label: "Avg. Duration", value: `${avgQuizDuration}m`, note: "Per quiz", accent: "bg-warning/10 text-warning" },
@@ -191,7 +237,7 @@ export default function TeacherDashboard() {
                       <div className="text-3xl font-black text-foreground tabular-nums">{card.value}</div>
                       <div className="mt-1 text-[11px] text-muted">{card.note}</div>
                     </div>
-                    <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12h14" />
                         <path d="M12 5v14" />
@@ -202,95 +248,66 @@ export default function TeacherDashboard() {
               ))}
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+            <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
               <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-sm font-bold text-foreground">Question Load</h3>
-                    <p className="text-[11px] text-muted">Your largest quiz banks</p>
+                    <h3 className="text-sm font-bold text-foreground">Performance Snapshot</h3>
+                    <p className="text-[11px] text-muted">Your current teaching workload</p>
                   </div>
                   <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                    {questionsChart.length} quizzes
+                    Live
                   </span>
                 </div>
-                <MiniBarChart data={questionsChart} color="var(--primary)" />
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <DonutMetric label="Questions" value={totalQuestions} total={Math.max(totalQuestions, 40)} accent="var(--primary)" />
+                  <DonutMetric label="Sessions" value={totalSessions} total={Math.max(totalSessions, 20)} accent="var(--success)" />
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-border bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between text-[11px] text-muted">
+                    <span>Portfolio trend</span>
+                    <span className="font-semibold text-foreground">Last 6 quizzes</span>
+                  </div>
+                  <SparklineChart values={questionTrend} color="var(--primary)" />
+                </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-sm font-bold text-foreground">Session Activity</h3>
-                    <p className="text-[11px] text-muted">Runs per quiz</p>
+                    <h3 className="text-sm font-bold text-foreground">Top Focus</h3>
+                    <p className="text-[11px] text-muted">Most active quiz</p>
                   </div>
-                  <span className="rounded-full bg-success/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-success">
-                    {totalSessions} runs
+                  <span className="rounded-full bg-warning/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-warning">
+                    highlight
                   </span>
                 </div>
-                <MiniBarChart data={sessionsChart} color="var(--success)" />
-              </div>
-            </div>
 
-            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                <div className="mb-4 flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Recent Quizzes</h3>
-                    <p className="text-[11px] text-muted">Freshly created work</p>
-                  </div>
-                  <Link href="/teacher/quiz/create" className="text-xs font-semibold text-primary hover:text-primary/80">
-                    Create new
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {recentQuizzes.map((quiz) => (
-                    <Link
-                      key={quiz.id}
-                      href={`/teacher/quiz/${quiz.id}`}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-border bg-slate-50 px-3 py-2.5 transition hover:border-primary/30 hover:bg-primary/[0.02]"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-foreground">{quiz.title}</div>
-                        <div className="mt-0.5 text-[11px] text-muted">
-                          {new Date(quiz.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 text-[11px] font-medium text-muted">
-                        <span className="rounded-full bg-white px-2 py-1">{quiz._count.questions}q</span>
-                        <span className="rounded-full bg-white px-2 py-1">{quiz._count.sessions} runs</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                <h3 className="text-sm font-bold text-foreground">Spotlight</h3>
                 {hottestQuiz ? (
-                  <div className="mt-4 rounded-2xl bg-gradient-to-br from-primary to-secondary p-4 text-white shadow-lg">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">Top performer</div>
+                  <div className="mt-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-primary p-4 text-white shadow-lg">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/70">Top performer</div>
                     <div className="mt-3 text-lg font-black leading-tight">{hottestQuiz.title}</div>
                     <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-                      <span className="rounded-full bg-white/15 px-2 py-1">{hottestQuiz._count.sessions} sessions</span>
-                      <span className="rounded-full bg-white/15 px-2 py-1">{hottestQuiz._count.questions} questions</span>
+                      <span className="rounded-full bg-white/10 px-2 py-1">{hottestQuiz._count.sessions} sessions</span>
+                      <span className="rounded-full bg-white/10 px-2 py-1">{hottestQuiz._count.questions} questions</span>
                     </div>
                   </div>
                 ) : (
                   <div className="mt-4 rounded-2xl bg-slate-100 p-4 text-sm text-muted">No quiz activity yet.</div>
                 )}
 
-                <div className="mt-5 space-y-3">
-                  <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
-                    <span className="text-[11px] text-muted">Fastest average</span>
-                    <span className="text-sm font-bold text-foreground">{Math.min(avgQuizDuration, 45) || 0}m</span>
+                <div className="mt-5 rounded-2xl border border-border bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between text-[11px] text-muted">
+                    <span>Session flow</span>
+                    <span className="font-semibold text-foreground">Last 6 entries</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
-                    <span className="text-[11px] text-muted">Question cadence</span>
-                    <span className="text-sm font-bold text-foreground">{avgQuestionsPerQuiz} / quiz</span>
-                  </div>
+                  <SparklineChart values={sessionTrend} color="var(--success)" />
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         )}
 
         {loading ? (
@@ -319,10 +336,10 @@ export default function TeacherDashboard() {
             </Link>
           </div>
         ) : (
-          <div>
-            <div className="flex items-center justify-between mb-4">
+          <section className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-sm font-bold text-foreground">Your Quizzes</h2>
+                <h2 className="text-sm font-bold text-foreground">My Quizzes</h2>
                 <p className="text-xs text-muted mt-0.5">{filteredQuizzes.length} of {quizzes.length}</p>
               </div>
               <div className="w-56">
@@ -378,7 +395,6 @@ export default function TeacherDashboard() {
                 </div>
               )}
 
-              {/* Add new quiz slot */}
               <Link
                 href="/teacher/quiz/create"
                 className="group rounded-2xl border-2 border-dashed border-border/60 hover:border-primary/40 bg-transparent hover:bg-primary/[0.03] transition-all flex flex-col items-center justify-center py-10 gap-2 min-h-[148px]"
@@ -391,7 +407,7 @@ export default function TeacherDashboard() {
                 <span className="text-xs font-semibold text-muted/60 group-hover:text-primary transition-colors">New Quiz</span>
               </Link>
             </div>
-          </div>
+          </section>
         )}
       </div>
     </DashboardLayout>
