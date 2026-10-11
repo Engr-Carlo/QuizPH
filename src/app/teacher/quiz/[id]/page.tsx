@@ -1095,8 +1095,8 @@ export default function QuizDetailPage() {
 
         {/* ── Question form modal ── */}
         {showQuestionForm && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true">
-            <div className="w-full max-w-5xl bg-card border-2 border-primary/25 rounded-3xl shadow-2xl my-6 overflow-hidden fade-in" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true">
+            <div className="w-full max-w-3xl bg-card border-2 border-primary/25 rounded-2xl shadow-2xl my-6 overflow-hidden fade-in" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <h3 className="font-bold text-foreground text-lg">
                   {editingQuestion ? "Edit Question" : questionFormTab === "single" ? "New Question" : "Import Questions"}
