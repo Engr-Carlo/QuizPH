@@ -118,7 +118,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let currentUserId = session.user.id;
+  let currentUserId: string | null = session.user.id ?? null;
   if (!currentUserId && session.user.email) {
     const userByEmail = await prisma.user.findUnique({
       where: { email: session.user.email.toLowerCase().trim() },
