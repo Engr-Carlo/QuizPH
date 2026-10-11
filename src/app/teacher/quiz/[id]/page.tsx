@@ -1210,23 +1210,6 @@ Answer: 144`}</pre>
                         <p className="text-sm font-bold text-foreground">
                           Preview — {parsedPreview.length} question{parsedPreview.length !== 1 ? "s" : ""} to import
                         </p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setParsedPreview(null)}
-                            className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-danger transition"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleImportBulkQuestions}
-                            disabled={bulkImportLoading}
-                            className="px-3 py-1.5 rounded-lg bg-primary text-xs font-semibold text-white hover:bg-primary-dark transition disabled:opacity-40"
-                          >
-                            {bulkImportLoading ? "Importing..." : "Confirm Import"}
-                          </button>
-                        </div>
                       </div>
                       {parsedPreview.map((block, bi) => (
                         <div key={bi} className="rounded-xl bg-white border border-border p-4">
@@ -1256,6 +1239,23 @@ Answer: 144`}</pre>
                           </div>
                         </div>
                       ))}
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                        <button
+                          type="button"
+                          onClick={() => setParsedPreview(null)}
+                          className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-danger transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleImportBulkQuestions}
+                          disabled={bulkImportLoading}
+                          className="px-3 py-1.5 rounded-lg bg-primary text-xs font-semibold text-white hover:bg-primary-dark transition disabled:opacity-40"
+                        >
+                          {bulkImportLoading ? "Importing..." : "Confirm Import"}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
