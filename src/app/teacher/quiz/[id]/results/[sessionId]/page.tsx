@@ -31,12 +31,29 @@ export default function ResultsPage() {
   const sessionId = params.sessionId as string;
   const [data, setData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const res = await fetch(`/api/sessions/${sessionId}`);
-    if (res.ok) setData(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`, { cache: "no-store" });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        setFetchError(payload?.error || "Session results could not be loaded.");
+        setData(null);
+        setLoading(false);
+        return;
+      }
+
+      const session = await res.json();
+      setData(session);
+      setFetchError(null);
+      setLoading(false);
+    } catch {
+      setFetchError("Session results could not be loaded.");
+      setData(null);
+      setLoading(false);
+    }
   }, [sessionId]);
 
   useEffect(() => {
@@ -54,7 +71,9 @@ export default function ResultsPage() {
   if (!data) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">Session not found</div>
+        <div className="text-center py-12">
+          <div className="text-lg font-medium text-foreground">{fetchError || "Session not found"}</div>
+        </div>
       </DashboardLayout>
     );
   }
