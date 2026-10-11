@@ -62,11 +62,63 @@ export default function TeacherDashboard() {
   const firstName = session?.user?.name?.split(" ")[0] || "Teacher";
   const totalQuestions = quizzes.reduce((s, q) => s + q._count.questions, 0);
   const totalSessions = quizzes.reduce((s, q) => s + q._count.sessions, 0);
+  const totalLiveTopics = quizzes.filter((q) => q._count.sessions > 0).length;
+  const avgQuizDuration = quizzes.length
+    ? Math.round(quizzes.reduce((sum, q) => sum + q.duration, 0) / quizzes.length / 60)
+    : 0;
+  const avgQuestionsPerQuiz = quizzes.length
+    ? Math.round(totalQuestions / quizzes.length)
+    : 0;
+  const hottestQuiz = quizzes.reduce<Quiz | null>((best, quiz) => {
+    if (!best || quiz._count.sessions > best._count.sessions) return quiz;
+    return best;
+  }, null);
+  const recentQuizzes = [...quizzes]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
+  const questionsChart = [...quizzes]
+    .sort((a, b) => b._count.questions - a._count.questions)
+    .slice(0, 6)
+    .map((quiz) => ({
+      label: quiz.title.length > 12 ? `${quiz.title.slice(0, 12)}…` : quiz.title,
+      value: quiz._count.questions,
+    }));
+  const sessionsChart = [...quizzes]
+    .sort((a, b) => b._count.sessions - a._count.sessions)
+    .slice(0, 6)
+    .map((quiz) => ({
+      label: quiz.title.length > 12 ? `${quiz.title.slice(0, 12)}…` : quiz.title,
+      value: quiz._count.sessions,
+    }));
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const filteredQuizzes = searchQuery
     ? quizzes.filter((q) => q.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : quizzes;
+
+  function MiniBarChart({ data, color }: { data: { label: string; value: number }[]; color: string }) {
+    const maxValue = Math.max(...data.map((point) => point.value), 1);
+
+    return (
+      <div className="mt-5 flex h-40 items-end gap-2">
+        {data.map((point) => (
+          <div key={point.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+            <span className="text-[10px] font-semibold text-muted">{point.value}</span>
+            <div className="flex h-28 w-full items-end rounded-t-xl bg-slate-100/80 px-1">
+              <div
+                className="w-full rounded-t-xl transition-all"
+                style={{
+                  height: `${Math.max((point.value / maxValue) * 100, point.value > 0 ? 18 : 5)}%`,
+                  background: color,
+                }}
+              />
+            </div>
+            <span className="max-w-full truncate text-[9px] text-muted" title={point.label}>{point.label}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -120,6 +172,126 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
+
+        {!loading && !error && quizzes.length > 0 && (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: "Total Quizzes", value: quizzes.length, note: `${totalLiveTopics} with activity`, accent: "bg-primary/10 text-primary" },
+                { label: "Question Bank", value: totalQuestions, note: `${avgQuestionsPerQuiz} avg. each`, accent: "bg-success/10 text-success" },
+                { label: "Sessions Run", value: totalSessions, note: "Across all quizzes", accent: "bg-secondary/10 text-secondary" },
+                { label: "Avg. Duration", value: `${avgQuizDuration}m`, note: "Per quiz", accent: "bg-warning/10 text-warning" },
+              ].map((card) => (
+                <div key={card.label} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                  <div className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${card.accent}`}>
+                    {card.label}
+                  </div>
+                  <div className="mt-4 flex items-end justify-between gap-2">
+                    <div>
+                      <div className="text-3xl font-black text-foreground tabular-nums">{card.value}</div>
+                      <div className="mt-1 text-[11px] text-muted">{card.note}</div>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14" />
+                        <path d="M12 5v14" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Question Load</h3>
+                    <p className="text-[11px] text-muted">Your largest quiz banks</p>
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                    {questionsChart.length} quizzes
+                  </span>
+                </div>
+                <MiniBarChart data={questionsChart} color="var(--primary)" />
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Session Activity</h3>
+                    <p className="text-[11px] text-muted">Runs per quiz</p>
+                  </div>
+                  <span className="rounded-full bg-success/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-success">
+                    {totalSessions} runs
+                  </span>
+                </div>
+                <MiniBarChart data={sessionsChart} color="var(--success)" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Recent Quizzes</h3>
+                    <p className="text-[11px] text-muted">Freshly created work</p>
+                  </div>
+                  <Link href="/teacher/quiz/create" className="text-xs font-semibold text-primary hover:text-primary/80">
+                    Create new
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  {recentQuizzes.map((quiz) => (
+                    <Link
+                      key={quiz.id}
+                      href={`/teacher/quiz/${quiz.id}`}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-border bg-slate-50 px-3 py-2.5 transition hover:border-primary/30 hover:bg-primary/[0.02]"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-foreground">{quiz.title}</div>
+                        <div className="mt-0.5 text-[11px] text-muted">
+                          {new Date(quiz.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 text-[11px] font-medium text-muted">
+                        <span className="rounded-full bg-white px-2 py-1">{quiz._count.questions}q</span>
+                        <span className="rounded-full bg-white px-2 py-1">{quiz._count.sessions} runs</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-bold text-foreground">Spotlight</h3>
+                {hottestQuiz ? (
+                  <div className="mt-4 rounded-2xl bg-gradient-to-br from-primary to-secondary p-4 text-white shadow-lg">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">Top performer</div>
+                    <div className="mt-3 text-lg font-black leading-tight">{hottestQuiz.title}</div>
+                    <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+                      <span className="rounded-full bg-white/15 px-2 py-1">{hottestQuiz._count.sessions} sessions</span>
+                      <span className="rounded-full bg-white/15 px-2 py-1">{hottestQuiz._count.questions} questions</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl bg-slate-100 p-4 text-sm text-muted">No quiz activity yet.</div>
+                )}
+
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
+                    <span className="text-[11px] text-muted">Fastest average</span>
+                    <span className="text-sm font-bold text-foreground">{Math.min(avgQuizDuration, 45) || 0}m</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
+                    <span className="text-[11px] text-muted">Question cadence</span>
+                    <span className="text-sm font-bold text-foreground">{avgQuestionsPerQuiz} / quiz</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-28">
