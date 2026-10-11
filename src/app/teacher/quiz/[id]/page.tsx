@@ -1093,34 +1093,47 @@ export default function QuizDetailPage() {
           </div>
         </div>
 
-        {/* ── Question form ── */}
+        {/* ── Question form modal ── */}
         {showQuestionForm && (
-          <div className="bg-card border-2 border-primary/25 rounded-2xl mb-5 shadow-sm fade-in overflow-hidden">
-
-            {/* Tab header */}
-            {!editingQuestion && (
-              <div className="flex border-b border-border">
-                {(["single", "paste"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => { setQuestionFormTab(tab); setParsedPreview(null); }}
-                    className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-                      questionFormTab === tab
-                        ? "bg-primary/8 text-primary border-b-2 border-primary"
-                        : "text-muted hover:text-foreground hover:bg-surface/60"
-                    }`}
-                  >
-                    {tab === "single" ? "Single Question" : "Paste Multiple"}
-                  </button>
-                ))}
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true">
+            <div className="w-full max-w-5xl bg-card border-2 border-primary/25 rounded-3xl shadow-2xl my-6 overflow-hidden fade-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                <h3 className="font-bold text-foreground text-lg">
+                  {editingQuestion ? "Edit Question" : questionFormTab === "single" ? "New Question" : "Import Questions"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-border text-muted hover:bg-surface hover:text-foreground transition"
+                  aria-label="Close editor"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
               </div>
-            )}
 
-            <div className="p-6">
-              <h3 className="font-bold text-foreground mb-5">
-                {editingQuestion ? "Edit Question" : questionFormTab === "single" ? "New Question" : "Import Questions"}
-              </h3>
+              {!editingQuestion && (
+                <div className="flex border-b border-border">
+                  {(["single", "paste"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => { setQuestionFormTab(tab); setParsedPreview(null); }}
+                      className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                        questionFormTab === tab
+                          ? "bg-primary/8 text-primary border-b-2 border-primary"
+                          : "text-muted hover:text-foreground hover:bg-surface/60"
+                      }`}
+                    >
+                      {tab === "single" ? "Single Question" : "Paste Multiple"}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-6">
 
               {/* ─────────── PASTE MULTIPLE TAB ─────────── */}
               {!editingQuestion && questionFormTab === "paste" && (
@@ -1467,6 +1480,7 @@ Answer: 144`}</pre>
               </div>
               )}
 
+              </div>
             </div>
           </div>
         )}
