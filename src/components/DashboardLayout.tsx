@@ -124,8 +124,8 @@ function IconMegaphone() {
 type NavItem = { href: string; label: string; icon: () => React.ReactElement; matchPrefix?: boolean };
 
 const teacherNav: NavItem[] = [
-  { href: "/teacher#dashboard", label: "Dashboard", icon: IconHome, matchPrefix: true },
-  { href: "/teacher#my-quizzes", label: "My Quizzes", icon: IconGrid, matchPrefix: true },
+  { href: "/teacher", label: "Dashboard", icon: IconHome },
+  { href: "/teacher/my-quizzes", label: "My Quizzes", icon: IconGrid },
   { href: "/teacher/quiz/create", label: "Create Quiz", icon: IconPlusCircle },
   { href: "/guide", label: "Guide", icon: IconBook },
   { href: "/settings", label: "Settings", icon: IconSettings },
