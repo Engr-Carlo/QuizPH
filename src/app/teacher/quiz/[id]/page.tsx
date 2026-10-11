@@ -252,6 +252,7 @@ export default function QuizDetailPage() {
   const [qIncludedInQuiz, setQIncludedInQuiz] = useState(true);
   const [qPoints, setQPoints] = useState(1);
   const [qMathTolerance, setQMathTolerance] = useState(0);
+  const [showPointsPopover, setShowPointsPopover] = useState(false);
   const [bulkQuestionInput, setBulkQuestionInput] = useState("");
   const [qOptions, setQOptions] = useState<{ text: string; isCorrect: boolean }[]>([
     { text: "", isCorrect: true },
@@ -335,6 +336,7 @@ export default function QuizDetailPage() {
     setQIncludedInQuiz(true);
     setQPoints(1);
     setQMathTolerance(0);
+    setShowPointsPopover(false);
     setBulkQuestionInput("");
     setQOptions([
       { text: "", isCorrect: true },
@@ -1249,7 +1251,46 @@ Answer: 144`}</pre>
               {/* ─────────── SINGLE QUESTION TAB ─────────── */}
               {(editingQuestion || questionFormTab === "single") && (
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-foreground mb-2">Question Type</label>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <label className="block text-sm font-semibold text-foreground">Question Type</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowPointsPopover((prev) => !prev)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/6 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 transition"
+                    >
+                      <span>Points</span>
+                      <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold">{qPoints}</span>
+                    </button>
+
+                    {showPointsPopover && (
+                      <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-border bg-card p-3 shadow-xl z-20">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <p className="text-xs font-semibold text-foreground">Set value</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowPointsPopover(false)}
+                            className="text-[10px] text-muted hover:text-foreground"
+                          >
+                            Done
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={qPoints}
+                            onChange={(e) => setQPoints(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
+                            min={1}
+                            max={100}
+                            className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                          />
+                          <span className="text-[11px] font-medium text-muted">pts</span>
+                        </div>
+                        <p className="mt-2 text-[10px] text-muted">Default is 1 point when left blank.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {(["MCQ", "TRUE_FALSE", "SHORT_ANSWER", "MATH"] as const).map((t) => (
                     <button
@@ -1304,21 +1345,6 @@ Answer: 144`}</pre>
                   className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition placeholder:text-muted"
                   placeholder="Enter your question..."
                 />
-              </div>
-
-              <div className="rounded-2xl border border-primary/20 bg-primary/4 p-4">
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Points</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    value={qPoints}
-                    onChange={(e) => setQPoints(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
-                    min={1}
-                    max={100}
-                    className="w-24 px-3 py-2 border border-primary/20 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
-                  />
-                  <span className="text-xs text-muted">Default is 1 point when left blank.</span>
-                </div>
               </div>
 
               {/* Options */}
