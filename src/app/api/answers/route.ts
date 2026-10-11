@@ -124,12 +124,14 @@ export async function POST(req: Request) {
       },
     });
 
-    // Update score if correct and capture new score in one query
+    // Update score if correct and capture new score in one query.
+    // Default is 1 point per question unless a custom question value is assigned.
     let finalScore = participant.score;
     if (isCorrect) {
+      const pointsAwarded = question.points ?? 1;
       const updated = await prisma.participant.update({
         where: { id: participantId },
-        data: { score: { increment: 1 } },
+        data: { score: { increment: pointsAwarded } },
         select: { score: true },
       });
       finalScore = updated.score;

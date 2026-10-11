@@ -22,6 +22,15 @@ export async function PUT(
   // Snapshot old options before deleting — needed to map stored answerText (old option IDs) → text
   const oldOptions = await prisma.option.findMany({ where: { questionId } });
   const oldIdToText = new Map(oldOptions.map((o: (typeof oldOptions)[number]) => [o.id, o.text]));
+  const previousQuestion = await prisma.question.findUnique({
+    where: { id: questionId },
+    select: { points: true },
+  });
+  const oldPoints = previousQuestion?.points ?? 1;
+  const normalizedPoints = Number(body.points ?? 1);
+  const newPoints = Number.isFinite(normalizedPoints)
+    ? Math.min(Math.max(Math.round(normalizedPoints), 1), 100)
+    : 1;
 
   // Delete old options and recreate + update question inside one transaction
   const [, updated] = await prisma.$transaction([
@@ -34,6 +43,7 @@ export async function PUT(
         text: body.text,
         order: body.order,
         includedInQuiz: body.includedInQuiz ?? true,
+        points: newPoints,
         mathTolerance: body.type === "MATH" ? (body.mathTolerance ?? 0) : 0,
         options: {
           create: body.options?.map((opt: { text: string; isCorrect: boolean }) => ({
@@ -102,7 +112,7 @@ export async function PUT(
         changes.push({
           answerId: answer.id,
           participantId: answer.participantId,
-          delta: newIsCorrect ? 1 : -1,
+          delta: newIsCorrect ? newPoints : -oldPoints,
         });
       }
     }

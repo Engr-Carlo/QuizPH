@@ -15,6 +15,7 @@ interface Question {
   id: string;
   type: string;
   text: string;
+  points?: number;
   options: Option[];
 }
 
@@ -102,10 +103,11 @@ export default function StudentResultsPage() {
   }
 
   const totalQuestions = data.quiz.activeQuestionCount;
+  const totalPoints = data.quiz.questions.reduce((sum, question) => sum + (question.points ?? 1), 0);
   const correctCount = participant.answers.filter((a) => a.isCorrect).length;
   const wrongCount = participant.answers.filter((a) => !a.isCorrect).length;
   const skippedCount = totalQuestions - participant.answers.length;
-  const accuracy = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+  const accuracy = totalPoints > 0 ? Math.round((participant.score / totalPoints) * 100) : 0;
 
   // Score color based on accuracy
   const scoreColor = accuracy >= 80 ? "text-success" : accuracy >= 60 ? "text-warning" : "text-danger";
@@ -157,7 +159,7 @@ export default function StudentResultsPage() {
               <p className={`text-lg font-extrabold ${scoreColor} mb-3`}>{scoreMsg}</p>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Score", value: participant.score, color: "text-primary", bg: "bg-primary/8" },
+                  { label: "Score", value: `${participant.score}/${totalPoints}`, color: "text-primary", bg: "bg-primary/8" },
                   { label: "Correct", value: correctCount, color: "text-success", bg: "bg-success/8" },
                   { label: "Wrong", value: wrongCount, color: "text-danger", bg: "bg-danger/8" },
                   ...(skippedCount > 0 ? [{ label: "Skipped", value: skippedCount, color: "text-muted", bg: "bg-surface" }] : []),

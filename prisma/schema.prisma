@@ -162,6 +162,7 @@ model Question {
   text           String
   order          Int          @default(0)
   includedInQuiz Boolean      @default(true)
+  points         Int          @default(1)
   mathTolerance  Float        @default(0)
 
   quizId String

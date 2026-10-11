@@ -18,6 +18,7 @@ interface Question {
   text: string;
   order: number;
   includedInQuiz: boolean;
+  points: number;
   mathTolerance: number;
   options: Option[];
 }
@@ -249,6 +250,7 @@ export default function QuizDetailPage() {
   const [qTopic, setQTopic] = useState("General");
   const [qText, setQText] = useState("");
   const [qIncludedInQuiz, setQIncludedInQuiz] = useState(true);
+  const [qPoints, setQPoints] = useState(1);
   const [qMathTolerance, setQMathTolerance] = useState(0);
   const [bulkQuestionInput, setBulkQuestionInput] = useState("");
   const [qOptions, setQOptions] = useState<{ text: string; isCorrect: boolean }[]>([
@@ -331,6 +333,7 @@ export default function QuizDetailPage() {
     setQTopic("General");
     setQText("");
     setQIncludedInQuiz(true);
+    setQPoints(1);
     setQMathTolerance(0);
     setBulkQuestionInput("");
     setQOptions([
@@ -372,6 +375,7 @@ export default function QuizDetailPage() {
         topic: qTopic,
         text: qText,
         includedInQuiz: qIncludedInQuiz,
+        points: qPoints,
         mathTolerance: qType === "MATH" ? qMathTolerance : 0,
         options: qOptions.filter((o) => o.text.trim()),
       }),
@@ -422,6 +426,7 @@ export default function QuizDetailPage() {
         text: question.text,
         order: question.order,
         includedInQuiz: !question.includedInQuiz,
+        points: question.points ?? 1,
         mathTolerance: question.mathTolerance ?? 0,
         options: question.options.map((option) => ({ text: option.text, isCorrect: option.isCorrect })),
       }),
@@ -441,6 +446,7 @@ export default function QuizDetailPage() {
     setQTopic(question.topic || "General");
     setQText(question.text);
     setQIncludedInQuiz(question.includedInQuiz);
+    setQPoints(question.points ?? 1);
     setQMathTolerance(question.mathTolerance ?? 0);
     setQOptions(question.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })));
     setShowQuestionForm(true);
@@ -490,6 +496,7 @@ export default function QuizDetailPage() {
           topic: qTopic,
           text: parsed.text,
           includedInQuiz: qIncludedInQuiz,
+          points: qPoints,
           options: parsed.options,
         }),
       });
@@ -1299,6 +1306,21 @@ Answer: 144`}</pre>
                 />
               </div>
 
+              <div className="rounded-2xl border border-primary/20 bg-primary/4 p-4">
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Points</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    value={qPoints}
+                    onChange={(e) => setQPoints(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
+                    min={1}
+                    max={100}
+                    className="w-24 px-3 py-2 border border-primary/20 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                  />
+                  <span className="text-xs text-muted">Default is 1 point when left blank.</span>
+                </div>
+              </div>
+
               {/* Options */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
@@ -1456,6 +1478,9 @@ Answer: 144`}</pre>
                           </span>
                           <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${q.includedInQuiz ? "bg-success/10 text-success border border-success/30" : "bg-muted/10 text-muted border border-border"}`}>
                             {q.includedInQuiz ? "Included" : "Excluded"}
+                          </span>
+                          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/20">
+                            {q.points ?? 1} pt{(q.points ?? 1) === 1 ? "" : "s"}
                           </span>
                         </div>
                         <p className="font-semibold text-foreground text-sm mb-2">{q.text}</p>

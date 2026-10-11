@@ -35,11 +35,13 @@ export const quizSchema = z.object({
 });
 
 export const questionSchema = z.object({
-  type: z.enum(["MCQ", "TRUE_FALSE", "SHORT_ANSWER"]),
+  type: z.enum(["MCQ", "TRUE_FALSE", "SHORT_ANSWER", "MATH"]),
   topic: z.string().min(1, "Topic is required").max(100),
   text: z.string().min(1, "Question text is required"),
   order: z.number(),
   includedInQuiz: z.boolean().optional(),
+  points: z.number().int().min(1).max(100).default(1),
+  mathTolerance: z.number().min(0).max(100).optional().default(0),
   options: z.array(
     z.object({
       text: z.string().min(1),

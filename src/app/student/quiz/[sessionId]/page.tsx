@@ -15,6 +15,7 @@ interface Question {
   id: string;
   type: string;
   text: string;
+  points?: number;
   options: Option[];
 }
 
@@ -649,6 +650,8 @@ function StudentQuizContent() {
     );
   }
 
+  const totalPossiblePoints = sessionData.quiz.questions.reduce((sum, question) => sum + (question.points ?? 1), 0);
+
   // WAITING state
   if (status === "waiting") {
     return (
@@ -714,11 +717,11 @@ function StudentQuizContent() {
           {score !== null && (
             <div className="mb-6 mt-6 rounded-[28px] bg-surface border border-border p-8">
               <div className="text-5xl font-black text-primary mb-2">
-                {score}/{sessionData.quiz.activeQuestionCount}
+                {score}/{totalPossiblePoints}
               </div>
               <div className="text-muted font-medium">
-                {sessionData.quiz.activeQuestionCount > 0
-                  ? Math.round((score / sessionData.quiz.activeQuestionCount) * 100)
+                {totalPossiblePoints > 0
+                  ? Math.round((score / totalPossiblePoints) * 100)
                   : 0}% Accuracy
               </div>
             </div>

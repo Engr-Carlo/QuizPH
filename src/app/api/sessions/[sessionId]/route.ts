@@ -153,6 +153,7 @@ export async function GET(
               text: true,
               order: true,
               includedInQuiz: true,
+              points: true,
               mathTolerance: true,
               options: {
                 select: { id: true, text: true, isCorrect: true },

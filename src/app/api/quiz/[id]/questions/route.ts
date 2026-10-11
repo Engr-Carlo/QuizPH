@@ -20,6 +20,10 @@ export async function POST(
   }
 
   const questionCount = await prisma.question.count({ where: { quizId } });
+  const normalizedPoints = Number(body.points ?? 1);
+  const safePoints = Number.isFinite(normalizedPoints)
+    ? Math.min(Math.max(Math.round(normalizedPoints), 1), 100)
+    : 1;
 
   const question = await prisma.question.create({
     data: {
@@ -29,6 +33,7 @@ export async function POST(
       text: body.text,
       order: body.order ?? questionCount,
       includedInQuiz: body.includedInQuiz ?? true,
+      points: safePoints,
       mathTolerance: body.type === "MATH" ? (body.mathTolerance ?? 0) : 0,
       options: {
         create: body.options?.map((opt: { text: string; isCorrect: boolean }) => ({

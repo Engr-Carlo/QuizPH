@@ -21,7 +21,7 @@ interface SessionData {
   quiz: {
     title: string;
     activeQuestionCount: number;
-    questions: { id: string; text: string; options: { id: string; text: string; isCorrect: boolean }[] }[];
+    questions: { id: string; text: string; points?: number; options: { id: string; text: string; isCorrect: boolean }[] }[];
   };
   participants: Participant[];
 }
@@ -60,6 +60,7 @@ export default function ResultsPage() {
   }
 
   const totalQuestions = data.quiz.activeQuestionCount;
+  const totalPoints = data.quiz.questions.reduce((sum, question) => sum + (question.points ?? 1), 0);
   const sorted = [...data.participants].sort((a, b) => b.score - a.score);
 
   function generateCSV() {
@@ -79,13 +80,13 @@ export default function ResultsPage() {
       const nameParts = p.user.name.trim().split(/\s+/);
       const firstName = nameParts.length > 0 ? nameParts[0] : "";
       const lastName = nameParts.slice(1).join(" ") || firstName;
-      const accuracy = totalQuestions > 0 ? Math.round((p.score / totalQuestions) * 100) : 0;
+      const accuracy = totalPoints > 0 ? Math.round((p.score / totalPoints) * 100) : 0;
       return [
         idx + 1,
         `"${lastName.replace(/"/g, '""')}"`,
         `"${firstName.replace(/"/g, '""')}"`,
         `"${p.user.email.replace(/"/g, '""')}"`,
-        `="${p.score}/${totalQuestions}"`,
+        `="${p.score}/${totalPoints}"`,
         p.score,
         `"${accuracy}%"`,
         p.violations.length,
@@ -168,11 +169,11 @@ export default function ResultsPage() {
                     <div className="text-xs text-muted">{p.user.email}</div>
                   </td>
                   <td className="text-center px-4 py-3 font-bold">
-                    {p.score}/{totalQuestions}
+                    {p.score}/{totalPoints}
                   </td>
                   <td className="text-center px-4 py-3">
-                    {totalQuestions > 0
-                      ? Math.round((p.score / totalQuestions) * 100)
+                    {totalPoints > 0
+                      ? Math.round((p.score / totalPoints) * 100)
                       : 0}
                     %
                   </td>
