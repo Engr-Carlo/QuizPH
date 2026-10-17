@@ -289,19 +289,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={href}
                 onClick={() => setMobileNavOpen(false)}
                 className={cn(
-                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                  "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150",
                   isActive
-                    ? "bg-primary text-white shadow-[0_2px_10px_rgba(37,99,235,0.45)] ring-1 ring-blue-400/20"
-                    : "text-slate-400 hover:bg-white/6 hover:text-slate-100"
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
                 )}
               >
-                <span className={cn("flex-shrink-0 transition-transform duration-150", !isActive && "group-hover:scale-105")}>
+                <span className={cn("flex-shrink-0", isActive ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300")}>
                   <Icon />
                 </span>
                 <span>{label}</span>
-                {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60 flex-shrink-0" />
-                )}
               </Link>
             );
           })}

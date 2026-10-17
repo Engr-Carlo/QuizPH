@@ -1,9 +1,23 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
+import DashboardLayout from "@/components/DashboardLayout";
+import LineChart from "@/components/dashboard/LineChart";
+import {
+  IconChevronRight,
+  IconClock,
+  IconPlay,
+  IconPlus,
+  IconQuestion,
+  IconQuiz,
+  PageHeader,
+  Panel,
+  StatCard,
+  buttonPrimary,
+  buttonSecondary,
+} from "@/components/dashboard/primitives";
 
 interface Quiz {
   id: string;
@@ -15,25 +29,17 @@ interface Quiz {
   _count: { questions: number; sessions: number };
 }
 
+const CHART_QUIZ_LIMIT = 8;
+const RECENT_QUIZ_LIMIT = 5;
+
 function formatDuration(secs: number) {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
   return s ? `${m}m ${s}s` : `${m}m`;
 }
 
-const CARD_ACCENTS: [string, string][] = [
-  ["#2563EB", "#4F46E5"],
-  ["#059669", "#0891B2"],
-  ["#7C3AED", "#9333EA"],
-  ["#D97706", "#EA580C"],
-  ["#0284C7", "#0369A1"],
-  ["#E11D48", "#DB2777"],
-];
-
-function cardAccentStyle(id: string) {
-  const sum = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const [from, to] = CARD_ACCENTS[sum % CARD_ACCENTS.length];
-  return { background: `linear-gradient(135deg, ${from}, ${to})` };
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function TeacherDashboard() {
@@ -41,17 +47,21 @@ export default function TeacherDashboard() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadQuizzes() {
       try {
         const res = await fetch("/api/quiz");
         const payload = await res.json().catch(() => null);
-        if (!res.ok) { setError(payload?.error || "Failed to load quizzes"); setQuizzes([]); return; }
+        if (!res.ok) {
+          setError(payload?.error || "Failed to load quizzes");
+          setQuizzes([]);
+          return;
+        }
         setQuizzes(Array.isArray(payload) ? payload : []);
       } catch {
-        setError("Failed to load quizzes"); setQuizzes([]);
+        setError("Failed to load quizzes");
+        setQuizzes([]);
       } finally {
         setLoading(false);
       }
@@ -59,343 +69,149 @@ export default function TeacherDashboard() {
     loadQuizzes();
   }, []);
 
+  const metrics = useMemo(() => {
+    const totalQuestions = quizzes.reduce((sum, q) => sum + q._count.questions, 0);
+    const totalSessions = quizzes.reduce((sum, q) => sum + q._count.sessions, 0);
+    const quizzesWithSessions = quizzes.filter((q) => q._count.sessions > 0).length;
+    const avgDurationMins = quizzes.length
+      ? Math.round(quizzes.reduce((sum, q) => sum + q.duration, 0) / quizzes.length / 60)
+      : 0;
+    const avgQuestions = quizzes.length ? Math.round(totalQuestions / quizzes.length) : 0;
+    const mostActive = quizzes.reduce<Quiz | null>(
+      (best, q) => (q._count.sessions > (best?._count.sessions ?? 0) ? q : best),
+      null
+    );
+    return { totalQuestions, totalSessions, quizzesWithSessions, avgDurationMins, avgQuestions, mostActive };
+  }, [quizzes]);
+
+  const newestFirst = useMemo(
+    () => [...quizzes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [quizzes]
+  );
+  const chartQuizzes = useMemo(() => newestFirst.slice(0, CHART_QUIZ_LIMIT).reverse(), [newestFirst]);
+  const recentQuizzes = newestFirst.slice(0, RECENT_QUIZ_LIMIT);
+
   const firstName = session?.user?.name?.split(" ")[0] || "Teacher";
-  const totalQuestions = quizzes.reduce((s, q) => s + q._count.questions, 0);
-  const totalSessions = quizzes.reduce((s, q) => s + q._count.sessions, 0);
-  const totalLiveTopics = quizzes.filter((q) => q._count.sessions > 0).length;
-  const avgQuizDuration = quizzes.length
-    ? Math.round(quizzes.reduce((sum, q) => sum + q.duration, 0) / quizzes.length / 60)
-    : 0;
-  const avgQuestionsPerQuiz = quizzes.length
-    ? Math.round(totalQuestions / quizzes.length)
-    : 0;
-  const hottestQuiz = quizzes.reduce<Quiz | null>((best, quiz) => {
-    if (!best || quiz._count.sessions > best._count.sessions) return quiz;
-    return best;
-  }, null);
-  const chartData = [...quizzes]
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .slice(-6)
-    .map((quiz) => ({
-      label: new Date(quiz.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-      value: quiz._count.sessions,
-    }));
-  const recentQuizzes = [...quizzes]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 4);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  function LineChart({ data }: { data: { label: string; value: number }[] }) {
-    const width = 100;
-    const height = 100;
-    const maxValue = Math.max(...data.map((point) => point.value), 1);
-    const minValue = Math.min(...data.map((point) => point.value), 0);
-    const points = data.map((point, index) => {
-      const x = (index / Math.max(data.length - 1, 1)) * width;
-      const y = height - ((point.value - minValue) / Math.max(maxValue - minValue, 1)) * 68 - 12;
-      return `${x},${y}`;
-    });
-    const areaPath = `${points.join(" ")} ${width},${height} 0,${height}`;
-
-    return (
-      <div className="mt-5">
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-48 w-full overflow-visible">
-          <defs>
-            <linearGradient id="line-chart-fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#2563EB" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#2563EB" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-          {[20, 40, 60, 80].map((line) => (
-            <line key={line} x1="0" x2="100" y1={line} y2={line} stroke="#E2E8F0" strokeWidth="0.6" />
-          ))}
-          <polygon points={areaPath} fill="url(#line-chart-fill)" />
-          <polyline
-            fill="none"
-            stroke="#2563EB"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={points.join(" ")}
-          />
-          {data.map((point, index) => {
-            const x = (index / Math.max(data.length - 1, 1)) * width;
-            const y = height - ((point.value - minValue) / Math.max(maxValue - minValue, 1)) * 68 - 12;
-            return (
-              <g key={`${point.label}-${index}`}>
-                <circle cx={x} cy={y} r="1.8" fill="#2563EB" />
-                {index === data.length - 1 && <circle cx={x} cy={y} r="4" fill="#2563EB" stroke="#fff" strokeWidth="1.3" />}
-              </g>
-            );
-          })}
-        </svg>
-        <div className="mt-2 flex justify-between text-[10px] font-medium text-muted">
-          {data.map((point) => (
-            <span key={point.label} className="truncate px-1" title={point.label}>{point.label}</span>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  function DonutMetric({
-    label,
-    value,
-    total,
-    accent,
-    suffix = "",
-  }: {
-    label: string;
-    value: number;
-    total: number;
-    accent: string;
-    suffix?: string;
-  }) {
-    const safeTotal = Math.max(total, 1);
-    const ratio = Math.min(value / safeTotal, 1);
-    const radius = 34;
-    const circumference = 2 * Math.PI * radius;
-    const dash = circumference * ratio;
-
-    return (
-      <div className="rounded-2xl border border-border bg-slate-50 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">{label}</div>
-            <div className="mt-2 text-3xl font-black text-foreground tabular-nums">{value}{suffix}</div>
-          </div>
-          <svg viewBox="0 0 120 120" className="h-20 w-20 -rotate-90" aria-label={`${label} metric`}>
-            <circle cx="60" cy="60" r={radius} stroke="#E2E8F0" strokeWidth="12" fill="none" />
-            <circle
-              cx="60"
-              cy="60"
-              r={radius}
-              stroke={accent}
-              strokeWidth="12"
-              fill="none"
-              strokeDasharray={`${dash} ${circumference - dash}`}
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-6xl space-y-5">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5 lg:h-[calc(100dvh-8.5rem)] lg:min-h-[540px]">
+        <PageHeader
+          title="Dashboard"
+          description={`${greeting}, ${firstName}. Here is an overview of your quizzes and sessions.`}
+          actions={
+            <>
+              <Link href="/teacher/my-quizzes" className={buttonSecondary}>
+                My quizzes
+              </Link>
+              <Link href="/teacher/quiz/create" className={buttonPrimary}>
+                <IconPlus />
+                Create quiz
+              </Link>
+            </>
+          }
+        />
 
-        {/* ── Hero banner ── */}
-        <div id="dashboard" className="relative overflow-hidden rounded-2xl min-h-[240px] sm:min-h-[268px] flex items-end shadow-2xl">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-[1.02]"
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=1600&q=80')" }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-slate-800/30" />
-          {/* Subtle grain texture overlay */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
-          <div className="relative w-full px-6 pb-7 pt-10 sm:px-8 sm:pb-9">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-              <div className="max-w-md">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">{greeting}</p>
-                <h1 className="text-4xl sm:text-5xl font-black text-white leading-[1.05] tracking-tight">
-                  Hi, {firstName}.
-                </h1>
-                <p className="mt-3 text-sm text-white/50 font-medium">
-                  {loading ? "Loading your workspace\u2026" : quizzes.length === 0 ? "Create your first quiz to get started." : `${quizzes.length} quiz${quizzes.length !== 1 ? "zes" : ""} \u00b7 ${totalQuestions} questions \u00b7 ${totalSessions} sessions run`}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
-                {!loading && quizzes.length > 0 && (
-                  <div className="flex gap-2">
-                    {[
-                      { label: "Quizzes", value: quizzes.length },
-                      { label: "Questions", value: totalQuestions },
-                      { label: "Sessions", value: totalSessions },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="rounded-xl bg-white/8 border border-white/12 backdrop-blur-md px-3 py-2.5 text-center min-w-[58px]">
-                        <div className="text-xl font-black text-white tabular-nums leading-none">{value}</div>
-                        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 mt-1">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Link
-                  href="/teacher/quiz/create"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-900 text-sm font-bold rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.25)] shadow-lg flex-shrink-0"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  New Quiz
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {!loading && !error && quizzes.length > 0 && (
-          <section className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                { label: "Total Quizzes", value: quizzes.length, note: `${totalLiveTopics} active`, accent: "bg-primary/10 text-primary" },
-                { label: "Question Bank", value: totalQuestions, note: `${avgQuestionsPerQuiz} avg. each`, accent: "bg-success/10 text-success" },
-                { label: "Sessions Run", value: totalSessions, note: "Across all quizzes", accent: "bg-secondary/10 text-secondary" },
-                { label: "Avg. Duration", value: `${avgQuizDuration}m`, note: "Per quiz", accent: "bg-warning/10 text-warning" },
-              ].map((card) => (
-                <div key={card.label} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                  <div className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${card.accent}`}>
-                    {card.label}
-                  </div>
-                  <div className="mt-4 flex items-end justify-between gap-2">
-                    <div>
-                      <div className="text-3xl font-black text-foreground tabular-nums">{card.value}</div>
-                      <div className="mt-1 text-[11px] text-muted">{card.note}</div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14" />
-                        <path d="M12 5v14" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Performance Snapshot</h3>
-                    <p className="text-[11px] text-muted">Recent activity across your quizzes</p>
-                  </div>
-                  <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                    Live
-                  </span>
-                </div>
-                <LineChart data={chartData} />
-              </div>
-
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Top Focus</h3>
-                    <p className="text-[11px] text-muted">Most active quiz</p>
-                  </div>
-                  <span className="rounded-full bg-warning/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-warning">
-                    highlight
-                  </span>
-                </div>
-
-                {hottestQuiz ? (
-                  <div className="mt-4 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-primary p-4 text-white shadow-lg">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/70">Top performer</div>
-                    <div className="mt-3 text-lg font-black leading-tight">{hottestQuiz.title}</div>
-                    <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-                      <span className="rounded-full bg-white/10 px-2 py-1">{hottestQuiz._count.sessions} sessions</span>
-                      <span className="rounded-full bg-white/10 px-2 py-1">{hottestQuiz._count.questions} questions</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl bg-slate-100 p-4 text-sm text-muted">No quiz activity yet.</div>
-                )}
-
-                <div className="mt-5 grid gap-3">
-                  <DonutMetric label="Questions" value={totalQuestions} total={Math.max(totalQuestions, 40)} accent="var(--primary)" />
-                  <DonutMetric label="Sessions" value={totalSessions} total={Math.max(totalSessions, 20)} accent="var(--success)" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-[1.55fr_0.95fr]">
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Recent Quizzes</h3>
-                    <p className="text-[11px] text-muted">Your newest class materials</p>
-                  </div>
-                  <Link href="/teacher/my-quizzes" className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary hover:text-primary/80">
-                    View all
-                  </Link>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {recentQuizzes.map((quiz) => (
-                    <div key={quiz.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-slate-50 px-3 py-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-foreground">{quiz.title}</div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
-                          <span>{quiz._count.questions} questions</span>
-                          <span>•</span>
-                          <span>{quiz._count.sessions} sessions</span>
-                          <span>•</span>
-                          <span>{new Date(quiz.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        </div>
-                      </div>
-                      <Link href={`/teacher/quiz/${quiz.id}`} className="inline-flex shrink-0 items-center justify-center rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
-                        Open
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Quick Actions</h3>
-                    <p className="text-[11px] text-muted">Faster workflow</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <Link href="/teacher/quiz/create" className="flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-3 py-3 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
-                    <span>Create a new quiz</span>
-                    <span className="text-lg">→</span>
-                  </Link>
-                  <Link href="/teacher/my-quizzes" className="flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-3 py-3 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
-                    <span>Manage my quizzes</span>
-                    <span className="text-lg">→</span>
-                  </Link>
-                  <Link href="/report-bug" className="flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-3 py-3 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
-                    <span>Report a bug</span>
-                    <span className="text-lg">→</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
+        {error && (
+          <div className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</div>
         )}
 
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Total quizzes"
+            value={loading ? "–" : quizzes.length}
+            hint={loading ? undefined : `${metrics.quizzesWithSessions} with at least one session`}
+            icon={<IconQuiz />}
+          />
+          <StatCard
+            label="Questions"
+            value={loading ? "–" : metrics.totalQuestions}
+            hint={loading ? undefined : `${metrics.avgQuestions} per quiz on average`}
+            icon={<IconQuestion />}
+          />
+          <StatCard
+            label="Sessions run"
+            value={loading ? "–" : metrics.totalSessions}
+            hint={loading ? undefined : metrics.mostActive ? `Most active: ${metrics.mostActive.title}` : "No sessions yet"}
+            icon={<IconPlay />}
+          />
+          <StatCard
+            label="Average duration"
+            value={loading ? "–" : `${metrics.avgDurationMins}m`}
+            hint={loading ? undefined : "Per quiz"}
+            icon={<IconClock />}
+          />
+        </div>
+
         {loading ? (
-          <div className="flex items-center justify-center py-28">
-            <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
+          <div className="grid min-h-[18rem] flex-1 gap-4 lg:grid-cols-3 lg:min-h-0">
+            <div className="animate-pulse rounded-xl border border-border bg-white lg:col-span-2" />
+            <div className="animate-pulse rounded-xl border border-border bg-white" />
           </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-danger/20 bg-danger/5 px-5 py-4 text-sm text-danger">{error}</div>
         ) : quizzes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border bg-white text-center">
-            <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mb-5">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
-              </svg>
+          <Panel title="Get started" className="flex-1" bodyClassName="flex items-center justify-center">
+            <div className="max-w-sm py-8 text-center">
+              <h3 className="text-base font-semibold text-foreground">You have not created a quiz yet</h3>
+              <p className="mt-1.5 text-sm text-muted">
+                Create your first quiz to run live, monitored sessions with your students.
+              </p>
+              <Link href="/teacher/quiz/create" className={`${buttonPrimary} mt-5`}>
+                <IconPlus />
+                Create quiz
+              </Link>
             </div>
-            <h3 className="font-bold text-foreground mb-1.5">No quizzes yet</h3>
-            <p className="text-muted text-sm mb-6 max-w-xs">Create your first quiz to start engaging students with live, monitored sessions.</p>
-            <Link
-              href="/teacher/quiz/create"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition hover:opacity-90"
-              style={{ background: "var(--primary)" }}
+          </Panel>
+        ) : (
+          <div className="grid flex-1 gap-4 lg:min-h-0 lg:grid-cols-3">
+            <Panel
+              title="Sessions per quiz"
+              subtitle={`Your ${chartQuizzes.length} most recent quizzes, oldest to newest`}
+              className="min-h-[18rem] lg:col-span-2 lg:min-h-0"
+              bodyClassName="pt-4"
             >
-              Create First Quiz
-            </Link>
+              <LineChart
+                labels={chartQuizzes.map((q) => q.title)}
+                series={[{ name: "Sessions", color: "var(--primary)", values: chartQuizzes.map((q) => q._count.sessions) }]}
+                emptyMessage="No quizzes to display"
+              />
+            </Panel>
+
+            <Panel
+              title="Recent quizzes"
+              subtitle="Latest additions to your library"
+              bodyClassName="overflow-y-auto px-2 pt-2"
+              action={
+                <Link href="/teacher/my-quizzes" className="text-xs font-medium text-primary hover:underline">
+                  View all
+                </Link>
+              }
+            >
+              <ul className="divide-y divide-border">
+                {recentQuizzes.map((quiz) => (
+                  <li key={quiz.id}>
+                    <Link
+                      href={`/teacher/quiz/${quiz.id}`}
+                      className="group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 transition hover:bg-surface"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{quiz.title}</p>
+                        <p className="mt-0.5 truncate text-xs text-muted">
+                          {quiz._count.questions} questions · {quiz._count.sessions} sessions · {formatDuration(quiz.duration)}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-muted">{formatDate(quiz.createdAt)}</p>
+                      </div>
+                      <span className="flex-shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-foreground">
+                        <IconChevronRight />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
           </div>
-        ) : null}
+        )}
       </div>
     </DashboardLayout>
   );
