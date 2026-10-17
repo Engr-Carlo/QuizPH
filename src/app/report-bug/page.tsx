@@ -1,15 +1,35 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
+
+interface BugReportHistoryItem {
+  id: string;
+  title: string;
+  category: "BUG" | "IMPROVEMENT" | "DISPUTE";
+  description: string;
+  expectedBehavior?: string | null;
+  steps?: string | null;
+  status: "OPEN" | "IN_REVIEW" | "RESOLVED" | "REJECTED";
+  adminNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const REPORT_CATEGORIES = [
   { value: "BUG", label: "Bug" },
   { value: "IMPROVEMENT", label: "Improvement" },
   { value: "DISPUTE", label: "Dispute" },
 ] as const;
+
+const STATUS_STYLES: Record<string, string> = {
+  OPEN: "bg-sky-100 text-sky-700 border-sky-200",
+  IN_REVIEW: "bg-amber-100 text-amber-700 border-amber-200",
+  RESOLVED: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  REJECTED: "bg-slate-200 text-slate-700 border-slate-300",
+};
 
 export default function ReportBugPage() {
   const { data: session } = useSession();
@@ -22,7 +42,22 @@ export default function ReportBugPage() {
   const [screenshotName, setScreenshotName] = useState("");
   const [screenshotDataUrl, setScreenshotDataUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reportHistory, setReportHistory] = useState<BugReportHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [toast, setToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+
+  async function loadHistory() {
+    setLoadingHistory(true);
+    const response = await fetch("/api/bug-reports");
+    if (response.ok) {
+      setReportHistory(await response.json());
+    }
+    setLoadingHistory(false);
+  }
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   const redirectPath = useMemo(
     () => (session?.user?.role === "TEACHER" ? "/teacher" : "/student"),
@@ -96,6 +131,8 @@ export default function ReportBugPage() {
       return;
     }
 
+    const createdReport = payload as BugReportHistoryItem;
+    setReportHistory((current) => [createdReport, ...current]);
     setToast({ kind: "success", message: "Bug report submitted successfully." });
     setTimeout(() => {
       setToast(null);
@@ -105,7 +142,7 @@ export default function ReportBugPage() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div className="mb-6">
           <h1 className="text-2xl font-black text-foreground">Report a bug</h1>
           <p className="mt-1 text-sm text-muted">
@@ -210,6 +247,75 @@ export default function ReportBugPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">My report history</h2>
+              <p className="mt-1 text-sm text-muted">Check updates, current status, and admin comments.</p>
+            </div>
+          </div>
+
+          {loadingHistory ? (
+            <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+              Loading your reports...
+            </div>
+          ) : reportHistory.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-background p-6 text-center text-sm text-muted">
+              You have not submitted any reports yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reportHistory.map((report) => (
+                <div key={report.id} className="rounded-2xl border border-border bg-background p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-bold text-foreground">{report.title}</h3>
+                        <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                          {report.category}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted">
+                        Submitted {new Date(report.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                    </div>
+
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${STATUS_STYLES[report.status]}`}>
+                      {report.status.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-foreground">
+                    <p className="font-semibold text-foreground">Issue</p>
+                    <p className="mt-1 leading-6 text-muted">{report.description}</p>
+                  </div>
+
+                  {report.expectedBehavior && (
+                    <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-foreground">
+                      <p className="font-semibold text-foreground">Expected behavior</p>
+                      <p className="mt-1 leading-6 text-muted">{report.expectedBehavior}</p>
+                    </div>
+                  )}
+
+                  {report.steps && (
+                    <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-foreground">
+                      <p className="font-semibold text-foreground">Steps</p>
+                      <pre className="mt-1 whitespace-pre-wrap leading-6 text-muted">{report.steps}</pre>
+                    </div>
+                  )}
+
+                  <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-foreground">
+                    <p className="font-semibold text-foreground">Admin response</p>
+                    <p className="mt-1 leading-6 text-muted">
+                      {report.adminNote || "No admin response yet. We will update this once it is reviewed."}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
