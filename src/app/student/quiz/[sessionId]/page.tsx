@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
+import { createViolationQueue } from "@/lib/violation-queue";
 import { formatTime, shuffleArray } from "@/lib/utils";
 
 interface Option {
@@ -365,17 +366,35 @@ function StudentQuizContent() {
   // Helper — fire-and-forget violation POST.  Uses participantId / sessionId
   // directly (both are stable URL params, not React state) so there is no
   // stale-closure risk regardless of when the callback is invoked.
+  const violationQueueRef = useRef<ReturnType<typeof createViolationQueue> | null>(null);
   const postViolation = useCallback(
     (type: string) => {
       if (!participantId || !sessionId) return;
-      fetch("/api/violations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participantId, sessionId, type }),
-      }).catch(() => {});
+      if (!violationQueueRef.current) {
+        violationQueueRef.current = createViolationQueue((types) => {
+          fetch("/api/violations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ participantId, sessionId, types }),
+            keepalive: true,
+          }).catch(() => {});
+        });
+      }
+      violationQueueRef.current.push(type);
     },
     [participantId, sessionId]
   );
+
+  // Flush any queued violations when the page is hidden or closed.
+  useEffect(() => {
+    const flush = () => violationQueueRef.current?.flush();
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, []);
 
   // 1. Fullscreen enforcement — every exit immediately triggers a violation.
   // Deps: only [status, postViolation, isIOS].  antiCheatEnabled is read from a

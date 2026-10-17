@@ -50,17 +50,25 @@ export const questionSchema = z.object({
   ),
 });
 
+const violationTypeEnum = z.enum([
+  "FULLSCREEN_EXIT",
+  "TAB_SWITCH",
+  "RIGHT_CLICK",
+  "DEVTOOLS",
+  "COPY_PASTE",
+  "SCREENSHOT_ATTEMPT",
+]);
+
 export const violationSchema = z.object({
   participantId: z.string(),
   sessionId: z.string(),
-  type: z.enum([
-    "FULLSCREEN_EXIT",
-    "TAB_SWITCH",
-    "RIGHT_CLICK",
-    "DEVTOOLS",
-    "COPY_PASTE",
-    "SCREENSHOT_ATTEMPT",
-  ]),
+  type: violationTypeEnum,
+});
+
+export const violationBatchSchema = z.object({
+  participantId: z.string(),
+  sessionId: z.string(),
+  types: z.array(violationTypeEnum).min(1).max(10),
 });
 
 export const profileUpdateSchema = z

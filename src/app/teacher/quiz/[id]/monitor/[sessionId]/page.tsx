@@ -136,12 +136,26 @@ export default function MonitorPage() {
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
 
+  // Coalesce bursts of live events into one refetch per window (N students => 1 request, not N).
+  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleFetch = useCallback(() => {
+    if (fetchTimerRef.current) return;
+    fetchTimerRef.current = setTimeout(() => {
+      fetchTimerRef.current = null;
+      fetchSession();
+    }, 2500);
+  }, [fetchSession]);
+
+  useEffect(() => () => {
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+  }, []);
+
   useEffect(() => {
     const pusher = getPusherClient();
     const ch = pusher.subscribe(`session-${sessionId}`);
     ch.bind("violation", (data: ViolationEvent) => {
       setToasts((prev) => [data, ...prev].slice(0, 8));
-      fetchSession();
+      scheduleFetch();
     });
     ch.bind("session-status", () => {
       setStartingQuiz(false);
@@ -156,12 +170,12 @@ export default function MonitorPage() {
           return next;
         });
       }, 3000);
-      fetchSession();
+      scheduleFetch();
     });
-    ch.bind("answer-submitted", fetchSession);
-    ch.bind("participant-finished", fetchSession);
+    ch.bind("answer-submitted", scheduleFetch);
+    ch.bind("participant-finished", scheduleFetch);
     return () => { ch.unbind_all(); pusher.unsubscribe(`session-${sessionId}`); };
-  }, [sessionId, fetchSession]);
+  }, [sessionId, fetchSession, scheduleFetch]);
 
   useEffect(() => {
     if (!toasts.length) return;

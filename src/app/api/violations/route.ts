@@ -1,8 +1,12 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
-import { violationSchema } from "@/lib/validations";
+import { RateLimiter } from "@/lib/rate-limit";
+import { violationBatchSchema } from "@/lib/validations";
 import { NextResponse } from "next/server";
+
+// In-memory guard: spam is dropped before any DB work (best-effort per instance).
+const violationLimiter = new RateLimiter(20, 60_000);
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -11,8 +15,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const parsed = violationSchema.safeParse(body);
+    const raw = await req.json();
+    // Accept the legacy single `type` payload from clients cached before batching shipped.
+    const input = raw && !raw.types && raw.type ? { ...raw, types: [raw.type] } : raw;
+    const parsed = violationBatchSchema.safeParse(input);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -21,59 +27,49 @@ export async function POST(req: Request) {
       );
     }
 
-    const { participantId, sessionId, type } = parsed.data;
+    const { participantId, types } = parsed.data;
 
-    // Verify participant belongs to user
+    if (!violationLimiter.hit(participantId).allowed) {
+      return NextResponse.json({ message: "ok" }, { status: 200 });
+    }
+
     const participant = await prisma.participant.findUnique({
       where: { id: participantId },
-      include: { user: { select: { name: true } } },
+      select: { userId: true, sessionId: true, user: { select: { name: true } } },
     });
 
     if (!participant || participant.userId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Rate-limit: silently drop if this participant has logged > 10 violations in the last 60s
-    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-    const recentCount = await prisma.violationLog.count({
-      where: { participantId, timestamp: { gt: oneMinuteAgo } },
-    });
-    if (recentCount >= 10) {
-      return NextResponse.json({ message: "ok" }, { status: 200 });
-    }
+    // Trust the participant's real session, not the client-supplied one.
+    const sessionId = participant.sessionId;
+    const timestamp = new Date();
 
-    const violation = await prisma.violationLog.create({
-      data: {
-        participantId,
-        sessionId,
-        type: type as "FULLSCREEN_EXIT" | "TAB_SWITCH" | "RIGHT_CLICK" | "DEVTOOLS" | "COPY_PASTE" | "SCREENSHOT_ATTEMPT",
-      },
+    await prisma.violationLog.createMany({
+      data: types.map((type) => ({ participantId, sessionId, type, timestamp })),
     });
 
-    // Single query — compute total + breakdown in JS instead of 2 separate DB round-trips
-    const allViolations = await prisma.violationLog.findMany({
+    // One aggregate query instead of loading every violation row.
+    const grouped = await prisma.violationLog.groupBy({
+      by: ["type"],
       where: { participantId },
-      select: { type: true },
+      _count: { _all: true },
     });
+    const typeCounts = grouped.map((g: (typeof grouped)[number]) => ({ type: g.type, count: g._count._all }));
+    const totalCount = typeCounts.reduce((sum: number, g: { count: number }) => sum + g.count, 0);
 
-    const totalCount = allViolations.length;
-    const typeMap = new Map<string, number>();
-    for (const v of allViolations) {
-      typeMap.set(v.type, (typeMap.get(v.type) ?? 0) + 1);
-    }
-    const typeCounts = Array.from(typeMap.entries()).map(([t, count]) => ({ type: t, count }));
-
-    // Notify teacher in real-time
     await pusherServer.trigger(`session-${sessionId}`, "violation", {
       participantId,
       participantName: participant.user.name,
-      type,
+      type: types[0],
+      types,
       totalCount,
       typeCounts,
-      timestamp: violation.timestamp,
+      timestamp,
     });
 
-    return NextResponse.json({ violation, totalCount }, { status: 201 });
+    return NextResponse.json({ ok: true, totalCount }, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Failed to log violation" },
