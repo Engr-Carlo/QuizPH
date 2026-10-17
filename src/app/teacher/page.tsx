@@ -80,6 +80,9 @@ export default function TeacherDashboard() {
       label: new Date(quiz.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
       value: quiz._count.sessions,
     }));
+  const recentQuizzes = [...quizzes]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
@@ -262,7 +265,7 @@ export default function TeacherDashboard() {
               ))}
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+            <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
               <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -303,6 +306,64 @@ export default function TeacherDashboard() {
                 <div className="mt-5 grid gap-3">
                   <DonutMetric label="Questions" value={totalQuestions} total={Math.max(totalQuestions, 40)} accent="var(--primary)" />
                   <DonutMetric label="Sessions" value={totalSessions} total={Math.max(totalSessions, 20)} accent="var(--success)" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[1.55fr_0.95fr]">
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Recent Quizzes</h3>
+                    <p className="text-[11px] text-muted">Your newest class materials</p>
+                  </div>
+                  <Link href="/teacher/my-quizzes" className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary hover:text-primary/80">
+                    View all
+                  </Link>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {recentQuizzes.map((quiz) => (
+                    <div key={quiz.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-slate-50 px-3 py-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-foreground">{quiz.title}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+                          <span>{quiz._count.questions} questions</span>
+                          <span>•</span>
+                          <span>{quiz._count.sessions} sessions</span>
+                          <span>•</span>
+                          <span>{new Date(quiz.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                      </div>
+                      <Link href={`/teacher/quiz/${quiz.id}`} className="inline-flex shrink-0 items-center justify-center rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
+                        Open
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Quick Actions</h3>
+                    <p className="text-[11px] text-muted">Faster workflow</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <Link href="/teacher/quiz/create" className="flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-3 py-3 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
+                    <span>Create a new quiz</span>
+                    <span className="text-lg">→</span>
+                  </Link>
+                  <Link href="/teacher/my-quizzes" className="flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-3 py-3 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
+                    <span>Manage my quizzes</span>
+                    <span className="text-lg">→</span>
+                  </Link>
+                  <Link href="/report-bug" className="flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-3 py-3 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
+                    <span>Report a bug</span>
+                    <span className="text-lg">→</span>
+                  </Link>
                 </div>
               </div>
             </div>
