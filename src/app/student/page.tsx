@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 import { getAvatarUrl, normalizeAvatarId } from "@/lib/avatar-presets";
+import { CoverArt } from "@/components/dashboard/CoverArt";
+import { HERO_PHOTO } from "@/components/dashboard/primitives";
 
 interface HistoryEntry {
   id: string;
@@ -69,8 +71,7 @@ export default function StudentDashboard() {
       <div className="mx-auto max-w-5xl space-y-5">
 
         {/* Profile card */}
-        <section className="rounded-[28px] border border-border/70 bg-white shadow-sm overflow-hidden">
-          <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2563EB, #0891B2)" }} />
+        <section className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
           <div className="p-5 sm:p-6">
             <div className="flex items-center gap-4">
               <img
@@ -84,7 +85,7 @@ export default function StudentDashboard() {
               </div>
               <Link
                 href="/settings"
-                className="flex-shrink-0 rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary transition"
+                className="flex-shrink-0 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary transition"
               >
                 Settings
               </Link>
@@ -93,31 +94,31 @@ export default function StudentDashboard() {
         </section>
 
         {/* ── Action hero ── */}
-        <section className="relative overflow-hidden rounded-2xl shadow-xl" style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #0369a1 100%)" }}>
-          {/* Decorative orbs */}
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl" style={{ background: "rgba(255,255,255,0.07)" }} />
-          <div className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full blur-2xl" style={{ background: "rgba(6,182,212,0.15)" }} />
+        <section className="relative overflow-hidden rounded-xl border border-border shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={HERO_PHOTO} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/95 via-ink/85 to-ink/50" />
           <div className="relative px-6 py-7 sm:px-8 sm:py-9">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="max-w-lg">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">Student space</p>
-                <h1 className="text-3xl sm:text-4xl font-black text-white leading-[1.05] tracking-tight">
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-white/60 mb-2">Student space</p>
+                <h1 className="text-3xl sm:text-4xl font-semibold text-white leading-tight tracking-tight">
                   Ready, {firstName}?
                 </h1>
-                <p className="mt-2.5 text-sm text-white/55 leading-relaxed">
+                <p className="mt-2.5 text-sm text-white/70 leading-relaxed">
                   Enter a 6-character session code to join your teacher&apos;s live quiz.
                 </p>
                 <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link
                     href="/student/join"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#fff] px-5 py-2.5 text-sm font-semibold text-[#0B1A2C] shadow-sm transition hover:bg-[#EEF2F7]"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polygon points="5 3 19 12 5 21 5 3"/>
                     </svg>
                     Join a Quiz
                   </Link>
-                  <span className="text-xs text-white/40 font-medium sm:pl-1">Fullscreen &middot; Anti-cheat &middot; Mobile-ready</span>
+                  <span className="text-xs text-white/60 font-medium sm:pl-1">Fullscreen &middot; Anti-cheat &middot; Mobile-ready</span>
                 </div>
               </div>
 
@@ -134,18 +135,17 @@ export default function StudentDashboard() {
                       { label: "Completed", value: finished.length },
                       ...(avgPct !== null ? [{ label: "Avg score", value: `${avgPct}%` }] : []),
                     ].map(({ label, value }) => (
-                      <div key={label} className="rounded-xl border border-white/12 bg-white/8 backdrop-blur-sm px-4 py-3 min-w-[90px] lg:min-w-0 text-center">
-                        <div className="text-2xl font-black text-white tabular-nums leading-none">{value}</div>
-                        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40 mt-1">{label}</div>
+                      <div key={label} className="rounded-lg border border-white/15 bg-white/10 backdrop-blur-sm px-4 py-3 min-w-[90px] lg:min-w-0 text-center">
+                        <div className="text-2xl font-semibold text-white tabular-nums leading-none">{value}</div>
+                        <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/60 mt-1.5">{label}</div>
                       </div>
                     ));
                   })()}
                 </div>
               ) : (
-                <div className="flex-shrink-0 rounded-xl border border-white/12 bg-white/6 backdrop-blur-sm px-5 py-4 max-w-[200px]">
-                  <div className="text-2xl mb-1">🎓</div>
-                  <p className="text-xs font-bold text-white/80 leading-snug">No sessions yet</p>
-                  <p className="text-[11px] text-white/40 mt-1">Join your first quiz to see your stats here.</p>
+                <div className="flex-shrink-0 rounded-lg border border-white/15 bg-white/10 backdrop-blur-sm px-5 py-4 max-w-[220px]">
+                  <p className="text-sm font-semibold text-white leading-snug">No sessions yet</p>
+                  <p className="text-xs text-white/60 mt-1">Join your first quiz to see your stats here.</p>
                 </div>
               )}
             </div>
@@ -216,6 +216,7 @@ export default function StudentDashboard() {
                     className="rounded-xl border border-border/50 bg-surface/40 px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
+                      <CoverArt seed={entry.session.id} className="h-10 w-10 flex-shrink-0 rounded-lg" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-foreground truncate">{entry.session.quiz.title}</p>
                         <p className="text-xs text-muted mt-0.5">

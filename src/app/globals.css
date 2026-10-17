@@ -4,40 +4,49 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* One vibrant color — Blue */
-  --primary: #2563EB;
-  --primary-dark: #1D4ED8;
-  --primary-light: #EFF6FF;
+  /* Brand — deep cobalt, used sparingly on a calm neutral base */
+  --primary: #1F4B99;
+  --primary-dark: #163A7A;
+  --primary-light: #EAF0FA;
 
   /* Neutrals */
   --background: #FFFFFF;
-  --foreground: #111827;
-  --surface: #F9FAFB;
+  --canvas: #F3F5F8;
+  --ink: #0B1A2C;
+  --foreground: #0F1B2D;
+  --surface: #F6F8FB;
   --card: #FFFFFF;
-  --border: #E5E7EB;
-  --muted: #6B7280;
+  --border: #E1E6ED;
+  --muted: #5B6778;
 
   /* Semantic */
-  --success: #059669;
-  --danger: #DC2626;
-  --warning: #D97706;
+  --success: #0F8A5F;
+  --danger: #C23B3B;
+  --warning: #B7791F;
 
-  /* Legacy aliases kept for other pages */
-  --secondary: #0891B2;
-  --accent: #7C3AED;
-  --text-secondary: #6B7280;
+  /* Supporting hues */
+  --secondary: #0E7490;
+  --accent: #6D4FB3;
+  --text-secondary: #5B6778;
 }
 
 /* ── Dark mode ────────────────────────────────────────────────────────── */
 html.dark {
-  --background: #0F172A;
-  --foreground: #F1F5F9;
-  --surface: #1E293B;
-  --card: #243049;
-  --border: #334155;
-  --muted: #94A3B8;
-  --primary-light: #1E3A8A;
-  --text-secondary: #94A3B8;
+  --primary: #5585DA;
+  --primary-dark: #6E98E6;
+  --primary-light: #1B2A47;
+  --background: #0B1220;
+  --canvas: #0B1220;
+  --ink: #070E19;
+  --foreground: #E8EEF7;
+  --surface: #121B2E;
+  --card: #182339;
+  --border: #263550;
+  --muted: #93A1B8;
+  --success: #34B98A;
+  --danger: #E26D6D;
+  --warning: #D9A04A;
+  --text-secondary: #93A1B8;
 }
 
 /* Swap hardcoded Tailwind bg-white → card in dark mode */
@@ -49,8 +58,8 @@ html.dark .bg-white\/88,
 html.dark .bg-white\/85,
 html.dark .bg-white\/82,
 html.dark .bg-white\/80 { background-color: color-mix(in oklab, var(--card) 93%, transparent) !important; }
-html.dark .bg-slate-50 { background-color: #1a2535 !important; }
-html.dark .bg-slate-100 { background-color: #243049 !important; }
+html.dark .bg-slate-50 { background-color: var(--surface) !important; }
+html.dark .bg-slate-100 { background-color: var(--border) !important; }
 html.dark .text-slate-700 { color: #94A3B8 !important; }
 html.dark .border-white\/80 { border-color: rgba(255,255,255,0.10) !important; }
 html.dark input,
@@ -64,6 +73,8 @@ html.dark .bg-white\/10 { background-color: rgba(255,255,255,0.06) !important; }
 html.dark .bg-white\/12 { background-color: rgba(255,255,255,0.08) !important; }
 
 @theme inline {
+  --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -79,7 +90,7 @@ html.dark .bg-white\/12 { background-color: rgba(255,255,255,0.08) !important; }
   --color-border: var(--border);
   --color-surface: var(--surface);
   --color-text-secondary: var(--text-secondary);
-  --font-sans: "Segoe UI", "Inter", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-inter), "Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SFMono-Regular", "Consolas", "Liberation Mono", Menlo, monospace;
 }
 
@@ -134,7 +145,7 @@ body {
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary), #60A5FA);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

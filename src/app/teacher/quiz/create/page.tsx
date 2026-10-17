@@ -3,8 +3,116 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { buttonPrimary, buttonSecondary } from "@/components/dashboard/primitives";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
+
+const inputClass =
+  "w-full rounded-lg border border-border bg-white px-3 text-sm text-foreground placeholder:text-muted transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-border bg-white shadow-sm">
+      <header className="border-b border-border/70 px-6 py-4">
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
+      </header>
+      <div className="space-y-5 px-6 py-5">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-foreground">
+        {label}
+        {required && <span className="ml-0.5 text-danger">*</span>}
+      </label>
+      {children}
+      {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
+    </div>
+  );
+}
+
+function ChoiceCard({
+  selected,
+  onSelect,
+  title,
+  description,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn(
+        "flex items-start gap-3 rounded-lg border p-3.5 text-left transition",
+        selected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-white hover:border-primary/40"
+      )}
+    >
+      <span
+        className={cn(
+          "mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2",
+          selected ? "border-primary" : "border-border"
+        )}
+      >
+        {selected && <span className="h-2 w-2 rounded-full bg-primary" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        {description && <span className="mt-0.5 block text-xs leading-relaxed text-muted">{description}</span>}
+      </span>
+    </button>
+  );
+}
+
+function ToggleRow({
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative mt-0.5 h-5 w-9 flex-shrink-0 rounded-full transition-colors",
+          checked ? "bg-primary" : "bg-border"
+        )}
+      >
+        <span
+          className={cn(
+            "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[#fff] shadow transition-transform",
+            checked && "translate-x-4"
+          )}
+        />
+      </button>
+    </div>
+  );
+}
 
 export default function CreateQuizPage() {
   const router = useRouter();
@@ -84,26 +192,25 @@ export default function CreateQuizPage() {
 
   return (
     <DashboardLayout>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted mb-6">
-        <Link href="/teacher" className="hover:text-foreground transition">My Quizzes</Link>
-        <span>/</span>
-        <span className="text-foreground font-medium">Create Quiz</span>
-      </div>
+      <div className="mx-auto max-w-3xl">
+        <nav className="mb-5 flex items-center gap-2 text-sm text-muted" aria-label="Breadcrumb">
+          <Link href="/teacher/my-quizzes" className="transition hover:text-foreground">My quizzes</Link>
+          <span aria-hidden="true">/</span>
+          <span className="font-medium text-foreground">Create quiz</span>
+        </nav>
 
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-extrabold text-foreground mb-1">Create New Quiz</h1>
-        <p className="text-muted text-sm mb-8">Configure your quiz settings. You can add questions after creating it.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Create a new quiz</h1>
+        <p className="mb-7 mt-1 text-sm text-muted">Set the basics now. You can add questions right after creating it.</p>
 
         {!teacherHasUniversity && (
-          <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
+          <div className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
             Please add at least one university in Settings before creating a quiz.
           </div>
         )}
 
         {toast && (
           <div className="toast-enter fixed right-5 top-5 z-50 w-[min(420px,calc(100vw-2rem))]">
-            <div className={`rounded-2xl border p-4 shadow-lg ${toast.tone === "error" ? "border-danger/30 bg-danger/6 text-danger" : "border-warning/30 bg-warning/8 text-warning"}`}>
+            <div className={`rounded-xl border bg-white p-4 shadow-lg ${toast.tone === "error" ? "border-danger/30 text-danger" : "border-warning/30 text-warning"}`}>
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-danger/10 text-danger">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -113,12 +220,12 @@ export default function CreateQuizPage() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold leading-5">{toast.message}</p>
+                  <p className="text-sm font-medium leading-5">{toast.message}</p>
                   {toast.tone === "error" && (
                     <button
                       type="button"
                       onClick={() => router.push("/settings")}
-                      className="mt-2 inline-flex items-center text-xs font-bold underline underline-offset-2"
+                      className="mt-2 inline-flex items-center text-xs font-semibold underline underline-offset-2"
                     >
                       Open Settings
                     </button>
@@ -137,250 +244,174 @@ export default function CreateQuizPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="flex items-start gap-2.5 bg-danger/6 border border-danger/25 text-danger text-sm p-3.5 rounded-xl">
-              <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex items-start gap-2.5 rounded-lg border border-danger/25 bg-danger/5 p-3.5 text-sm text-danger" role="alert">
+              <svg className="mt-0.5 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
               <span>{error}</span>
             </div>
           )}
 
-          {/* Card: Basic info */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-4">Basic Info</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Quiz Title <span className="text-danger">*</span></label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition placeholder:text-muted"
-                  placeholder="e.g., Philippine History - Chapter 5"
+          <FormSection title="Basic info" description="What students will see when they join.">
+            <Field label="Quiz title" required>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className={cn(inputClass, "h-10")}
+                placeholder="e.g., Philippine History - Chapter 5"
+              />
+            </Field>
+            <Field label="Description" hint="Optional. A short note for students.">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className={cn(inputClass, "resize-none py-2.5")}
+                placeholder="Brief description for students..."
+              />
+            </Field>
+          </FormSection>
+
+          <FormSection title="Timer" description="How long students have to finish.">
+            <Field label="Timer type">
+              <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
+                <ChoiceCard
+                  selected={timerType === "PER_QUIZ"}
+                  onSelect={() => setTimerType("PER_QUIZ")}
+                  title="Per quiz"
+                  description="One countdown for the whole quiz"
+                />
+                <ChoiceCard
+                  selected={timerType === "PER_QUESTION"}
+                  onSelect={() => setTimerType("PER_QUESTION")}
+                  title="Per question"
+                  description="Each question has its own countdown"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Description <span className="text-muted font-normal">(optional)</span></label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition resize-none placeholder:text-muted"
-                  placeholder="Brief description for students..."
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Card: Timer settings */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-4">Timer Settings</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Timer Type</label>
-                <div className="grid grid-cols-1 gap-2">
-                  {(["PER_QUIZ", "PER_QUESTION"] as const).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTimerType(t)}
-                      className={`px-4 py-2.5 text-sm font-medium rounded-xl border-2 text-left transition ${
-                        timerType === t
-                          ? "border-primary bg-primary/6 text-primary"
-                          : "border-border text-muted hover:border-primary/40"
-                      }`}
-                    >
-                      {t === "PER_QUIZ" ? "Per quiz (total time)" : "Per question"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">
-                  Duration
-                  <span className="ml-2 text-primary font-bold">{displayDuration}</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <input
-                      type="number"
-                      value={durationMinutes}
-                      onChange={(e) => setDurationMinutes(Math.max(0, Number(e.target.value) || 0))}
-                      min={0}
-                      max={120}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                    />
-                    <p className="text-xs text-muted mt-1">Minutes</p>
-                  </div>
-                  <div>
-                    <input
-                      type="number"
-                      value={durationSeconds}
-                      onChange={(e) => setDurationSeconds(Math.min(59, Math.max(0, Number(e.target.value) || 0)))}
-                      min={0}
-                      max={59}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                    />
-                    <p className="text-xs text-muted mt-1">Seconds</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted mt-2">Use minutes and seconds together instead of raw total seconds.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Card: Quiz settings */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-4">Quiz Settings</h2>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Question Bank Mode</label>
-                <div className="grid md:grid-cols-3 gap-2">
-                  {([
-                    { value: "ALL", label: "Use all questions", desc: "Every bank item appears in the quiz" },
-                    { value: "RANDOM", label: "Random draw", desc: "Pick a random subset from the bank" },
-                    { value: "MANUAL", label: "Manual selection", desc: "Teacher chooses which bank items appear" },
-                  ] as const).map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setQuestionSelectionMode(item.value)}
-                      className={`p-3 rounded-xl border-2 text-left transition ${
-                        questionSelectionMode === item.value
-                          ? "border-primary bg-primary/6 text-primary"
-                          : "border-border text-muted hover:border-primary/40"
-                      }`}
-                    >
-                      <p className="text-sm font-semibold">{item.label}</p>
-                      <p className="text-xs mt-1">{item.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {questionSelectionMode === "RANDOM" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Questions to draw</label>
-                    <input
-                      type="number"
-                      value={questionDrawCount}
-                      onChange={(e) => setQuestionDrawCount(Math.max(1, Number(e.target.value) || 1))}
-                      min={1}
-                      max={500}
-                      className="w-full max-w-[200px] px-4 py-2.5 border border-border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                    />
-                    <p className="text-xs text-muted mt-1">Example: if the bank has 20 questions, you can draw only 10.</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">Random draw scope</label>
-                    <div className="grid md:grid-cols-2 gap-2">
-                      {([
-                        { value: "SESSION", label: "Same set per session", desc: "All students in one session get the same random subset" },
-                        { value: "PARTICIPANT", label: "Different set per student", desc: "Each student gets their own random subset" },
-                      ] as const).map((item) => (
-                        <button
-                          key={item.value}
-                          type="button"
-                          onClick={() => setRandomQuestionScope(item.value)}
-                          className={`p-3 rounded-xl border-2 text-left transition ${
-                            randomQuestionScope === item.value
-                              ? "border-primary bg-primary/6 text-primary"
-                              : "border-border text-muted hover:border-primary/40"
-                          }`}
-                        >
-                          <p className="text-sm font-semibold">{item.label}</p>
-                          <p className="text-xs mt-1">{item.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-2xl border border-warning/25 bg-warning/6 p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Anti-cheat monitor</p>
-                    <p className="text-xs text-muted mt-1">Premium feature. Offer it as a limited-time upgrade teaser for teachers.</p>
-                  </div>
-                  <span className="inline-flex items-center rounded-full bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning">Premium trial</span>
-                </div>
-                <label className="flex items-start gap-3 cursor-pointer group rounded-xl hover:bg-white/60 p-2 -m-2 transition">
+            </Field>
+            <Field label={`Duration (${displayDuration})`} hint="Set minutes and seconds together.">
+              <div className="grid max-w-xs grid-cols-2 gap-3">
+                <div>
                   <input
-                    type="checkbox"
-                    checked={antiCheatEnabled}
-                    onChange={(e) => setAntiCheatEnabled(e.target.checked)}
-                    className="mt-1"
+                    type="number"
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(Math.max(0, Number(e.target.value) || 0))}
+                    min={0}
+                    max={120}
+                    aria-label="Minutes"
+                    className={cn(inputClass, "h-10")}
                   />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Enable anti-cheat monitoring</p>
-                    <p className="text-xs text-muted">Fullscreen, tab-switch, right-click, clipboard, and devtools detection during quiz sessions.</p>
-                  </div>
-                </label>
+                  <p className="mt-1 text-xs text-muted">Minutes</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    value={durationSeconds}
+                    onChange={(e) => setDurationSeconds(Math.min(59, Math.max(0, Number(e.target.value) || 0)))}
+                    min={0}
+                    max={59}
+                    aria-label="Seconds"
+                    className={cn(inputClass, "h-10")}
+                  />
+                  <p className="mt-1 text-xs text-muted">Seconds</p>
+                </div>
               </div>
+            </Field>
+          </FormSection>
 
-              <div className="space-y-3">
-                {[
-                  { key: "randomizeQuestions", label: "Randomize delivered question order", desc: "Useful when the quiz uses all or randomly drawn bank items", checked: randomizeQuestions, set: setRandomizeQuestions },
-                  { key: "randomizeAnswers", label: "Randomize answer choices", desc: "Answer options appear in a different order for students", checked: randomizeAnswers, set: setRandomizeAnswers },
-                ].map(({ key, label, desc, checked, set }) => (
-                  <label key={key} className="flex items-start gap-3 cursor-pointer group p-3 rounded-xl hover:bg-surface transition">
-                    <div className="relative mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => set(e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
-                        checked ? "bg-primary border-primary" : "border-border group-hover:border-primary/50"
-                      }`}>
-                        {checked && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{label}</p>
-                      <p className="text-xs text-muted">{desc}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              <div className="space-y-3 rounded-2xl border border-border p-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" checked={!allowSkip} onChange={(e) => setAllowSkip(!e.target.checked)} className="mt-1" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Disable question skipping</p>
-                    <p className="text-xs text-muted">Students must answer in order and cannot jump ahead or go back.</p>
-                  </div>
-                </label>
-              </div>
+          <FormSection title="Questions" description="Choose which questions from your bank appear in a session.">
+            <div role="radiogroup" className="grid gap-2 md:grid-cols-3">
+              <ChoiceCard
+                selected={questionSelectionMode === "ALL"}
+                onSelect={() => setQuestionSelectionMode("ALL")}
+                title="Use all questions"
+                description="Every bank item appears in the quiz"
+              />
+              <ChoiceCard
+                selected={questionSelectionMode === "RANDOM"}
+                onSelect={() => setQuestionSelectionMode("RANDOM")}
+                title="Random draw"
+                description="Pick a random subset from the bank"
+              />
+              <ChoiceCard
+                selected={questionSelectionMode === "MANUAL"}
+                onSelect={() => setQuestionSelectionMode("MANUAL")}
+                title="Manual selection"
+                description="You choose which bank items appear"
+              />
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2.5 text-white font-semibold text-sm rounded-xl bg-primary shadow-sm transition disabled:opacity-50 hover:bg-primary/90"
-            >
-              {loading ? "Creating..." : "Create Quiz"}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2.5 border border-border text-muted text-sm rounded-xl hover:bg-surface transition"
-            >
+            {questionSelectionMode === "RANDOM" && (
+              <div className="space-y-5 rounded-lg border border-border bg-surface p-4">
+                <Field label="Questions to draw" hint="Example: if the bank has 20 questions, you can draw only 10.">
+                  <input
+                    type="number"
+                    value={questionDrawCount}
+                    onChange={(e) => setQuestionDrawCount(Math.max(1, Number(e.target.value) || 1))}
+                    min={1}
+                    max={500}
+                    className={cn(inputClass, "h-10 max-w-[180px]")}
+                  />
+                </Field>
+                <Field label="Random draw scope">
+                  <div role="radiogroup" className="grid gap-2 md:grid-cols-2">
+                    <ChoiceCard
+                      selected={randomQuestionScope === "SESSION"}
+                      onSelect={() => setRandomQuestionScope("SESSION")}
+                      title="Same set per session"
+                      description="All students in one session get the same subset"
+                    />
+                    <ChoiceCard
+                      selected={randomQuestionScope === "PARTICIPANT"}
+                      onSelect={() => setRandomQuestionScope("PARTICIPANT")}
+                      title="Different set per student"
+                      description="Each student gets their own random subset"
+                    />
+                  </div>
+                </Field>
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection title="Delivery and integrity" description="Control how the quiz is presented and monitored.">
+            <ToggleRow
+              checked={antiCheatEnabled}
+              onChange={setAntiCheatEnabled}
+              label="Anti-cheat monitoring"
+              description="Flags fullscreen exits, tab switches, right-clicks, clipboard use, and devtools during live sessions."
+            />
+            <div className="border-t border-border/70" />
+            <ToggleRow
+              checked={randomizeQuestions}
+              onChange={setRandomizeQuestions}
+              label="Randomize question order"
+              description="Useful when the quiz uses all or randomly drawn bank items."
+            />
+            <ToggleRow
+              checked={randomizeAnswers}
+              onChange={setRandomizeAnswers}
+              label="Randomize answer choices"
+              description="Answer options appear in a different order for each student."
+            />
+            <div className="border-t border-border/70" />
+            <ToggleRow
+              checked={!allowSkip}
+              onChange={(value) => setAllowSkip(!value)}
+              label="Disable question skipping"
+              description="Students must answer in order and cannot jump ahead or go back."
+            />
+          </FormSection>
+
+          <div className="flex items-center justify-end gap-3 pt-1">
+            <button type="button" onClick={() => router.back()} className={buttonSecondary}>
               Cancel
+            </button>
+            <button type="submit" disabled={loading} className={cn(buttonPrimary, "disabled:opacity-50")}>
+              {loading ? "Creating..." : "Create quiz"}
             </button>
           </div>
         </form>

@@ -62,7 +62,7 @@ export async function createAndSendResetToken(user: {
       <h2 style="margin:0 0 12px;">Reset your QuizPH password</h2>
       <p style="margin:0 0 12px;">Hi ${user.name},</p>
       <p style="margin:0 0 16px;">Click the button below to reset your password:</p>
-      <a href="${resetUrl}" style="display:inline-block;background:#4f46e5;color:#fff;font-weight:700;padding:12px 24px;border-radius:10px;text-decoration:none;font-size:14px;">Reset Password</a>
+      <a href="${resetUrl}" style="display:inline-block;background:#1f4b99;color:#fff;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Reset Password</a>
       <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">This link expires in ${TOKEN_TTL_MINUTES} minutes. If you didn't request this, you can ignore this email.</p>
     </div>
   `;

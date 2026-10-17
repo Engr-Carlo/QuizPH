@@ -1,7 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import PresenceHeartbeat from "@/components/PresenceHeartbeat";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+
+export const viewport: Viewport = {
+  themeColor: "#1F4B99",
+};
 
 export const metadata: Metadata = {
   title: "QuizPH - Smart Quiz Platform",
@@ -14,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <head>
         <link rel="manifest" href="/api/manifest" />
         <meta name="mobile-web-app-capable" content="yes" />

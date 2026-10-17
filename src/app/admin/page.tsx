@@ -2,29 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import LineChart from "@/components/dashboard/LineChart";
+import { AreaChart, Donut, DonutLegend, HBarChart, Sparkline } from "@/components/dashboard/charts";
 import {
+  HeroBanner,
   IconClipboard,
   IconPlay,
   IconPulse,
   IconUsers,
-  LegendItem,
-  PageHeader,
   Panel,
+  SegmentedControl,
   StatCard,
 } from "@/components/dashboard/primitives";
-
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  isActive: boolean;
-  isOnline: boolean;
-  lastSeenAt: string | null;
-  createdAt: string;
-  _count: { quizzes: number; participants: number };
-}
 
 interface ChartPoint {
   label: string;
@@ -57,23 +45,16 @@ interface ComputeData {
 }
 
 interface AdminData {
-  users: UserData[];
   total: number;
   stats: {
     quizCount: number;
     sessionCount: number;
     participantCount: number;
-    archivedSessionCount: number;
     onlineUsers: number;
     teacherCount: number;
     studentCount: number;
     adminCount: number;
-    onlineTeachers: number;
-    onlineStudents: number;
-    onlineAdmins: number;
-    waitingSessionCount: number;
     activeSessionCount: number;
-    endedSessionCount: number;
   };
   charts: {
     usersByDay: ChartPoint[];
@@ -87,20 +68,24 @@ interface AdminData {
   recentActivity: ActivityEvent[];
 }
 
-const SERIES_COLORS = ["var(--primary)", "var(--success)", "var(--warning)", "var(--accent)"];
+const SESSION_STATUS_COLORS: Record<string, string> = {
+  Waiting: "var(--warning)",
+  Active: "var(--success)",
+  Ended: "var(--primary)",
+  Archived: "var(--muted)",
+};
 
 const CATEGORY_COLORS: Record<string, string> = {
-  admin: "#2563EB",
-  session: "#059669",
-  quiz: "#7C3AED",
-  "patch-note": "#D97706",
-  auth: "#DC2626",
-  other: "#6B7280",
+  admin: "var(--primary)",
+  session: "var(--success)",
+  quiz: "var(--accent)",
+  "patch-note": "var(--warning)",
+  auth: "var(--danger)",
+  other: "var(--muted)",
 };
 
 function getTimeAgo(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60_000);
+  const mins = Math.floor((Date.now() - new Date(isoString).getTime()) / 60_000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
@@ -110,123 +95,6 @@ function getTimeAgo(isoString: string): string {
 
 function formatServerTime(ms: number) {
   return ms >= 60_000 ? `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s` : `${(ms / 1000).toFixed(1)}s`;
-}
-
-function RoleDonut({ teachers, students, admins }: { teachers: number; students: number; admins: number }) {
-  const data = [
-    { label: "Teachers", value: teachers, color: "var(--primary)" },
-    { label: "Students", value: students, color: "var(--success)" },
-    { label: "Admins", value: admins, color: "var(--danger)" },
-  ].filter((item) => item.value > 0);
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-
-  if (total === 0) {
-    return <p className="py-6 text-center text-sm text-muted">No user data</p>;
-  }
-
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  let offset = 0;
-  const segments = data.map((item) => {
-    const dash = (item.value / total) * circumference;
-    const segment = { ...item, dash, offset };
-    offset += dash;
-    return segment;
-  });
-
-  return (
-    <div className="flex items-center gap-6">
-      <div className="relative h-28 w-28 flex-shrink-0">
-        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-label="User role distribution">
-          <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="11" style={{ stroke: "var(--border)" }} />
-          {segments.map((segment) => (
-            <circle
-              key={segment.label}
-              cx="50"
-              cy="50"
-              r={radius}
-              fill="none"
-              strokeWidth="11"
-              stroke={segment.color}
-              strokeDasharray={`${segment.dash} ${circumference - segment.dash}`}
-              strokeDashoffset={-segment.offset}
-            />
-          ))}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-semibold tabular-nums text-foreground">{total}</span>
-          <span className="text-[11px] text-muted">users</span>
-        </div>
-      </div>
-      <ul className="min-w-0 flex-1 space-y-2">
-        {data.map((item) => (
-          <li key={item.label} className="flex items-center justify-between gap-3 text-sm">
-            <span className="inline-flex items-center gap-2 text-muted">
-              <span className="h-2 w-2 rounded-full" style={{ background: item.color }} />
-              {item.label}
-            </span>
-            <span className="font-medium tabular-nums text-foreground">{item.value}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function PresenceList({ items }: { items: { label: string; online: number; total: number }[] }) {
-  return (
-    <ul className="space-y-3">
-      {items.map((item, index) => {
-        const percent = item.total > 0 ? (item.online / item.total) * 100 : 0;
-        return (
-          <li key={item.label}>
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="text-muted">{item.label}</span>
-              <span className="font-medium tabular-nums text-foreground">
-                {item.online} <span className="text-muted">/ {item.total} online</span>
-              </span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${percent}%`, background: SERIES_COLORS[index % SERIES_COLORS.length] }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function SessionLifecycle({ items }: { items: ChartPoint[] }) {
-  const total = items.reduce((sum, item) => sum + item.count, 0);
-
-  return (
-    <div>
-      <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
-        {items.map((item, index) => (
-          <div
-            key={item.label}
-            title={`${item.label}: ${item.count}`}
-            style={{ width: `${total ? (item.count / total) * 100 : 0}%`, background: SERIES_COLORS[index % SERIES_COLORS.length] }}
-          />
-        ))}
-      </div>
-      <ul className="mt-4 divide-y divide-border">
-        {items.map((item, index) => (
-          <li key={item.label} className="flex items-center justify-between py-2.5 text-sm">
-            <span className="inline-flex items-center gap-2 text-muted">
-              <span className="h-2 w-2 rounded-full" style={{ background: SERIES_COLORS[index % SERIES_COLORS.length] }} />
-              {item.label}
-            </span>
-            <span className="font-medium tabular-nums text-foreground">{item.count}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-1 text-xs text-muted">{total} sessions in total</p>
-    </div>
-  );
 }
 
 function ComputeUsage() {
@@ -252,6 +120,16 @@ function ComputeUsage() {
   const totalMs = data?.today.totalMs ?? 0;
   const totalCalls = data?.today.totalCalls ?? 0;
   const timeTone = totalMs > 30_000 ? "text-danger" : totalMs > 10_000 ? "text-warning" : "text-success";
+  const categoryItems = data
+    ? Object.entries(data.categories)
+        .sort(([, a], [, b]) => b.totalMs - a.totalMs)
+        .map(([category, value]) => ({
+          label: category.charAt(0).toUpperCase() + category.slice(1),
+          value: Number((value.totalMs / 1000).toFixed(1)),
+          hint: `${value.calls} calls`,
+          color: CATEGORY_COLORS[category] ?? CATEGORY_COLORS.other,
+        }))
+    : [];
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
@@ -300,35 +178,28 @@ function ComputeUsage() {
                 ))}
               </div>
 
-              {Object.keys(data.categories).length > 0 && (
-                <div>
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">By feature</h3>
-                  <ul className="space-y-3">
-                    {Object.entries(data.categories)
-                      .sort(([, a], [, b]) => b.totalMs - a.totalMs)
-                      .map(([category, value]) => {
-                        const pct = totalMs > 0 ? (value.totalMs / totalMs) * 100 : 0;
-                        const color = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.other;
-                        return (
-                          <li key={category}>
-                            <div className="mb-1 flex items-center justify-between text-xs">
-                              <span className="inline-flex items-center gap-2 font-medium capitalize text-foreground">
-                                <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-                                {category}
-                              </span>
-                              <span className="tabular-nums text-muted">
-                                {value.calls} calls · {(value.totalMs / 1000).toFixed(1)}s ({pct.toFixed(0)}%)
-                              </span>
-                            </div>
-                            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                            </div>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              )}
+              <div className="grid gap-8 lg:grid-cols-2">
+                {categoryItems.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Server seconds by feature</h3>
+                    <HBarChart items={categoryItems} formatValue={(v) => `${v}s`} />
+                  </div>
+                )}
+
+                {data.trend.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Server time, last 7 days</h3>
+                    <div className="h-48">
+                      <AreaChart
+                        labels={data.trend.map((t) => t.date.slice(5))}
+                        series={[{ name: "Server time", color: "var(--warning)", values: data.trend.map((t) => Number((t.totalMs / 1000).toFixed(1))) }]}
+                        integer={false}
+                        formatValue={(v) => `${Number(v.toFixed(1))}s`}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {data.today.routes.length > 0 && (
                 <div>
@@ -336,7 +207,7 @@ function ComputeUsage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-border text-left text-xs font-medium text-muted">
+                        <tr className="border-b border-border text-left text-xs text-muted">
                           <th className="pb-2 pr-4 font-medium">Route</th>
                           <th className="pb-2 pr-4 text-right font-medium">Calls</th>
                           <th className="pb-2 pr-4 text-right font-medium">Avg</th>
@@ -391,20 +262,6 @@ function ComputeUsage() {
                 </div>
               )}
 
-              {data.trend.length > 0 && (
-                <div>
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Server time, last 7 days (seconds)</h3>
-                  <div className="h-52">
-                    <LineChart
-                      labels={data.trend.map((t) => t.date.slice(5))}
-                      series={[{ name: "Server time (s)", color: "var(--warning)", values: data.trend.map((t) => Number((t.totalMs / 1000).toFixed(1))) }]}
-                      integer={false}
-                      formatValue={(v) => `${Number(v.toFixed(1))}s`}
-                    />
-                  </div>
-                </div>
-              )}
-
               {data.today.routes.length === 0 && (
                 <p className="py-4 text-center text-sm text-muted">No compute data yet today.</p>
               )}
@@ -419,6 +276,8 @@ function ComputeUsage() {
 export default function AdminDashboard() {
   const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activityMetric, setActivityMetric] = useState<"participants" | "sessions">("participants");
+  const [growthMetric, setGrowthMetric] = useState<"students" | "teachers">("students");
 
   async function fetchData() {
     const res = await fetch("/api/admin/users", { cache: "no-store" });
@@ -459,108 +318,148 @@ export default function AdminDashboard() {
   if (!data) return null;
 
   const { stats, charts } = data;
-  const dayLabels = charts.usersByDay.map((point) => point.label);
+  const roleItems = [
+    { label: "Teachers", value: stats.teacherCount, color: "var(--primary)" },
+    { label: "Students", value: stats.studentCount, color: "var(--success)" },
+    { label: "Admins", value: stats.adminCount, color: "var(--accent)" },
+  ];
+  const lifecycleItems = charts.sessionStatus.map((item) => ({
+    label: item.label,
+    value: item.count,
+    color: SESSION_STATUS_COLORS[item.label] ?? "var(--muted)",
+  }));
+  const lifecycleTotal = lifecycleItems.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <DashboardLayout>
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <PageHeader title="Admin overview" description="Platform-wide summary of accounts, sessions, and activity." />
+        <HeroBanner
+          eyebrow="Administration"
+          title="Platform overview"
+          description={`${stats.onlineUsers} online now · ${stats.activeSessionCount} session${stats.activeSessionCount === 1 ? "" : "s"} running · ${data.total} registered accounts.`}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Online now"
-            value={stats.onlineUsers}
-            hint="Active in the last 2 minutes"
-            icon={<IconPulse />}
-          />
+          <StatCard label="Online now" value={stats.onlineUsers} hint="Active in the last 2 minutes" icon={<IconPulse />} tone="success" />
           <StatCard
             label="Total users"
             value={data.total}
             hint={`${stats.teacherCount} teachers · ${stats.studentCount} students`}
             icon={<IconUsers />}
+            tone="primary"
+            spark={<Sparkline values={charts.usersByDay.map((p) => p.count)} color="var(--primary)" />}
           />
           <StatCard
             label="Sessions run"
             value={stats.sessionCount}
-            hint={`${stats.activeSessionCount} active now`}
+            hint={`${stats.quizCount} quizzes on the platform`}
             icon={<IconPlay />}
+            tone="secondary"
+            spark={<Sparkline values={charts.sessionsByDay.map((p) => p.count)} color="var(--secondary)" />}
           />
           <StatCard
             label="Participants"
             value={stats.participantCount}
-            hint={`${stats.quizCount} quizzes on the platform`}
+            hint="Total quiz entries"
             icon={<IconClipboard />}
+            tone="accent"
+            spark={<Sparkline values={charts.participantsByDay.map((p) => p.count)} color="var(--accent)" />}
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-12">
           <Panel
-            title="Platform activity"
-            subtitle="Last 7 days"
-            className="xl:col-span-2"
+            title="Quiz activity"
+            subtitle="Daily totals, last 7 days"
+            className="lg:col-span-8"
             action={
-              <div className="flex items-center gap-4">
-                <LegendItem color={SERIES_COLORS[0]} label="New users" />
-                <LegendItem color={SERIES_COLORS[1]} label="Sessions" />
-                <LegendItem color={SERIES_COLORS[2]} label="Participants" />
-              </div>
+              <SegmentedControl
+                value={activityMetric}
+                onChange={setActivityMetric}
+                options={[
+                  { value: "participants", label: "Participants" },
+                  { value: "sessions", label: "Sessions" },
+                ]}
+              />
             }
-            bodyClassName="pt-4"
           >
             <div className="h-64">
-              <LineChart
-                labels={dayLabels}
+              <AreaChart
+                labels={charts.sessionsByDay.map((p) => p.label)}
                 series={[
-                  { name: "New users", color: SERIES_COLORS[0], values: charts.usersByDay.map((p) => p.count) },
-                  { name: "Sessions", color: SERIES_COLORS[1], values: charts.sessionsByDay.map((p) => p.count) },
-                  { name: "Participants", color: SERIES_COLORS[2], values: charts.participantsByDay.map((p) => p.count) },
+                  {
+                    name: activityMetric === "participants" ? "Participants" : "Sessions",
+                    color: activityMetric === "participants" ? "var(--accent)" : "var(--secondary)",
+                    values: (activityMetric === "participants" ? charts.participantsByDay : charts.sessionsByDay).map((p) => p.count),
+                  },
                 ]}
               />
             </div>
           </Panel>
 
-          <Panel title="Users" subtitle="Role distribution and live presence">
-            <div className="space-y-6">
-              <RoleDonut teachers={stats.teacherCount} students={stats.studentCount} admins={stats.adminCount} />
-              <div className="border-t border-border pt-4">
-                <PresenceList items={charts.onlineByRole} />
-              </div>
+          <Panel title="Accounts" subtitle="Role mix and who is online" className="lg:col-span-4" bodyClassName="space-y-5">
+            <div className="flex items-center gap-5">
+              <Donut items={roleItems} size={120} centerValue={data.total} centerLabel="users" emptyMessage="No users" />
+              <DonutLegend items={roleItems} />
+            </div>
+            <div className="border-t border-border/70 pt-4">
+              <HBarChart
+                items={charts.onlineByRole.map((item, index) => ({
+                  label: item.label,
+                  value: item.online,
+                  total: item.total,
+                  hint: `of ${item.total} online`,
+                  color: ["var(--accent)", "var(--primary)", "var(--success)"][index % 3],
+                }))}
+              />
             </div>
           </Panel>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-12">
           <Panel
             title="Account growth"
-            subtitle="New accounts, last 7 days"
+            subtitle="New accounts per day"
+            className="lg:col-span-4"
             action={
-              <div className="flex items-center gap-3">
-                <LegendItem color={SERIES_COLORS[0]} label="Teachers" />
-                <LegendItem color={SERIES_COLORS[1]} label="Students" />
-              </div>
+              <SegmentedControl
+                value={growthMetric}
+                onChange={setGrowthMetric}
+                options={[
+                  { value: "students", label: "Students" },
+                  { value: "teachers", label: "Teachers" },
+                ]}
+              />
             }
-            bodyClassName="pt-4"
           >
             <div className="h-56">
-              <LineChart
+              <AreaChart
                 labels={charts.teachersByDay.map((p) => p.label)}
                 series={[
-                  { name: "Teachers", color: SERIES_COLORS[0], values: charts.teachersByDay.map((p) => p.count) },
-                  { name: "Students", color: SERIES_COLORS[1], values: charts.studentsByDay.map((p) => p.count) },
+                  {
+                    name: growthMetric === "students" ? "Students" : "Teachers",
+                    color: growthMetric === "students" ? "var(--success)" : "var(--primary)",
+                    values: (growthMetric === "students" ? charts.studentsByDay : charts.teachersByDay).map((p) => p.count),
+                  },
                 ]}
               />
             </div>
           </Panel>
 
-          <Panel title="Session lifecycle" subtitle="Sessions by status">
-            <SessionLifecycle items={charts.sessionStatus} />
+          <Panel title="Session lifecycle" subtitle="Share of sessions by status" className="lg:col-span-4">
+            <div className="flex h-56 flex-col items-center justify-center gap-5">
+              <Donut items={lifecycleItems} size={128} centerValue={lifecycleTotal} centerLabel="sessions" emptyMessage="No sessions yet" />
+              <div className="flex w-full">
+                <DonutLegend items={lifecycleItems} />
+              </div>
+            </div>
           </Panel>
 
-          <Panel title="Recent activity" subtitle="Sessions and anti-cheat events" bodyClassName="max-h-72 overflow-y-auto">
+          <Panel title="Recent activity" subtitle="Sessions and anti-cheat events" className="lg:col-span-4" bodyClassName="max-h-[19.5rem] overflow-y-auto">
             {data.recentActivity.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted">No recent activity</p>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-border/70">
                 {data.recentActivity.map((event, index) => (
                   <li key={index} className="flex items-start justify-between gap-3 py-2.5 first:pt-0">
                     <div className="flex min-w-0 items-start gap-2.5">

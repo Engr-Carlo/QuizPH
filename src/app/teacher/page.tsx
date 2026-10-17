@@ -1,112 +1,133 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
-import LineChart from "@/components/dashboard/LineChart";
+import { AreaChart, Donut, DonutLegend, Sparkline } from "@/components/dashboard/charts";
+import { CoverArt } from "@/components/dashboard/CoverArt";
 import {
+  HeroBanner,
   IconChevronRight,
-  IconClock,
   IconPlay,
   IconPlus,
-  IconQuestion,
   IconQuiz,
-  PageHeader,
+  IconTarget,
+  IconUsers,
   Panel,
+  SegmentedControl,
   StatCard,
-  buttonPrimary,
-  buttonSecondary,
+  StatusPill,
+  buttonGhostOnPhoto,
+  buttonOnPhoto,
+  type Tone,
 } from "@/components/dashboard/primitives";
 
-interface Quiz {
-  id: string;
-  title: string;
-  description: string | null;
-  timerType: string;
-  duration: number;
-  createdAt: string;
-  _count: { questions: number; sessions: number };
+interface TeacherStats {
+  totals: {
+    quizzes: number;
+    questions: number;
+    sessions: number;
+    liveSessions: number;
+    students: number;
+    attempts: number;
+    completionRate: number | null;
+    avgScore: number | null;
+    violations: number;
+  };
+  months: { label: string; sessions: number; participants: number }[];
+  scoreBands: { label: string; count: number }[];
+  recentSessions: {
+    id: string;
+    code: string;
+    status: "WAITING" | "ACTIVE" | "ENDED";
+    createdAt: string;
+    quizId: string;
+    quizTitle: string;
+    participants: number;
+  }[];
 }
 
-const CHART_QUIZ_LIMIT = 8;
-const RECENT_QUIZ_LIMIT = 5;
+const BAND_COLORS = ["var(--success)", "var(--primary)", "var(--warning)", "var(--danger)"];
 
-function formatDuration(secs: number) {
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return s ? `${m}m ${s}s` : `${m}m`;
-}
+const STATUS_META: Record<TeacherStats["recentSessions"][number]["status"], { label: string; tone: Tone }> = {
+  ACTIVE: { label: "Live", tone: "success" },
+  WAITING: { label: "Waiting", tone: "warning" },
+  ENDED: { label: "Ended", tone: "neutral" },
+};
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+function timeAgo(iso: string) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
 }
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [stats, setStats] = useState<TeacherStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [metric, setMetric] = useState<"participants" | "sessions">("participants");
 
   useEffect(() => {
-    async function loadQuizzes() {
-      try {
-        const res = await fetch("/api/quiz");
-        const payload = await res.json().catch(() => null);
-        if (!res.ok) {
-          setError(payload?.error || "Failed to load quizzes");
-          setQuizzes([]);
-          return;
+    async function load() {
+      let message = "Failed to load dashboard data";
+      // Neon can take a few seconds to wake; one retry hides that from the user.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await fetch("/api/teacher/stats");
+          const payload = await res.json().catch(() => null);
+          if (res.ok) {
+            setStats(payload);
+            setLoading(false);
+            return;
+          }
+          message = payload?.error || message;
+          if (res.status < 500) break;
+        } catch {
+          // network error: fall through to retry
         }
-        setQuizzes(Array.isArray(payload) ? payload : []);
-      } catch {
-        setError("Failed to load quizzes");
-        setQuizzes([]);
-      } finally {
-        setLoading(false);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
+      setError(message);
+      setLoading(false);
     }
-    loadQuizzes();
+    load();
   }, []);
 
-  const metrics = useMemo(() => {
-    const totalQuestions = quizzes.reduce((sum, q) => sum + q._count.questions, 0);
-    const totalSessions = quizzes.reduce((sum, q) => sum + q._count.sessions, 0);
-    const quizzesWithSessions = quizzes.filter((q) => q._count.sessions > 0).length;
-    const avgDurationMins = quizzes.length
-      ? Math.round(quizzes.reduce((sum, q) => sum + q.duration, 0) / quizzes.length / 60)
-      : 0;
-    const avgQuestions = quizzes.length ? Math.round(totalQuestions / quizzes.length) : 0;
-    const mostActive = quizzes.reduce<Quiz | null>(
-      (best, q) => (q._count.sessions > (best?._count.sessions ?? 0) ? q : best),
-      null
-    );
-    return { totalQuestions, totalSessions, quizzesWithSessions, avgDurationMins, avgQuestions, mostActive };
-  }, [quizzes]);
-
-  const newestFirst = useMemo(
-    () => [...quizzes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [quizzes]
-  );
-  const chartQuizzes = useMemo(() => newestFirst.slice(0, CHART_QUIZ_LIMIT).reverse(), [newestFirst]);
-  const recentQuizzes = newestFirst.slice(0, RECENT_QUIZ_LIMIT);
-
   const firstName = session?.user?.name?.split(" ")[0] || "Teacher";
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const now = new Date();
+  const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
+  const today = now.toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric" });
+
+  const totals = stats?.totals;
+  const dash = (value: number | string | null | undefined) => (loading || value === null || value === undefined ? "–" : value);
+  const bandItems = (stats?.scoreBands ?? []).map((band, index) => ({ ...band, value: band.count, color: BAND_COLORS[index] }));
+  const hasQuizzes = (totals?.quizzes ?? 0) > 0;
 
   return (
     <DashboardLayout>
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 lg:h-[calc(100dvh-8.5rem)] lg:min-h-[540px]">
-        <PageHeader
-          title="Dashboard"
-          description={`${greeting}, ${firstName}. Here is an overview of your quizzes and sessions.`}
+      <div className="mx-auto flex max-w-7xl flex-col gap-5 lg:h-[calc(100dvh-8.5rem)] lg:min-h-[560px]">
+        <HeroBanner
+          eyebrow={today}
+          title={`${greeting}, ${firstName}`}
+          description={
+            totals?.liveSessions
+              ? `${totals.liveSessions} session${totals.liveSessions === 1 ? " is" : "s are"} live right now.`
+              : "Here is how your classes are doing."
+          }
           actions={
             <>
-              <Link href="/teacher/my-quizzes" className={buttonSecondary}>
+              <Link href="/teacher/my-quizzes" className={buttonGhostOnPhoto}>
                 My quizzes
               </Link>
-              <Link href="/teacher/quiz/create" className={buttonPrimary}>
+              <Link href="/teacher/quiz/create" className={buttonOnPhoto}>
                 <IconPlus />
                 Create quiz
               </Link>
@@ -120,95 +141,140 @@ export default function TeacherDashboard() {
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Total quizzes"
-            value={loading ? "–" : quizzes.length}
-            hint={loading ? undefined : `${metrics.quizzesWithSessions} with at least one session`}
+            label="Quizzes"
+            value={dash(totals?.quizzes)}
+            hint={totals ? `${totals.questions} questions in your library` : undefined}
             icon={<IconQuiz />}
-          />
-          <StatCard
-            label="Questions"
-            value={loading ? "–" : metrics.totalQuestions}
-            hint={loading ? undefined : `${metrics.avgQuestions} per quiz on average`}
-            icon={<IconQuestion />}
+            tone="primary"
           />
           <StatCard
             label="Sessions run"
-            value={loading ? "–" : metrics.totalSessions}
-            hint={loading ? undefined : metrics.mostActive ? `Most active: ${metrics.mostActive.title}` : "No sessions yet"}
+            value={dash(totals?.sessions)}
+            hint={totals ? `${totals.liveSessions} live now` : undefined}
             icon={<IconPlay />}
+            tone="secondary"
+            spark={stats && <Sparkline values={stats.months.map((d) => d.sessions)} color="var(--secondary)" />}
           />
           <StatCard
-            label="Average duration"
-            value={loading ? "–" : `${metrics.avgDurationMins}m`}
-            hint={loading ? undefined : "Per quiz"}
-            icon={<IconClock />}
+            label="Students reached"
+            value={dash(totals?.students)}
+            hint={totals ? `${totals.attempts} attempts total` : undefined}
+            icon={<IconUsers />}
+            tone="accent"
+            spark={stats && <Sparkline values={stats.months.map((d) => d.participants)} color="var(--accent)" />}
+          />
+          <StatCard
+            label="Average score"
+            value={totals?.avgScore == null ? dash(null) : `${totals.avgScore}%`}
+            hint={
+              totals
+                ? `${totals.completionRate ?? 0}% completion · ${totals.violations} flag${totals.violations === 1 ? "" : "s"}`
+                : undefined
+            }
+            icon={<IconTarget />}
+            tone="success"
           />
         </div>
 
-        {loading ? (
-          <div className="grid min-h-[18rem] flex-1 gap-4 lg:grid-cols-3 lg:min-h-0">
-            <div className="animate-pulse rounded-xl border border-border bg-white lg:col-span-2" />
-            <div className="animate-pulse rounded-xl border border-border bg-white" />
-          </div>
-        ) : quizzes.length === 0 ? (
+        {!loading && !error && !hasQuizzes ? (
           <Panel title="Get started" className="flex-1" bodyClassName="flex items-center justify-center">
             <div className="max-w-sm py-8 text-center">
               <h3 className="text-base font-semibold text-foreground">You have not created a quiz yet</h3>
               <p className="mt-1.5 text-sm text-muted">
                 Create your first quiz to run live, monitored sessions with your students.
               </p>
-              <Link href="/teacher/quiz/create" className={`${buttonPrimary} mt-5`}>
+              <Link
+                href="/teacher/quiz/create"
+                className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-primary-dark"
+              >
                 <IconPlus />
                 Create quiz
               </Link>
             </div>
           </Panel>
         ) : (
-          <div className="grid flex-1 gap-4 lg:min-h-0 lg:grid-cols-3">
+          <div className="grid flex-1 gap-4 lg:min-h-0 lg:grid-cols-12">
             <Panel
-              title="Sessions per quiz"
-              subtitle={`Your ${chartQuizzes.length} most recent quizzes, oldest to newest`}
-              className="min-h-[18rem] lg:col-span-2 lg:min-h-0"
-              bodyClassName="pt-4"
+              title="Activity"
+              subtitle="Monthly totals, last 12 months"
+              className="lg:col-span-5"
+              bodyClassName="relative"
+              action={
+                <SegmentedControl
+                  value={metric}
+                  onChange={setMetric}
+                  options={[
+                    { value: "participants", label: "Students" },
+                    { value: "sessions", label: "Sessions" },
+                  ]}
+                />
+              }
             >
-              <LineChart
-                labels={chartQuizzes.map((q) => q.title)}
-                series={[{ name: "Sessions", color: "var(--primary)", values: chartQuizzes.map((q) => q._count.sessions) }]}
-                emptyMessage="No quizzes to display"
+              <div className="h-60 lg:absolute lg:inset-x-5 lg:inset-y-4 lg:h-auto">
+                <AreaChart
+                  labels={(stats?.months ?? []).map((d) => d.label)}
+                  series={[
+                    {
+                      name: metric === "participants" ? "Students" : "Sessions",
+                      color: metric === "participants" ? "var(--accent)" : "var(--secondary)",
+                      values: (stats?.months ?? []).map((d) => d[metric]),
+                    },
+                  ]}
+                  emptyMessage={loading ? "Loading…" : "No activity yet"}
+                />
+              </div>
+            </Panel>
+
+            <Panel title="Score distribution" subtitle="Completed attempts" className="lg:col-span-3" bodyClassName="flex flex-col items-center gap-5">
+              <Donut
+                items={bandItems}
+                size={128}
+                centerValue={totals?.avgScore == null ? "–" : `${totals.avgScore}%`}
+                centerLabel="average"
+                emptyMessage={loading ? "Loading…" : "No completed attempts yet"}
               />
+              <div className="flex w-full">
+                <DonutLegend items={bandItems} />
+              </div>
             </Panel>
 
             <Panel
-              title="Recent quizzes"
-              subtitle="Latest additions to your library"
-              bodyClassName="overflow-y-auto px-2 pt-2"
-              action={
-                <Link href="/teacher/my-quizzes" className="text-xs font-medium text-primary hover:underline">
-                  View all
-                </Link>
-              }
+              title="Recent sessions"
+              subtitle="Latest activity across your quizzes"
+              className="lg:col-span-4"
+              bodyClassName="overflow-y-auto px-2 py-2"
             >
-              <ul className="divide-y divide-border">
-                {recentQuizzes.map((quiz) => (
-                  <li key={quiz.id}>
-                    <Link
-                      href={`/teacher/quiz/${quiz.id}`}
-                      className="group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 transition hover:bg-surface"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{quiz.title}</p>
-                        <p className="mt-0.5 truncate text-xs text-muted">
-                          {quiz._count.questions} questions · {quiz._count.sessions} sessions · {formatDuration(quiz.duration)}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-muted">{formatDate(quiz.createdAt)}</p>
-                      </div>
-                      <span className="flex-shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-foreground">
-                        <IconChevronRight />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {stats && stats.recentSessions.length === 0 ? (
+                <p className="px-3 py-8 text-center text-sm text-muted">No sessions yet. Start one from any quiz.</p>
+              ) : (
+                <ul className="divide-y divide-border/70">
+                  {(stats?.recentSessions ?? []).map((row) => {
+                    const meta = STATUS_META[row.status];
+                    const href =
+                      row.status === "ENDED"
+                        ? `/teacher/quiz/${row.quizId}/results/${row.id}`
+                        : `/teacher/quiz/${row.quizId}/monitor/${row.id}`;
+                    return (
+                      <li key={row.id}>
+                        <Link href={href} className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-surface">
+                          <CoverArt seed={row.quizId} className="h-10 w-10 flex-shrink-0 rounded-lg" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">{row.quizTitle}</p>
+                            <p className="mt-0.5 truncate text-xs text-muted">
+                              {row.status !== "ENDED" && <span className="mr-1.5 font-mono">{row.code}</span>}
+                              {row.participants} student{row.participants === 1 ? "" : "s"} · {timeAgo(row.createdAt)}
+                            </p>
+                          </div>
+                          <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
+                          <span className="flex-shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-foreground">
+                            <IconChevronRight />
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </Panel>
           </div>
         )}

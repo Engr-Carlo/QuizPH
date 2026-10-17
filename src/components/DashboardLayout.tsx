@@ -210,17 +210,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [session?.user]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] lg:flex">
+    <div className="min-h-screen bg-canvas lg:flex">
 
       {/* ── Mobile top bar ── */}
-      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950 lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-ink lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href={homeHref} className="flex items-center gap-2.5">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
-              style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#2F66B5]"
             >
-              <span className="text-white font-black text-sm">Q</span>
+              <span className="text-white font-bold text-sm">Q</span>
             </div>
             <div>
               <span className="block text-sm font-extrabold text-white tracking-tight">QuizPH</span>
@@ -255,7 +254,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Sidebar ── */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-[86vw] max-w-[320px] flex-col border-r border-slate-800 bg-slate-950 shadow-2xl transition-transform duration-300 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none",
+          "fixed inset-y-0 left-0 z-40 flex w-[86vw] max-w-[320px] flex-col border-r border-white/10 bg-ink shadow-2xl transition-transform duration-300 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none",
           mobileNavOpen ? "translate-x-0" : "-translate-x-full",
           "lg:flex"
         )}
@@ -264,20 +263,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="px-5 pt-6 pb-5">
           <Link href={homeHref} className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
-              style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)" }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#2F66B5]"
             >
-              <span className="text-white font-black text-sm">Q</span>
+              <span className="text-white font-bold text-sm">Q</span>
             </div>
             <div>
-              <span className="block text-base font-extrabold text-white tracking-tight">QuizPH</span>
+              <span className="block text-base font-semibold text-white tracking-tight">QuizPH</span>
               <span className="block text-[10px] font-medium text-slate-500 leading-tight">Quiz sessions for focus</span>
             </div>
           </Link>
         </div>
 
         {/* Divider */}
-        <div className="mx-4 mb-2 h-px bg-slate-800/60" />
+        <div className="mx-4 mb-3 h-px bg-white/10" />
+        <p className="px-6 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Workspace</p>
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
@@ -291,11 +290,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={cn(
                   "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150",
                   isActive
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+                    ? "bg-white/10 text-white"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
                 )}
               >
-                <span className={cn("flex-shrink-0", isActive ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300")}>
+                <span className={cn("flex-shrink-0", isActive ? "text-[#8DB4F0]" : "text-slate-500 group-hover:text-slate-300")}>
                   <Icon />
                 </span>
                 <span>{label}</span>
@@ -306,7 +305,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* User section */}
         <div className="mx-4 mb-4 mt-2">
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-3">
+          <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3">
             <div className="flex items-center gap-2.5 min-w-0 mb-2.5">
               {session?.user?.avatar ? (
                 <img

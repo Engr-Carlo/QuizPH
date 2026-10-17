@@ -543,7 +543,7 @@ export default function QuizDetailPage() {
   async function handleDeleteQuiz() {
     if (!confirm("Are you sure you want to delete this quiz? This cannot be undone.")) return;
     const res = await fetch(`/api/quiz/${quizId}`, { method: "DELETE" });
-    if (res.ok) router.push("/teacher");
+    if (res.ok) router.push("/teacher/my-quizzes");
   }
 
   function copyCode(code: string) {
@@ -589,7 +589,7 @@ export default function QuizDetailPage() {
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted mb-6">
-        <Link href="/teacher" className="hover:text-foreground transition">My Quizzes</Link>
+        <Link href="/teacher/my-quizzes" className="hover:text-foreground transition">My Quizzes</Link>
         <span>/</span>
         <span className="text-foreground font-medium truncate max-w-[200px]">{quiz.title}</span>
       </div>
