@@ -119,6 +119,14 @@ function IconMegaphone() {
     </svg>
   );
 }
+function IconAlertTriangle() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5 2.8 18.2A1.7 1.7 0 0 0 4.3 21h15.4a1.7 1.7 0 0 0 1.5-2.8L12 3.5z" />
+      <path d="M12 9v4" /><path d="M12 17h.01" />
+    </svg>
+  );
+}
 
 // ── Nav config ──────────────────────────────────────────────────────────────
 type NavItem = { href: string; label: string; icon: () => React.ReactElement; matchPrefix?: boolean };
@@ -127,6 +135,7 @@ const teacherNav: NavItem[] = [
   { href: "/teacher", label: "Dashboard", icon: IconHome },
   { href: "/teacher/my-quizzes", label: "My Quizzes", icon: IconGrid },
   { href: "/teacher/quiz/create", label: "Create Quiz", icon: IconPlusCircle },
+  { href: "/report-bug", label: "Report Bug", icon: IconAlertTriangle },
   { href: "/guide", label: "Guide", icon: IconBook },
   { href: "/settings", label: "Settings", icon: IconSettings },
 ];
@@ -136,11 +145,13 @@ const adminNav: NavItem[] = [
   { href: "/admin/quizzes", label: "Quizzes", icon: IconClipboard, matchPrefix: true },
   { href: "/admin/sessions", label: "Sessions", icon: IconPlay, matchPrefix: true },
   { href: "/admin/violations", label: "Violations", icon: IconShield, matchPrefix: true },
+  { href: "/admin/bug-reports", label: "Bug Reports", icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/patch-notes", label: "Patch Notes", icon: IconMegaphone, matchPrefix: true },
 ];
 const studentNav: NavItem[] = [
   { href: "/student", label: "Dashboard", icon: IconHome, matchPrefix: true },
   { href: "/student/join", label: "Join a Quiz", icon: IconTarget },
+  { href: "/report-bug", label: "Report Bug", icon: IconAlertTriangle },
   { href: "/guide", label: "Guide", icon: IconBook },
   { href: "/settings", label: "Settings", icon: IconSettings },
 ];

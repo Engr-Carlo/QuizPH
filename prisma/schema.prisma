@@ -52,6 +52,19 @@ enum ViolationType {
   SCREENSHOT_ATTEMPT
 }
 
+enum BugReportCategory {
+  BUG
+  IMPROVEMENT
+  DISPUTE
+}
+
+enum BugReportStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
 model User {
   id                 String    @id @default(cuid())
   name               String
@@ -73,6 +86,7 @@ model User {
   verificationCodes EmailVerificationCode[]
   passwordResetTokens PasswordResetToken[]
   patchNoteReads    PatchNoteRead[]
+  bugReports        BugReport[]
   routeLogUsers     RouteLogUser[]
 
   @@index([lastSeenAt])
@@ -280,6 +294,28 @@ model PatchNoteRead {
   @@unique([userId, patchNoteId])
   @@index([userId])
   @@index([patchNoteId])
+}
+
+model BugReport {
+  id             String            @id @default(cuid())
+  title          String
+  category       BugReportCategory @default(BUG)
+  description    String
+  expectedBehavior String?
+  steps          String?
+  screenshotDataUrl String?
+  screenshotName  String?
+  status         BugReportStatus   @default(OPEN)
+  adminNote      String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  resolvedAt     DateTime?
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status, createdAt])
 }
 
 // Tracks compute cost per API route per day (daily aggregate upsert — single row per route per day)
