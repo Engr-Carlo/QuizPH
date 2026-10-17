@@ -36,45 +36,53 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const title = String(body?.title ?? "").trim();
-  const category = String(body?.category ?? "BUG").trim().toUpperCase();
-  const description = String(body?.description ?? "").trim();
-  const expectedBehavior = String(body?.expectedBehavior ?? "").trim();
-  const steps = String(body?.steps ?? "").trim();
-  const screenshotDataUrl = typeof body?.screenshotDataUrl === "string"
-    ? body.screenshotDataUrl.trim()
-    : "";
-  const screenshotName = typeof body?.screenshotName === "string"
-    ? body.screenshotName.trim()
-    : "";
+  try {
+    const body = await req.json().catch(() => ({}));
+    const title = String(body?.title ?? "").trim();
+    const category = String(body?.category ?? "BUG").trim().toUpperCase();
+    const description = String(body?.description ?? "").trim();
+    const expectedBehavior = String(body?.expectedBehavior ?? "").trim();
+    const steps = String(body?.steps ?? "").trim();
+    const screenshotDataUrl = typeof body?.screenshotDataUrl === "string"
+      ? body.screenshotDataUrl.trim()
+      : "";
+    const screenshotName = typeof body?.screenshotName === "string"
+      ? body.screenshotName.trim()
+      : "";
 
-  if (!title || !description) {
+    if (!title || !description) {
+      return NextResponse.json(
+        { error: "Title and description are required." },
+        { status: 400 }
+      );
+    }
+
+    if (!VALID_CATEGORIES.has(category)) {
+      return NextResponse.json(
+        { error: "Invalid report category." },
+        { status: 400 }
+      );
+    }
+
+    const report = await prisma.bugReport.create({
+      data: {
+        userId: session.user.id,
+        title,
+        category: category as "BUG" | "IMPROVEMENT" | "DISPUTE",
+        description,
+        expectedBehavior: expectedBehavior || null,
+        steps: steps || null,
+        screenshotDataUrl: screenshotDataUrl || null,
+        screenshotName: screenshotName || null,
+      },
+    });
+
+    return NextResponse.json(report, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create bug report:", error);
     return NextResponse.json(
-      { error: "Title and description are required." },
-      { status: 400 }
+      { error: "Unable to save your bug report right now. Please try again in a moment." },
+      { status: 500 }
     );
   }
-
-  if (!VALID_CATEGORIES.has(category)) {
-    return NextResponse.json(
-      { error: "Invalid report category." },
-      { status: 400 }
-    );
-  }
-
-  const report = await prisma.bugReport.create({
-    data: {
-      userId: session.user.id,
-      title,
-      category: category as "BUG" | "IMPROVEMENT" | "DISPUTE",
-      description,
-      expectedBehavior: expectedBehavior || null,
-      steps: steps || null,
-      screenshotDataUrl: screenshotDataUrl || null,
-      screenshotName: screenshotName || null,
-    },
-  });
-
-  return NextResponse.json(report, { status: 201 });
 }
