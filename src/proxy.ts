@@ -48,5 +48,5 @@ export default auth((req) => {
 
 // API routes enforce auth themselves, so skipping them here saves one proxy invocation per API call.
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|json|webmanifest|js|css)$).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|json|webmanifest|js|css|mp4|webm)$).*)"],
 };

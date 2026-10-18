@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import PatchNoteModal from "@/components/PatchNoteModal";
+import WelcomeVideoModal from "@/components/WelcomeVideoModal";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -182,6 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [patchNote, setPatchNote] = useState<{ id: string; title: string; body: string } | null>(null);
+  const [patchNoteChecked, setPatchNoteChecked] = useState(false);
   const hasFetchedPatchNote = useRef(false);
   const role = session?.user?.role;
   const navItems =
@@ -206,7 +208,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setPatchNote(data.note);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setPatchNoteChecked(true));
   }, [session?.user]);
 
   return (
@@ -390,6 +393,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           body={patchNote.body}
           onDismiss={() => setPatchNote(null)}
         />
+      )}
+
+      {patchNoteChecked && !patchNote && session?.user?.id && (
+        <WelcomeVideoModal userId={session.user.id} />
       )}
     </div>
   );

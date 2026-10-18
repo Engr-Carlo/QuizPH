@@ -210,6 +210,21 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Promo video */}
+      <section className="py-16 px-6 border-t border-slate-100 bg-slate-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">See QuizPH in action</h2>
+          <p className="text-slate-500 text-sm mb-8">A quick tour from creating a quiz to reviewing live results.</p>
+          <video
+            className="w-full aspect-video rounded-2xl border border-slate-200 shadow-xl bg-slate-900"
+            src="/quizph-promo.mp4"
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </div>
+      </section>
+
       {/* Features */}
       <section className="py-20 px-6 border-t border-slate-100 bg-slate-50">
         <div className="max-w-6xl mx-auto">
