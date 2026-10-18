@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 import { getAvatarUrl, normalizeAvatarId } from "@/lib/avatar-presets";
 import { CoverArt } from "@/components/dashboard/CoverArt";
+import { DashboardVideoCard } from "@/components/dashboard/VideoCard";
 import { HERO_PHOTO } from "@/components/dashboard/primitives";
 
 interface HistoryEntry {
@@ -151,6 +152,11 @@ export default function StudentDashboard() {
             </div>
           </div>
         </section>
+
+        <DashboardVideoCard
+          title="How it works"
+          description="Watch the quick walkthrough for joining, answering, and checking results."
+        />
 
         <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm sm:p-6">

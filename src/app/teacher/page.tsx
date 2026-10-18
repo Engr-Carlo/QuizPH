@@ -22,6 +22,7 @@ import {
   buttonOnPhoto,
   type Tone,
 } from "@/components/dashboard/primitives";
+import { DashboardVideoCard } from "@/components/dashboard/VideoCard";
 
 interface TeacherStats {
   totals: {
@@ -175,6 +176,11 @@ export default function TeacherDashboard() {
             tone="success"
           />
         </div>
+
+        <DashboardVideoCard
+          title="Product overview"
+          description="Watch a brief tour of how teachers create and monitor quizzes."
+        />
 
         {!loading && !error && !hasQuizzes ? (
           <Panel title="Get started" className="flex-1" bodyClassName="flex items-center justify-center">
