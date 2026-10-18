@@ -69,7 +69,8 @@ export default function StudentDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-5xl space-y-5">
+      <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <div className="min-w-0 space-y-5">
 
         {/* Profile card */}
         <section className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
@@ -100,7 +101,7 @@ export default function StudentDashboard() {
           <img src={HERO_PHOTO} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-ink/95 via-ink/85 to-ink/50" />
           <div className="relative px-6 py-7 sm:px-8 sm:py-9">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
               <div className="max-w-lg">
                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-white/60 mb-2">Student space</p>
                 <h1 className="text-3xl sm:text-4xl font-semibold text-white leading-tight tracking-tight">
@@ -125,7 +126,7 @@ export default function StudentDashboard() {
 
               {/* Real stats from history — only shown if we have history */}
               {history.length > 0 ? (
-                <div className="flex gap-3 lg:flex-col lg:gap-2 flex-shrink-0">
+                <div className="flex gap-3 xl:flex-col xl:gap-2 flex-shrink-0">
                   {(() => {
                     const finished = history.filter(e => e.isFinished);
                     const avgPct = finished.length > 0
@@ -136,7 +137,7 @@ export default function StudentDashboard() {
                       { label: "Completed", value: finished.length },
                       ...(avgPct !== null ? [{ label: "Avg score", value: `${avgPct}%` }] : []),
                     ].map(({ label, value }) => (
-                      <div key={label} className="rounded-lg border border-white/15 bg-white/10 backdrop-blur-sm px-4 py-3 min-w-[90px] lg:min-w-0 text-center">
+                      <div key={label} className="rounded-lg border border-white/15 bg-white/10 backdrop-blur-sm px-4 py-3 min-w-[90px] xl:min-w-0 text-center">
                         <div className="text-2xl font-semibold text-white tabular-nums leading-none">{value}</div>
                         <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/60 mt-1.5">{label}</div>
                       </div>
@@ -153,12 +154,7 @@ export default function StudentDashboard() {
           </div>
         </section>
 
-        <DashboardVideoCard
-          title="How it works"
-          description="Watch the quick walkthrough for joining, answering, and checking results."
-        />
-
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="grid gap-4">
           <div className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-5">
               <div>
@@ -178,23 +174,6 @@ export default function StudentDashboard() {
                   </span>
                   <p className="mt-3 text-sm font-bold text-foreground">{title}</p>
                   <p className="mt-1 text-xs leading-5 text-muted">{desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-foreground mb-0.5">What to expect</h2>
-            <p className="text-xs text-muted mb-5">On mobile, it&apos;s even better</p>
-            <div className="space-y-2.5">
-              {[
-                { n: "01", text: "Timer and progress stay visible throughout." },
-                { n: "02", text: "Large tap targets — easy one-hand navigation." },
-                { n: "03", text: "Controls pinned near your thumb for speed." },
-              ].map(({ n, text }) => (
-                <div key={n} className="flex items-start gap-3 rounded-xl bg-surface/60 px-3.5 py-3">
-                  <span className="text-[10px] font-black text-primary/60 w-5 flex-shrink-0 mt-0.5 tabular-nums">{n}</span>
-                  <p className="text-xs leading-5 text-muted">{text}</p>
                 </div>
               ))}
             </div>
@@ -266,6 +245,31 @@ export default function StudentDashboard() {
             </div>
           </section>
         )}
+      </div>
+
+      <aside className="min-w-0 space-y-5 lg:sticky lg:top-[78px]">
+        <DashboardVideoCard
+          title="How it works"
+          description="A quick walkthrough of joining and answering."
+        />
+
+        <section className="rounded-xl border border-border bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-foreground">What to expect</h2>
+          <p className="mt-0.5 mb-4 text-xs text-muted">On mobile, it&apos;s even better</p>
+          <div className="space-y-2">
+            {[
+              { n: "01", text: "Timer and progress stay visible throughout." },
+              { n: "02", text: "Large tap targets — easy one-hand navigation." },
+              { n: "03", text: "Controls pinned near your thumb for speed." },
+            ].map(({ n, text }) => (
+              <div key={n} className="flex items-start gap-3 rounded-lg bg-surface/60 px-3 py-2.5">
+                <span className="mt-0.5 w-5 flex-shrink-0 text-[10px] font-bold tabular-nums text-primary/70">{n}</span>
+                <p className="text-xs leading-5 text-muted">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </aside>
       </div>
     </DashboardLayout>
   );

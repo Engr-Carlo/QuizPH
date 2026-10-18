@@ -177,13 +177,10 @@ export default function TeacherDashboard() {
           />
         </div>
 
-        <DashboardVideoCard
-          title="Product overview"
-          description="Watch a brief tour of how teachers create and monitor quizzes."
-        />
-
+        <div className="grid flex-1 gap-4 lg:min-h-0 lg:grid-cols-12">
+          <div className="grid gap-4 lg:col-span-8 lg:min-h-0 lg:grid-cols-8">
         {!loading && !error && !hasQuizzes ? (
-          <Panel title="Get started" className="flex-1" bodyClassName="flex items-center justify-center">
+          <Panel title="Get started" className="lg:col-span-8" bodyClassName="flex items-center justify-center">
             <div className="max-w-sm py-8 text-center">
               <h3 className="text-base font-semibold text-foreground">You have not created a quiz yet</h3>
               <p className="mt-1.5 text-sm text-muted">
@@ -199,7 +196,7 @@ export default function TeacherDashboard() {
             </div>
           </Panel>
         ) : (
-          <div className="grid flex-1 gap-4 lg:min-h-0 lg:grid-cols-12">
+          <>
             <Panel
               title="Activity"
               subtitle="Monthly totals, last 12 months"
@@ -243,11 +240,19 @@ export default function TeacherDashboard() {
                 <DonutLegend items={bandItems} />
               </div>
             </Panel>
+          </>
+        )}
+          </div>
 
+          <div className="flex flex-col gap-4 lg:col-span-4 lg:min-h-0">
+            <DashboardVideoCard
+              title="Product tour"
+              description="See how quizzes, sessions and monitoring fit together."
+            />
             <Panel
               title="Recent sessions"
               subtitle="Latest activity across your quizzes"
-              className="lg:col-span-4"
+              className="min-h-[200px] flex-1"
               bodyClassName="overflow-y-auto px-2 py-2"
             >
               {stats && stats.recentSessions.length === 0 ? (
@@ -283,7 +288,7 @@ export default function TeacherDashboard() {
               )}
             </Panel>
           </div>
-        )}
+        </div>
       </div>
     </DashboardLayout>
   );

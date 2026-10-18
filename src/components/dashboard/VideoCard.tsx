@@ -1,51 +1,37 @@
 "use client";
 
 import { useRef, useState } from "react";
-
-type DashboardVideoCardProps = {
-  title: string;
-  description?: string;
-};
+import { cn } from "@/lib/utils";
 
 export function DashboardVideoCard({
   title,
-  description = "Watch a short tour of the product flow and the student experience.",
-}: DashboardVideoCardProps) {
+  description,
+  className,
+}: {
+  title: string;
+  description?: string;
+  className?: string;
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const handlePlayClick = async () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    try {
-      if (video.paused) {
-        await video.play();
-      } else {
-        video.pause();
-      }
-    } catch {
-      // Browser may block autoplay; leave the user to click the native controls.
-    }
-  };
+  function play() {
+    videoRef.current?.play().catch(() => {});
+  }
 
   return (
-    <section className="mx-auto w-full max-w-2xl rounded-xl border border-border bg-white p-3 shadow-sm sm:p-4">
-      <div className="mb-2.5 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-foreground">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted">{description}</p>
-        </div>
-        <span className="inline-flex items-center rounded-full border border-border bg-surface px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
-          Video
-        </span>
+    <section className={cn("rounded-xl border border-border bg-white p-3 shadow-sm", className)}>
+      <div className="mb-2.5 px-1">
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-border bg-slate-950 shadow-sm">
+      <div className="group relative aspect-video overflow-hidden rounded-lg bg-ink">
         <video
           ref={videoRef}
-          className="block w-full max-h-[220px] object-cover"
+          className="absolute inset-0 h-full w-full object-contain"
           src="/quizph-promo.mp4"
+          controls={isPlaying}
           playsInline
           preload="metadata"
           onPlay={() => setIsPlaying(true)}
@@ -55,13 +41,13 @@ export function DashboardVideoCard({
         {!isPlaying && (
           <button
             type="button"
-            onClick={handlePlayClick}
+            onClick={play}
             aria-label="Play video"
-            className="absolute inset-0 flex items-center justify-center bg-slate-950/20 transition hover:bg-slate-950/10"
+            className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-ink/60 via-ink/10 to-transparent"
           >
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FF0033] shadow-[0_8px_28px_rgba(255,0,51,0.45)] ring-4 ring-white/20">
-              <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-white" aria-hidden="true">
-                <path d="M8 5v14l11-7-11-7z" />
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 text-ink shadow-lg ring-8 ring-white/20 transition duration-200 group-hover:scale-105 group-hover:bg-white">
+              <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z" />
               </svg>
             </span>
           </button>
