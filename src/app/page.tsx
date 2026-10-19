@@ -218,6 +218,7 @@ export default function Home() {
           <video
             className="w-full aspect-video rounded-2xl border border-slate-200 shadow-xl bg-slate-900"
             src="/quizph-promo.mp4"
+            poster="/quizph-promo-thumb.png"
             controls
             playsInline
             preload="metadata"

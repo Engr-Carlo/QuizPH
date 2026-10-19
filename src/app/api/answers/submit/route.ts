@@ -25,12 +25,19 @@ export async function POST(req: Request) {
 
     // Idempotent: if already finished, return existing state without side effects
     if (participant.isFinished) {
+      if (!participant.finishedAt) {
+        const repaired = await prisma.participant.update({
+          where: { id: participantId },
+          data: { finishedAt: new Date() },
+        });
+        return NextResponse.json(repaired);
+      }
       return NextResponse.json(participant);
     }
 
     const updated = await prisma.participant.update({
       where: { id: participantId },
-      data: { isFinished: true },
+      data: { isFinished: true, finishedAt: new Date() },
     });
 
     await pusherServer.trigger(

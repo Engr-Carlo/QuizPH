@@ -181,6 +181,7 @@ export async function GET(
           id: true,
           score: true,
           isFinished: true,
+          finishedAt: true,
           joinedAt: true,
           quizStartedAt: true,
           lastQuestionIndex: true,

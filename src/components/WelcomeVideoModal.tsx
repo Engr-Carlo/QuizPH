@@ -56,6 +56,7 @@ export default function WelcomeVideoModal({ userId }: { userId: string }) {
           <video
             className="w-full aspect-video"
             src="/quizph-promo.mp4"
+            poster="/quizph-promo-thumb.png"
             controls
             autoPlay
             muted

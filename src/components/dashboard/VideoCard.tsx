@@ -97,6 +97,7 @@ export function DashboardVideoCard({
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-contain"
           src="/quizph-promo.mp4"
+          poster="/quizph-promo-thumb.png"
           controls={isPlaying}
           playsInline
           preload="metadata"

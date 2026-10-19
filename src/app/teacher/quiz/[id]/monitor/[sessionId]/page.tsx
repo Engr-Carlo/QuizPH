@@ -21,6 +21,8 @@ interface Participant {
   id: string;
   score: number;
   isFinished: boolean;
+  finishedAt: string | null;
+  quizStartedAt: string | null;
   timeLeft: number;
   timerEndsAt: string | null;
   user: { name: string; email: string };
@@ -70,6 +72,24 @@ function getLiveTimeLeft(participant: Participant) {
   }
 
   return Math.max(0, Math.ceil((new Date(participant.timerEndsAt).getTime() - Date.now()) / 1000));
+}
+
+function formatCompletionDuration(participant: Participant) {
+  if (!participant.isFinished || !participant.quizStartedAt || !participant.finishedAt) {
+    return "—";
+  }
+
+  const startedAt = new Date(participant.quizStartedAt).getTime();
+  const finishedAt = new Date(participant.finishedAt).getTime();
+  const totalSeconds = Math.max(0, Math.round((finishedAt - startedAt) / 1000));
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -546,6 +566,7 @@ export default function MonitorPage() {
                     const vCount = p.violations.length;
                     const progress = totalQ > 0 ? (p.answers.length / totalQ) * 100 : 0;
                     const timeLeft = getLiveTimeLeft(p);
+                    const completionDuration = formatCompletionDuration(p);
 
                     return (
                       <button
@@ -606,6 +627,13 @@ export default function MonitorPage() {
                             {p.isFinished ? "Done" : formatTime(timeLeft)}
                           </span>
                         </div>
+
+                        {p.isFinished && completionDuration !== "—" && (
+                          <div className="mb-2 flex items-center justify-between rounded-xl bg-success/8 px-3 py-2 text-[11px] font-semibold text-success">
+                            <span>Finished in</span>
+                            <span>{completionDuration}</span>
+                          </div>
+                        )}
 
                         {/* Violation badges */}
                         {vCount > 0 ? (
@@ -735,6 +763,7 @@ export default function MonitorPage() {
                   { label: "Answers", value: `${selectedP.answers.length}/${totalQ}`, color: "text-foreground", bg: "bg-surface" },
                   { label: "Violations", value: selectedP.violations.length, color: "text-danger", bg: "bg-danger/8" },
                   { label: "Time Left", value: selectedP.isFinished ? "Done" : formatTime(getLiveTimeLeft(selectedP)), color: getLiveTimeLeft(selectedP) <= 60 && !selectedP.isFinished ? "text-danger" : "text-foreground", bg: getLiveTimeLeft(selectedP) <= 60 && !selectedP.isFinished ? "bg-danger/8" : "bg-surface" },
+                  { label: "Finish Time", value: formatCompletionDuration(selectedP), color: "text-success", bg: "bg-success/8" },
                   { label: "Status", value: selectedP.isFinished ? "Done" : "Active", color: selectedP.isFinished ? "text-success" : "text-warning", bg: selectedP.isFinished ? "bg-success/8" : "bg-warning/8" },
                 ].map(({ label, value, color, bg }) => (
                   <div key={label} className={`${bg} rounded-xl p-3 text-center`}>

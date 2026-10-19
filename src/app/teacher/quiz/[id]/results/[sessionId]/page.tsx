@@ -9,6 +9,8 @@ interface Participant {
   id: string;
   score: number;
   isFinished: boolean;
+  finishedAt: string | null;
+  quizStartedAt: string | null;
   user: { name: string; email: string };
   violations: { type: string; timestamp: string }[];
   answers: { questionId: string; answerText: string; isCorrect: boolean }[];
@@ -82,6 +84,22 @@ export default function ResultsPage() {
   const totalPoints = data.quiz.questions.reduce((sum, question) => sum + (question.points ?? 1), 0);
   const sorted = [...data.participants].sort((a, b) => b.score - a.score);
 
+  function formatCompletionDuration(participant: Participant) {
+    if (!participant.isFinished || !participant.quizStartedAt || !participant.finishedAt) {
+      return "—";
+    }
+
+    const startedAt = new Date(participant.quizStartedAt).getTime();
+    const finishedAt = new Date(participant.finishedAt).getTime();
+    const totalSeconds = Math.max(0, Math.round((finishedAt - startedAt) / 1000));
+
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+
   function generateCSV() {
     const headers = [
       "Rank",
@@ -91,6 +109,7 @@ export default function ResultsPage() {
       "Score",
       "Score Value",
       "Accuracy",
+      "Finish Time",
       "Violations",
       "Status",
     ];
@@ -108,6 +127,7 @@ export default function ResultsPage() {
         `="${p.score}/${totalPoints}"`,
         p.score,
         `"${accuracy}%"`,
+        `"${formatCompletionDuration(p)}"`,
         p.violations.length,
         p.isFinished ? "Finished" : "In Progress",
       ];
@@ -154,6 +174,7 @@ export default function ResultsPage() {
                 <th className="text-left px-4 py-3 font-medium">Student</th>
                 <th className="text-center px-4 py-3 font-medium">Score</th>
                 <th className="text-center px-4 py-3 font-medium">Accuracy</th>
+                <th className="text-center px-4 py-3 font-medium">Finished in</th>
                 <th className="text-center px-4 py-3 font-medium">Violations</th>
                 <th className="text-center px-4 py-3 font-medium">Status</th>
               </tr>
@@ -195,6 +216,9 @@ export default function ResultsPage() {
                       ? Math.round((p.score / totalPoints) * 100)
                       : 0}
                     %
+                  </td>
+                  <td className="text-center px-4 py-3 text-muted">
+                    {formatCompletionDuration(p)}
                   </td>
                   <td className="text-center px-4 py-3">
                     {p.violations.length > 0 ? (
