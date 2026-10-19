@@ -117,7 +117,7 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className={cn("flex min-h-0 flex-col rounded-xl border border-border bg-white shadow-sm", className)}>
+    <section className={cn("flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm", className)}>
       <header className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3.5">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
@@ -125,7 +125,7 @@ export function Panel({
         </div>
         {action && <div className="flex-shrink-0">{action}</div>}
       </header>
-      <div className={cn("min-h-0 flex-1 px-5 py-4", bodyClassName)}>{children}</div>
+      <div className={cn("min-h-0 w-full min-w-0 flex-1 overflow-hidden px-5 py-4", bodyClassName)}>{children}</div>
     </section>
   );
 }

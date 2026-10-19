@@ -298,7 +298,7 @@ export function Donut({
   let offset = 0;
 
   return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+    <div className="relative flex-shrink-0 overflow-hidden" style={{ width: size, height: size }}>
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label={centerLabel ?? "Distribution chart"}>
         <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="11" style={{ stroke: "var(--border)" }} />
         {total > 0 &&
@@ -340,7 +340,7 @@ export function DonutLegend({ items }: { items: DonutItem[] }) {
   return (
     <ul className="w-full max-w-full flex-1 space-y-2">
       {items.map((item) => (
-        <li key={item.label} className="flex w-full items-center justify-between gap-3 text-xs">
+        <li key={item.label} className="flex w-full max-w-full items-center justify-between gap-3 text-xs">
           <span className="flex min-w-0 max-w-full items-center gap-2 text-muted">
             <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: item.color }} />
             <span className="min-w-0 truncate">{item.label}</span>
