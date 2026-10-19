@@ -29,6 +29,7 @@ interface SessionData {
     lastQuestionIndex: number;
     timerEndsAt: string | null;
     isFinished?: boolean;
+    alreadyCompleted?: boolean;
     score?: number | null;
   } | null;
   quiz: {
@@ -77,6 +78,7 @@ function StudentQuizContent() {
   const [warningVisible, setWarningVisible] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [score, setScore] = useState<number | null>(null);
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const isSubmittingRef = useRef(false);
   const hasFinishedRef = useRef(false);
   const timeWarningShownRef = useRef(false);
@@ -144,6 +146,7 @@ function StudentQuizContent() {
         // If participant already submitted, show finished screen — never re-enter the quiz
         if (data.resumeData?.isFinished) {
           hasFinishedRef.current = true;
+          setAlreadyCompleted(Boolean(data.resumeData?.alreadyCompleted));
           if (data.resumeData.score !== undefined && data.resumeData.score !== null) {
             setScore(data.resumeData.score);
           }
@@ -151,6 +154,8 @@ function StudentQuizContent() {
           setLoading(false);
           return;
         }
+
+        setAlreadyCompleted(false);
 
         // Initialize questions only once per page load — re-fetching on tab switch
         // must not re-shuffle, otherwise answers map to wrong questions
@@ -730,9 +735,17 @@ function StudentQuizContent() {
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-success/70">Completed</p>
-          <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl">Quiz Complete</h1>
-          <p className="mt-2 text-sm text-muted sm:text-base">{sessionData.quiz.title}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-success/70">
+            {alreadyCompleted ? "Already submitted" : "Completed"}
+          </p>
+          <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl">
+            {alreadyCompleted ? "You already completed this quiz" : "Quiz Complete"}
+          </h1>
+          <p className="mt-2 text-sm text-muted sm:text-base">
+            {alreadyCompleted
+              ? "This attempt was already submitted and saved. Your score is below."
+              : sessionData.quiz.title}
+          </p>
           {score !== null && (
             <div className="mb-6 mt-6 rounded-[28px] bg-surface border border-border p-8">
               <div className="text-5xl font-black text-primary mb-2">

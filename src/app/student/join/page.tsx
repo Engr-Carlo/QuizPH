@@ -30,7 +30,11 @@ function JoinQuizPageContent() {
     setLoading(false);
 
     if (!res.ok) {
-      setError(data.error || "Failed to join quiz");
+      setError(
+        data.alreadyCompleted
+          ? "You already completed this quiz. Your score is available on your dashboard."
+          : data.error || "Failed to join quiz"
+      );
       return;
     }
 

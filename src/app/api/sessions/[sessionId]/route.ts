@@ -251,6 +251,7 @@ export async function GET(
     lastQuestionIndex: number;
     timerEndsAt: string | null;
     isFinished?: boolean;
+    alreadyCompleted?: boolean;
     score?: number | null;
   } | null = null;
 
@@ -267,6 +268,7 @@ export async function GET(
       // not the quiz. This prevents retaking after a page refresh.
       resumeData = {
         isFinished: true,
+        alreadyCompleted: true,
         score: participant.score,
         timeLeft: 0,
         lastQuestionIndex: 0,
