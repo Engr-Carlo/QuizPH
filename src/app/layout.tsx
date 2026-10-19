@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
-import PresenceHeartbeat from "@/components/PresenceHeartbeat";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
@@ -31,7 +30,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <SessionProvider>
-          <PresenceHeartbeat />
           {children}
         </SessionProvider>
       </body>
