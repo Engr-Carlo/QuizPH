@@ -140,77 +140,56 @@ const FEATURES = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-        <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-900">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <polyline points="9 13 11 15 15 11" />
-              </svg>
-            </div>
-            <span className="text-lg font-bold text-slate-900 tracking-tight">QuizPH</span>
+    <div className="min-h-screen bg-[#f5f5f5]">
+      <header className="bg-[#f5f5f5] border-b border-slate-200/80">
+        <div className="max-w-[1280px] mx-auto h-[74px] px-6 flex items-center justify-between">
+          <Link href="/" className="text-[18px] font-semibold text-slate-900 tracking-[-0.04em]">
+            QuizPH
           </Link>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 rounded-lg transition"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-2 text-sm font-semibold bg-slate-900 text-white rounded-lg transition hover:bg-slate-800"
-            >
-              Get Started
-            </Link>
-          </div>
-        </nav>
+          <Link href="/login" className="text-[14px] text-slate-700 hover:text-slate-900 transition">
+            Sign in
+          </Link>
+        </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-[#041b3a]">
+      <section className="relative overflow-hidden bg-[#051d43]">
         <div
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(circle at center, rgba(43,124,255,0.9) 0%, rgba(9,42,92,0.95) 34%, rgba(6,20,48,1) 100%)",
+            background:
+              "radial-gradient(circle at center, rgba(41,125,255,0.76) 0%, rgba(18,60,146,0.88) 25%, rgba(4,27,58,1) 60%, rgba(2,15,34,1) 100%)",
           }}
         />
 
-        <div className="relative max-w-6xl mx-auto px-6 pt-12 pb-20 lg:pb-24">
-          <div className="flex items-center justify-center text-center">
-            <div className="flex items-center gap-5 sm:gap-7">
-              <div className="w-[120px] h-[120px] sm:w-[154px] sm:h-[154px] rounded-[24px] sm:rounded-[28px] border-[4px] border-[#49a9ff] bg-[#1d9bf0] shadow-[0_0_35px_rgba(77,166,255,0.55)] flex items-center justify-center">
-                <span className="text-[64px] sm:text-[86px] leading-none font-black text-white">Q</span>
-              </div>
-              <div className="text-[54px] sm:text-[84px] lg:text-[96px] font-black tracking-[-0.06em] text-white leading-none">QuizPH</div>
+        <div className="relative max-w-[1200px] mx-auto min-h-[calc(100vh-74px)] px-6 pb-10 pt-8 flex flex-col items-center justify-center text-center">
+          <div className="flex items-center justify-center gap-5 sm:gap-6 lg:gap-7">
+            <div className="w-[130px] h-[130px] sm:w-[160px] sm:h-[160px] rounded-[26px] sm:rounded-[30px] bg-[#1b8ef0] border-[4px] border-[#59b9ff] shadow-[0_0_50px_rgba(77,171,255,0.55)] flex items-center justify-center">
+              <span className="text-[72px] sm:text-[90px] leading-none font-black text-white">Q</span>
+            </div>
+            <div className="text-[52px] sm:text-[74px] lg:text-[88px] font-black tracking-[-0.07em] text-white leading-none">
+              QuizPH
             </div>
           </div>
 
-          <div className="mt-12 text-center text-white">
-            <p className="text-[28px] sm:text-[44px] lg:text-[62px] font-light tracking-[-0.05em] leading-[1.08]">
+          <div className="mt-12 text-white">
+            <p className="text-[30px] sm:text-[48px] lg:text-[60px] font-light tracking-[-0.06em] leading-[1.06]">
               Built for modern learning.
             </p>
-            <p className="mt-2 text-[34px] sm:text-[52px] lg:text-[72px] font-black tracking-[-0.06em] leading-[1.06] text-[#9ad9ff]">
+            <p className="mt-2 text-[40px] sm:text-[58px] lg:text-[72px] font-black tracking-[-0.06em] leading-[1.06] text-[#8ecfff]">
               Built for QuizPH.
             </p>
           </div>
 
-          <div className="mt-12 flex justify-center">
+          <div className="mt-12 flex justify-center w-full">
             <Link
               href="/register"
-              className="inline-flex items-center justify-center h-[92px] w-full max-w-[520px] rounded-full bg-[#f4f4f4] text-[#0b1d3b] text-[26px] sm:text-[32px] font-semibold shadow-[0_14px_28px_rgba(0,0,0,0.18)] hover:bg-white transition"
+              className="inline-flex items-center justify-center h-[84px] sm:h-[96px] w-full max-w-[560px] rounded-full bg-[#f5f5f5] text-[#0d1d35] text-[22px] sm:text-[28px] font-semibold shadow-[0_12px_24px_rgba(0,0,0,0.18)] hover:bg-white transition"
             >
               Try QuizPH today
             </Link>
           </div>
 
-          <p className="mt-14 text-center text-[18px] sm:text-[24px] text-white/80 italic font-light">
+          <p className="mt-14 text-[18px] sm:text-[24px] text-white/75 italic font-light tracking-[-0.03em]">
             Secure, fair, and engaging quizzes for Philippine educators.
           </p>
         </div>
