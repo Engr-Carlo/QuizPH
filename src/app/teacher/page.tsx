@@ -249,44 +249,6 @@ export default function TeacherDashboard() {
               title="Product tour"
               description="See how quizzes, sessions and monitoring fit together."
             />
-            <Panel
-              title="Recent sessions"
-              subtitle="Latest activity across your quizzes"
-              className="min-h-[200px] flex-1"
-              bodyClassName="overflow-y-auto px-2 py-2"
-            >
-              {stats && stats.recentSessions.length === 0 ? (
-                <p className="px-3 py-8 text-center text-sm text-muted">No sessions yet. Start one from any quiz.</p>
-              ) : (
-                <ul className="divide-y divide-border/70">
-                  {(stats?.recentSessions ?? []).map((row) => {
-                    const meta = STATUS_META[row.status];
-                    const href =
-                      row.status === "ENDED"
-                        ? `/teacher/quiz/${row.quizId}/results/${row.id}`
-                        : `/teacher/quiz/${row.quizId}/monitor/${row.id}`;
-                    return (
-                      <li key={row.id}>
-                        <Link href={href} className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-surface">
-                          <CoverArt seed={row.quizId} className="h-10 w-10 flex-shrink-0 rounded-lg" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">{row.quizTitle}</p>
-                            <p className="mt-0.5 truncate text-xs text-muted">
-                              {row.status !== "ENDED" && <span className="mr-1.5 font-mono">{row.code}</span>}
-                              {row.participants} student{row.participants === 1 ? "" : "s"} · {timeAgo(row.createdAt)}
-                            </p>
-                          </div>
-                          <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
-                          <span className="flex-shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-foreground">
-                            <IconChevronRight />
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Panel>
           </div>
         </div>
       </div>

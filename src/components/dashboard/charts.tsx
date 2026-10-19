@@ -338,14 +338,14 @@ export function Donut({
 
 export function DonutLegend({ items }: { items: DonutItem[] }) {
   return (
-    <ul className="min-w-0 flex-1 space-y-2">
+    <ul className="w-full max-w-full flex-1 space-y-2">
       {items.map((item) => (
-        <li key={item.label} className="flex items-center justify-between gap-3 text-xs">
-          <span className="inline-flex min-w-0 items-center gap-2 text-muted">
+        <li key={item.label} className="flex w-full items-center justify-between gap-3 text-xs">
+          <span className="flex min-w-0 max-w-full items-center gap-2 text-muted">
             <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: item.color }} />
-            <span className="truncate">{item.label}</span>
+            <span className="min-w-0 truncate">{item.label}</span>
           </span>
-          <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
+          <span className="shrink-0 font-semibold tabular-nums text-foreground">{item.value}</span>
         </li>
       ))}
     </ul>
