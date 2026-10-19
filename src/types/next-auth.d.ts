@@ -8,6 +8,7 @@ declare module "next-auth" {
       email: string;
       role: string;
       avatar?: string;
+      loginNonce?: string;
       university?: string | null;
       universities?: string[];
       universityVerified?: boolean;
@@ -30,6 +31,7 @@ declare module "next-auth/jwt" {
     name?: string;
     email?: string;
     avatar?: string;
+    loginNonce?: string;
     university?: string | null;
     universities?: string[];
     universityVerified?: boolean;

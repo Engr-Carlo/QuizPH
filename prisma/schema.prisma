@@ -88,6 +88,7 @@ model User {
   patchNoteReads    PatchNoteRead[]
   bugReports        BugReport[]
   routeLogUsers     RouteLogUser[]
+  videoViews        VideoView[]
 
   @@index([lastSeenAt])
 }
@@ -344,4 +345,19 @@ model RouteLogUser {
 
   @@unique([date, route, userId])
   @@index([date, userId])
+}
+
+model VideoView {
+  id            String   @id @default(cuid())
+  videoId       String
+  userId        String
+  loginNonce    String
+  watchedSeconds Int     @default(0)
+  viewedAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId, loginNonce])
+  @@index([videoId, viewedAt])
+  @@index([userId, videoId])
 }

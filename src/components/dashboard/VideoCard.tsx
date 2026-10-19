@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 export function DashboardVideoCard({
@@ -14,10 +15,75 @@ export function DashboardVideoCard({
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasRecordedView, setHasRecordedView] = useState(false);
+  const [viewerCount, setViewerCount] = useState<number | null>(null);
+  const { data: session, status } = useSession();
 
   function play() {
     videoRef.current?.play().catch(() => {});
   }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadViewerCount() {
+      try {
+        const response = await fetch("/api/video-views?videoId=quizph-promo");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!active) return;
+        setViewerCount(Number(data.totalViews ?? 0));
+      } catch {
+        // Ignore fetch failures for this informational badge.
+      }
+    }
+
+    loadViewerCount();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || status !== "authenticated" || !session?.user?.id || !session?.user?.loginNonce || hasRecordedView) {
+      return;
+    }
+
+    const handleTimeUpdate = () => {
+      if (video.currentTime < 15 || hasRecordedView) return;
+      setHasRecordedView(true);
+      fetch("/api/video-views", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoId: "quizph-promo",
+          watchedSeconds: Math.floor(video.currentTime),
+          loginNonce: session.user.loginNonce,
+        }),
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            setHasRecordedView(false);
+            return;
+          }
+
+          const data = await response.json();
+          if (data?.counted) {
+            setViewerCount((previous) => {
+              const nextValue = Number(data.totalViews ?? 0);
+              return previous == null ? nextValue : Math.max(previous + 1, nextValue);
+            });
+          }
+        })
+        .catch(() => {
+          setHasRecordedView(false);
+        });
+    };
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    return () => video.removeEventListener("timeupdate", handleTimeUpdate);
+  }, [hasRecordedView, session?.user?.id, session?.user?.loginNonce, status]);
 
   return (
     <section className={cn("rounded-xl border border-border bg-white p-3 shadow-sm", className)}>
@@ -53,6 +119,16 @@ export function DashboardVideoCard({
           </button>
         )}
       </div>
+
+      {viewerCount !== null && (
+        <div className="mt-2 flex items-center gap-1.5 px-1 text-[10px] font-medium text-muted/80">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.8]" aria-hidden="true">
+            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+            <circle cx="12" cy="12" r="2.5" />
+          </svg>
+          <span>{viewerCount}</span>
+        </div>
+      )}
     </section>
   );
 }

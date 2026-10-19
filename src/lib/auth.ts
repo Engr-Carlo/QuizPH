@@ -70,7 +70,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      const tokenWithUniversities = token as typeof token & { universities?: string[] };
+      const tokenWithUniversities = token as typeof token & { universities?: string[]; loginNonce?: string };
 
       if (user) {
         token.role = (user as { role: string }).role;
@@ -80,6 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.avatar = normalizeAvatarId((user as { avatar?: string }).avatar);
         token.university = (user as { university?: string | null }).university ?? null;
         token.universityVerified = Boolean((user as { universityVerified?: boolean }).universityVerified);
+        token.loginNonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         const userUniversities = Array.isArray((user as { universities?: unknown[] }).universities)
           ? ((user as { universities: unknown[] }).universities as unknown[])
           : [];
@@ -161,12 +162,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        const sessionToken = token as typeof token & { universities?: string[] };
+        const sessionToken = token as typeof token & { universities?: string[]; loginNonce?: string };
         session.user.role = token.role as string;
         session.user.id = (token.id as string | undefined) ?? (token.sub as string | undefined) ?? session.user.id;
         session.user.name = (token.name as string | undefined) ?? session.user.name;
         session.user.email = (token.email as string | undefined) ?? session.user.email;
         session.user.avatar = token.avatar as string | undefined;
+        session.user.loginNonce = sessionToken.loginNonce ?? session.user.loginNonce;
         session.user.university = (token.university as string | null | undefined) ?? ((Array.isArray(sessionToken.universities) && sessionToken.universities[0]) || null);
         session.user.universityVerified = Boolean(token.universityVerified);
         session.user.universities = Array.isArray(sessionToken.universities)
