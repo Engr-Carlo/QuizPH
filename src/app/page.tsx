@@ -174,39 +174,45 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="py-16 px-6 lg:py-28 bg-white">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3.5 py-1.5 rounded-full mb-7 border border-primary/20 uppercase tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              Built for Philippine Educators
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight mb-5 tracking-tight">
-              Online Quizzes with<br />
-              <span className="text-primary">Real-Time Anti-Cheat</span>
-            </h1>
-            <p className="text-base text-slate-500 max-w-lg mb-8 leading-relaxed">
-              Create assessments, detect cheating in real time, and watch a live leaderboard — all in one platform designed for modern classrooms.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/register"
-                className="px-7 py-3 bg-primary text-white font-semibold rounded-lg transition hover:bg-primary/90 shadow-sm text-sm text-center"
-              >
-                Create Free Account
-              </Link>
-              <Link
-                href="/login"
-                className="px-7 py-3 border border-slate-200 text-slate-600 font-semibold rounded-lg hover:border-slate-300 hover:text-slate-900 transition text-sm text-center"
-              >
-                Sign In
-              </Link>
+      <section className="relative overflow-hidden bg-[#041b3a]">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(circle at center, rgba(43,124,255,0.9) 0%, rgba(9,42,92,0.95) 34%, rgba(6,20,48,1) 100%)",
+          }}
+        />
+
+        <div className="relative max-w-6xl mx-auto px-6 pt-12 pb-20 lg:pb-24">
+          <div className="flex items-center justify-center text-center">
+            <div className="flex items-center gap-5 sm:gap-7">
+              <div className="w-[120px] h-[120px] sm:w-[154px] sm:h-[154px] rounded-[24px] sm:rounded-[28px] border-[4px] border-[#49a9ff] bg-[#1d9bf0] shadow-[0_0_35px_rgba(77,166,255,0.55)] flex items-center justify-center">
+                <span className="text-[64px] sm:text-[86px] leading-none font-black text-white">Q</span>
+              </div>
+              <div className="text-[54px] sm:text-[84px] lg:text-[96px] font-black tracking-[-0.06em] text-white leading-none">QuizPH</div>
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <ProductMockup />
+          <div className="mt-12 text-center text-white">
+            <p className="text-[28px] sm:text-[44px] lg:text-[62px] font-light tracking-[-0.05em] leading-[1.08]">
+              Built for modern learning.
+            </p>
+            <p className="mt-2 text-[34px] sm:text-[52px] lg:text-[72px] font-black tracking-[-0.06em] leading-[1.06] text-[#9ad9ff]">
+              Built for QuizPH.
+            </p>
           </div>
+
+          <div className="mt-12 flex justify-center">
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center h-[92px] w-full max-w-[520px] rounded-full bg-[#f4f4f4] text-[#0b1d3b] text-[26px] sm:text-[32px] font-semibold shadow-[0_14px_28px_rgba(0,0,0,0.18)] hover:bg-white transition"
+            >
+              Try QuizPH today
+            </Link>
+          </div>
+
+          <p className="mt-14 text-center text-[18px] sm:text-[24px] text-white/80 italic font-light">
+            Secure, fair, and engaging quizzes for Philippine educators.
+          </p>
         </div>
       </section>
 
