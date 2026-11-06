@@ -398,7 +398,7 @@ export default function ReportBugPage() {
                         <div className="max-w-[88%]">
                           <div className="rounded-2xl rounded-tl-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-950 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-50">
                             <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Status note</p>
-                            {selected.adminNote}
+                            <p className="whitespace-pre-wrap break-words">{selected.adminNote}</p>
                           </div>
                         </div>
                       </div>

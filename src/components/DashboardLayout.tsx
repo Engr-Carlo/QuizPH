@@ -185,6 +185,12 @@ function getInitials(name?: string | null) {
   return name.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2);
 }
 
+function getNotificationPreview(text?: string | null) {
+  const normalized = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Admin update";
+  return normalized.length > 110 ? `${normalized.slice(0, 110).trimEnd()}…` : normalized;
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -449,7 +455,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             </span>
                           </div>
                           <p className="text-sm font-semibold text-foreground">{notification.title}</p>
-                          <p className="mt-2 text-xs leading-relaxed text-muted">{notification.adminNote}</p>
+                          <p className="mt-2 text-xs leading-relaxed text-muted whitespace-pre-wrap break-words">
+                            {getNotificationPreview(notification.adminNote)}
+                          </p>
                           <p className="mt-2 text-[10px] text-muted">
                             {new Date(notification.createdAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                           </p>
