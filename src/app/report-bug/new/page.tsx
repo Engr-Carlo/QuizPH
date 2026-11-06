@@ -163,36 +163,36 @@ export default function NewReportBugPage() {
     <DashboardLayout>
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/report-bug" className="inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground">
+          <Link href="/report-bug" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
             <IconArrowLeft />
             Back to reports
           </Link>
         </div>
 
-        <div className="rounded-[28px] border border-border bg-gradient-to-br from-primary/8 via-card to-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:from-primary/10 dark:via-slate-900 dark:to-slate-900">
+        <div className="rounded-[30px] border border-slate-200 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] ring-1 ring-slate-200/60 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
               <IconBug />
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Support</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground">Submit a bug report</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Support</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">Submit a bug report</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                 Tell us what went wrong, how it happened, and what you expected so we can fix it quickly.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-border bg-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
           <div className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-foreground">Report type</label>
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">Report type</label>
               <select
                 value={category}
                 onChange={(event) => setCategory(event.target.value as (typeof REPORT_CATEGORIES)[number]["value"])}
-                className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm text-foreground shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white"
               >
                 {REPORT_CATEGORIES.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -203,58 +203,58 @@ export default function NewReportBugPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-foreground">Title</label>
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">Title</label>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Example: Join session button freezes on mobile"
-                className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm text-foreground placeholder:text-muted shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-foreground">What did you see?</label>
+              <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">What did you see?</label>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={5}
                 placeholder="Describe the issue you noticed, where it happened, and any relevant details."
-                className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm text-foreground placeholder:text-muted shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-foreground">What should have happened?</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">What should have happened?</label>
                 <textarea
                   value={expectedBehavior}
                   onChange={(event) => setExpectedBehavior(event.target.value)}
                   rows={4}
                   placeholder="Expected behavior or improvement"
-                  className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm text-foreground placeholder:text-muted shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:placeholder:text-slate-500"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-foreground">Steps to reproduce</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">Steps to reproduce</label>
                 <textarea
                   value={steps}
                   onChange={(event) => setSteps(event.target.value)}
                   rows={4}
                   placeholder="1. Open the app\n2. Tap Join a Quiz\n3. See the issue"
-                  className="w-full rounded-2xl border border-border bg-background px-3.5 py-3 text-sm text-foreground placeholder:text-muted shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:placeholder:text-slate-500"
                 />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-dashed border-border bg-background p-4">
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/50">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <label className="block text-sm font-semibold text-foreground">Attachment</label>
-                  <p className="mt-1 text-xs text-muted">Optional screenshot to help us investigate.</p>
+                  <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200">Attachment</label>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Optional screenshot to help us investigate.</p>
                 </div>
 
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-foreground transition hover:border-primary/40 hover:text-primary">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   <IconUpload />
                   Upload image
                   <input
@@ -267,12 +267,12 @@ export default function NewReportBugPage() {
               </div>
 
               {screenshotName && (
-                <p className="mt-3 text-xs text-muted">Selected: {screenshotName}</p>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Selected: {screenshotName}</p>
               )}
             </div>
 
             {screenshotDataUrl && (
-              <div className="overflow-hidden rounded-2xl border border-border bg-surface p-2">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-950/50">
                 <img src={screenshotDataUrl} alt="Bug report attachment" className="max-h-80 w-full rounded-xl object-contain" />
               </div>
             )}
@@ -281,7 +281,7 @@ export default function NewReportBugPage() {
               <button
                 type="button"
                 onClick={() => router.push("/report-bug")}
-                className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-slate-400"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
               >
                 Cancel
               </button>

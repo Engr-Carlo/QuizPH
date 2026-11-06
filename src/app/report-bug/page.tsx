@@ -82,17 +82,17 @@ export default function ReportBugPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-[28px] border border-border bg-gradient-to-br from-primary/8 via-card to-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:from-primary/10 dark:via-slate-900 dark:to-slate-900">
+        <div className="rounded-[30px] border border-slate-200 bg-white/90 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] ring-1 ring-slate-200/60 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <IconBug />
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Support</p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground">Report history</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Support</p>
+                <h1 className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">Report history</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                   Review your submitted reports and follow up on support updates from the admin team.
                 </p>
               </div>
@@ -109,29 +109,29 @@ export default function ReportBugPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-[22px] border border-border bg-card p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Total</p>
-            <p className="mt-2 text-2xl font-black text-foreground">{stats.total}</p>
+          <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Total</p>
+            <p className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">{stats.total}</p>
           </div>
-          <div className="rounded-[22px] border border-border bg-card p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Open</p>
-            <p className="mt-2 text-2xl font-black text-foreground">{stats.open}</p>
+          <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Open</p>
+            <p className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">{stats.open}</p>
           </div>
-          <div className="rounded-[22px] border border-border bg-card p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">In review</p>
-            <p className="mt-2 text-2xl font-black text-foreground">{stats.review}</p>
+          <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">In review</p>
+            <p className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">{stats.review}</p>
           </div>
-          <div className="rounded-[22px] border border-border bg-card p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Resolved</p>
-            <p className="mt-2 text-2xl font-black text-foreground">{stats.resolved}</p>
+          <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Resolved</p>
+            <p className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">{stats.resolved}</p>
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-border bg-card p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:ring-slate-800/80">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold text-foreground">My report history</h2>
-              <p className="mt-1 text-sm text-muted">Track every update from the support team.</p>
+              <h2 className="text-2xl font-black tracking-[-0.06em] text-slate-900 dark:text-white">My report history</h2>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Track every update from the support team.</p>
             </div>
           </div>
 
@@ -154,48 +154,48 @@ export default function ReportBugPage() {
           ) : (
             <div className="space-y-4">
               {reportHistory.map((report) => (
-                <div key={report.id} className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+                <div key={report.id} className="rounded-[22px] border border-slate-200 bg-slate-50/60 p-4 shadow-sm ring-1 ring-slate-100 dark:border-slate-800 dark:bg-slate-900/60 dark:ring-slate-800/80">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-bold text-foreground">{report.title}</h3>
-                        <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        <h3 className="text-lg font-bold tracking-[-0.03em] text-slate-900 dark:text-white">{report.title}</h3>
+                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                           {report.category}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-muted">
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Submitted {new Date(report.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
                       </p>
                     </div>
 
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${STATUS_STYLES[report.status]}`}>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.1em] ${STATUS_STYLES[report.status]}`}>
                       {report.status.replace("_", " ")}
                     </span>
                   </div>
 
-                  <div className="mt-3 space-y-3">
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Issue</p>
-                      <p className="mt-2 text-sm leading-6 text-foreground">{report.description}</p>
+                  <div className="mt-4 space-y-3">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Issue</p>
+                      <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-200">{report.description}</p>
                     </div>
 
                     {report.expectedBehavior && (
-                      <div className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Expected</p>
-                        <p className="mt-2 text-sm leading-6 text-foreground">{report.expectedBehavior}</p>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Expected</p>
+                        <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-200">{report.expectedBehavior}</p>
                       </div>
                     )}
 
                     {report.steps && (
-                      <div className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Steps</p>
-                        <pre className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{report.steps}</pre>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Steps</p>
+                        <pre className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-slate-800 dark:text-slate-200">{report.steps}</pre>
                       </div>
                     )}
 
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Admin response</p>
-                      <p className="mt-2 text-sm leading-6 text-foreground">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Admin response</p>
+                      <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-200">
                         {report.adminNote || "No admin response yet. We will update this once it is reviewed."}
                       </p>
                     </div>
