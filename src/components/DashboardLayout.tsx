@@ -128,6 +128,14 @@ function IconAlertTriangle() {
     </svg>
   );
 }
+function IconBell() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
 
 // ── Nav config ──────────────────────────────────────────────────────────────
 type NavItem = { href: string; label: string; icon: () => React.ReactElement; matchPrefix?: boolean };
@@ -184,6 +192,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [patchNote, setPatchNote] = useState<{ id: string; title: string; body: string } | null>(null);
   const [patchNoteChecked, setPatchNoteChecked] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; status: string; adminNote: string; createdAt: string }>>([]);
   const hasFetchedPatchNote = useRef(false);
   const role = session?.user?.role;
   const navItems =
@@ -211,6 +221,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => {})
       .finally(() => setPatchNoteChecked(true));
   }, [session?.user]);
+
+  useEffect(() => {
+    if (!session?.user) {
+      setNotifications([]);
+      return;
+    }
+
+    fetch("/api/bug-reports")
+      .then((response) => {
+        if (!response.ok) return;
+        return response.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) return;
+        const nextNotifications = data
+          .filter((report) => typeof report?.adminNote === "string" && report.adminNote.trim())
+          .map((report) => ({
+            id: report.id,
+            title: report.title,
+            status: report.status,
+            adminNote: report.adminNote,
+            createdAt: report.updatedAt ?? report.createdAt,
+          }));
+        setNotifications(nextNotifications);
+      })
+      .catch(() => {
+        setNotifications([]);
+      });
+  }, [session?.user]);
+
+  const notificationCount = notifications.length;
 
   return (
     <div className="min-h-screen bg-canvas lg:flex">
@@ -360,6 +401,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                aria-label="Notifications"
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface text-muted transition hover:border-primary/40 hover:text-primary"
+              >
+                <IconBell />
+                {notificationCount > 0 && (
+                  <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-bold text-white">
+                    {notificationCount > 9 ? "9+" : notificationCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 top-12 z-50 w-[320px] rounded-2xl border border-border bg-card p-3 shadow-xl">
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <p className="text-sm font-bold text-foreground">Notifications</p>
+                    <span className="text-[10px] font-semibold text-muted uppercase tracking-wide">
+                      {notificationCount} new
+                    </span>
+                  </div>
+
+                  <div className="max-h-[280px] space-y-2 overflow-auto">
+                    {notificationCount === 0 ? (
+                      <div className="rounded-xl bg-surface px-3 py-4 text-sm text-muted">
+                        No admin replies yet.
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div key={notification.id} className="rounded-xl border border-border bg-surface p-3">
+                          <div className="mb-1 flex items-center justify-between gap-3">
+                            <p className="text-xs font-bold uppercase tracking-wide text-primary">Bug report update</p>
+                            <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">
+                              {notification.status}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-foreground">{notification.title}</p>
+                          <p className="mt-2 text-xs leading-relaxed text-muted">{notification.adminNote}</p>
+                          <p className="mt-2 text-[10px] text-muted">
+                            {new Date(notification.createdAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <ThemeToggle />
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2.5">
