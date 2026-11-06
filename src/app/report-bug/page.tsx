@@ -174,28 +174,38 @@ export default function ReportBugPage() {
                   </div>
 
                   <div className="mt-4 space-y-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Issue</p>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-950/40">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Issue</p>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          User report
+                        </span>
+                      </div>
                       <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-200">{report.description}</p>
                     </div>
 
                     {report.expectedBehavior && (
-                      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-950/40">
                         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Expected</p>
                         <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-200">{report.expectedBehavior}</p>
                       </div>
                     )}
 
                     {report.steps && (
-                      <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-950/40">
                         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Steps</p>
                         <pre className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-slate-800 dark:text-slate-200">{report.steps}</pre>
                       </div>
                     )}
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Admin response</p>
-                      <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-200">
+                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-3 shadow-[0_12px_24px_rgba(16,185,129,0.08)] dark:border-emerald-500/20 dark:from-emerald-500/10 dark:via-slate-900 dark:to-sky-500/10">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Admin response</p>
+                        <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                          Support update
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[15px] leading-7 text-slate-800 dark:text-slate-100">
                         {report.adminNote || "No admin response yet. We will update this once it is reviewed."}
                       </p>
                     </div>
