@@ -5,7 +5,7 @@ import PatchNoteModal from "@/components/PatchNoteModal";
 import WelcomeVideoModal from "@/components/WelcomeVideoModal";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getAvatarUrl } from "@/lib/avatar-presets";
@@ -189,6 +189,7 @@ function getInitials(name?: string | null) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [patchNote, setPatchNote] = useState<{ id: string; title: string; body: string } | null>(null);
   const [patchNoteChecked, setPatchNoteChecked] = useState(false);
@@ -432,7 +433,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                     ) : (
                       notifications.map((notification) => (
-                        <div key={notification.id} className="rounded-xl border border-border bg-surface p-3">
+                        <button
+                          key={notification.id}
+                          type="button"
+                          onClick={() => {
+                            setNotificationsOpen(false);
+                            router.push("/report-bug");
+                          }}
+                          className="w-full rounded-xl border border-border bg-surface p-3 text-left transition hover:border-primary/40 hover:bg-surface/80"
+                        >
                           <div className="mb-1 flex items-center justify-between gap-3">
                             <p className="text-xs font-bold uppercase tracking-wide text-primary">Bug report update</p>
                             <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">
@@ -444,7 +453,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <p className="mt-2 text-[10px] text-muted">
                             {new Date(notification.createdAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                           </p>
-                        </div>
+                        </button>
                       ))
                     )}
                   </div>
