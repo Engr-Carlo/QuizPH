@@ -269,7 +269,7 @@ export default function AdminBugReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-[1500px] space-y-6 px-2 sm:px-0">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
             <IconBug />
@@ -297,10 +297,10 @@ export default function AdminBugReportsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-            <aside className={`${selectedId ? "hidden lg:block" : "block"}`}>
-              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                <div className="flex gap-1 border-b border-slate-100 p-2 dark:border-slate-800">
+          <div className="grid gap-5 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-stretch">
+            <aside className={`${selectedId ? "hidden lg:block" : "block"} lg:self-stretch`}>
+              <div className="h-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_40px_-30px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900/80">
+                <div className="flex gap-1 border-b border-slate-100 bg-slate-50/70 p-2 dark:border-slate-800 dark:bg-slate-950/60">
                   {filters.map((item) => (
                     <button
                       key={item.key}
@@ -311,8 +311,8 @@ export default function AdminBugReportsPage() {
                       }}
                       className={`flex-1 rounded-xl px-2 py-2 text-xs font-semibold transition ${
                         filter === item.key
-                          ? "bg-primary/10 text-primary"
-                          : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                          ? "bg-white text-primary shadow-sm ring-1 ring-primary/10 dark:bg-slate-800 dark:text-primary"
+                          : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                       }`}
                     >
                       {item.label}
@@ -321,7 +321,7 @@ export default function AdminBugReportsPage() {
                   ))}
                 </div>
 
-                <div className="max-h-[620px] divide-y divide-slate-100 overflow-y-auto dark:divide-slate-800">
+                <div className="max-h-[680px] space-y-2 overflow-y-auto bg-slate-50/40 p-2 dark:bg-slate-950/30">
                   {filtered.length === 0 ? (
                     <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">No tickets in this view.</p>
                   ) : (
@@ -336,22 +336,29 @@ export default function AdminBugReportsPage() {
                           key={report.id}
                           type="button"
                           onClick={() => setSelectedId(report.id)}
-                          className={`block w-full px-4 py-3.5 text-left transition ${
-                            isActive ? "bg-primary/5" : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                          className={`relative block w-full rounded-2xl border p-3.5 text-left transition ${
+                            isActive
+                              ? "border-primary/30 bg-gradient-to-br from-primary/6 via-white to-slate-50 shadow-[0_18px_30px_-24px_rgba(59,130,246,0.8)] dark:from-primary/10 dark:via-slate-900 dark:to-slate-900"
+                              : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50 dark:bg-slate-900/80 dark:hover:border-slate-700 dark:hover:bg-slate-800"
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">{report.title}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className={`h-2.5 w-2.5 rounded-full ${report.status === "OPEN" ? "bg-sky-500" : report.status === "IN_REVIEW" ? "bg-amber-500" : report.status === "RESOLVED" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                              <p className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">{report.title}</p>
+                            </div>
                             <span className="shrink-0 text-[11px] text-slate-400">{timeAgo(report.updatedAt || report.createdAt)}</span>
                           </div>
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{preview}</p>
-                          <div className="mt-2.5 flex items-center gap-2">
+                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{preview}</p>
+                          <div className="mt-3 flex items-center justify-between gap-2">
                             <StatusBadge status={report.status} />
-                            {hasAdminReply && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            {hasAdminReply ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20">
                                 <IconShield />
                                 Team replied
                               </span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">Waiting</span>
                             )}
                           </div>
                         </button>
@@ -364,8 +371,8 @@ export default function AdminBugReportsPage() {
 
             <section className={`${selectedId ? "block" : "hidden lg:block"}`}>
               {selected ? (
-                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                  <div className="border-b border-slate-100 p-5 dark:border-slate-800">
+                <div className="h-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_40px_-30px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900/80">
+                  <div className="border-b border-slate-100 bg-gradient-to-r from-primary/6 via-white to-slate-50 p-5 dark:border-slate-800 dark:from-primary/5 dark:via-slate-900 dark:to-slate-900">
                     <button
                       type="button"
                       onClick={() => setSelectedId(null)}
@@ -377,25 +384,31 @@ export default function AdminBugReportsPage() {
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{selected.title}</h2>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full border border-primary/20 bg-primary/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                            {CATEGORY_LABEL[selected.category]}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">Ticket #{selected.id.slice(-6).toUpperCase()}</span>
+                        </div>
+                        <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 dark:text-white">{selected.title}</h2>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          {CATEGORY_LABEL[selected.category]} · Submitted by {selected.user.name} · {selected.user.email} · {formatShort(selected.createdAt)}
+                          Submitted by {selected.user.name} · {selected.user.email} · {formatShort(selected.createdAt)}
                         </p>
                       </div>
                       <StatusBadge status={selected.status} />
                     </div>
                   </div>
 
-                  <div className="lg:grid lg:grid-cols-[minmax(0,1.3fr)_320px]">
-                    <div className="bg-slate-50/60 p-5 dark:bg-slate-950/30">
+                  <div className="lg:grid lg:grid-cols-[minmax(0,1.35fr)_360px] lg:items-stretch">
+                    <div className="min-h-[620px] bg-gradient-to-b from-slate-50 via-white to-slate-50 p-5 dark:from-slate-950/40 dark:via-slate-900 dark:to-slate-950">
                       <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Issue summary</p>
                             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{selected.description}</p>
                           </div>
 
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Expected behavior</p>
                             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">
                               {selected.expectedBehavior || "No expected behavior provided."}
@@ -404,14 +417,14 @@ export default function AdminBugReportsPage() {
                         </div>
 
                         {selected.steps && (
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Steps to reproduce</p>
                             <pre className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{selected.steps}</pre>
                           </div>
                         )}
 
                         {selected.screenshotDataUrl && (
-                          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900/80">
+                          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                             <img
                               src={selected.screenshotDataUrl}
                               alt={selected.screenshotName || "Bug report screenshot"}
@@ -420,7 +433,7 @@ export default function AdminBugReportsPage() {
                           </div>
                         )}
 
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                           <div className="mb-3 flex items-center justify-between gap-2">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Conversation</p>
                             <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -462,7 +475,7 @@ export default function AdminBugReportsPage() {
                         </div>
 
                         {selected.adminNote && (
-                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-emerald-700 dark:text-emerald-300">Status note</p>
                             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-emerald-950 dark:text-emerald-50">{selected.adminNote}</p>
                           </div>
@@ -472,7 +485,7 @@ export default function AdminBugReportsPage() {
                       </div>
                     </div>
 
-                    <aside className="border-t border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60 lg:border-l lg:border-t-0">
+                    <aside className="border-t border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/60 lg:border-l lg:border-t-0">
                       <div className="space-y-5">
                         <div>
                           <label className="block text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Status</label>
@@ -484,7 +497,7 @@ export default function AdminBugReportsPage() {
                                 [selected.id]: event.target.value,
                               }))
                             }
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                           >
                             {Object.keys(STATUS_LABEL).map((status) => (
                               <option key={status} value={status}>
@@ -505,7 +518,7 @@ export default function AdminBugReportsPage() {
                               }))
                             }
                             rows={5}
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             placeholder="Add a summary or resolution note for the user."
                           />
                         </div>
@@ -516,12 +529,12 @@ export default function AdminBugReportsPage() {
                           type="button"
                           onClick={() => updateStatus(selected.id)}
                           disabled={savingId === selected.id}
-                          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_18px_-12px_rgba(37,99,235,0.7)] transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {savingId === selected.id ? "Saving..." : "Save update"}
                         </button>
 
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/70">
                           <label className="block text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Reply to user</label>
                           <textarea
                             value={replyDrafts[selected.id] ?? ""}
@@ -532,7 +545,7 @@ export default function AdminBugReportsPage() {
                               }))
                             }
                             rows={4}
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                             placeholder="Write a follow-up message for the report..."
                           />
 
@@ -542,7 +555,7 @@ export default function AdminBugReportsPage() {
                             type="button"
                             onClick={() => addReply(selected.id)}
                             disabled={replyingId === selected.id || !(replyDrafts[selected.id] ?? "").trim()}
-                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_18px_-12px_rgba(16,185,129,0.8)] transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <IconSend />
                             {replyingId === selected.id ? "Sending..." : "Send reply"}
@@ -553,7 +566,7 @@ export default function AdminBugReportsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="flex min-h-[320px] items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
+                <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-white text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
                   Select a ticket to view the conversation.
                 </div>
               )}
