@@ -20,6 +20,19 @@ export async function GET() {
           role: true,
         },
       },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+      },
     },
   });
 

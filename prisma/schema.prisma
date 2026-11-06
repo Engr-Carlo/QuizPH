@@ -65,6 +65,11 @@ enum BugReportStatus {
   REJECTED
 }
 
+enum BugReportMessageSender {
+  USER
+  ADMIN
+}
+
 model User {
   id                 String    @id @default(cuid())
   name               String
@@ -87,6 +92,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   patchNoteReads    PatchNoteRead[]
   bugReports        BugReport[]
+  bugReportMessages  BugReportMessage[]
   routeLogUsers     RouteLogUser[]
   videoViews        VideoView[]
 
@@ -299,25 +305,43 @@ model PatchNoteRead {
 }
 
 model BugReport {
-  id             String            @id @default(cuid())
-  title          String
-  category       BugReportCategory @default(BUG)
-  description    String
+  id               String            @id @default(cuid())
+  title            String
+  category         BugReportCategory @default(BUG)
+  description      String
   expectedBehavior String?
-  steps          String?
+  steps            String?
   screenshotDataUrl String?
-  screenshotName  String?
-  status         BugReportStatus   @default(OPEN)
-  adminNote      String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  resolvedAt     DateTime?
+  screenshotName    String?
+  status           BugReportStatus   @default(OPEN)
+  adminNote        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  resolvedAt       DateTime?
+
+  userId  String
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages BugReportMessage[]
+
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+model BugReportMessage {
+  id          String                   @id @default(cuid())
+  content     String
+  sender      BugReportMessageSender   @default(USER)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  bugReportId String
+  bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
 
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([bugReportId, createdAt])
   @@index([userId])
-  @@index([status, createdAt])
 }
 
 // Tracks compute cost per API route per day (daily aggregate upsert — single row per route per day)
