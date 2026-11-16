@@ -340,7 +340,7 @@ export default function AdminDashboard() {
         />
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Online now" value={stats.onlineUsers} hint="Active in the last 2 minutes" icon={<IconPulse />} tone="success" />
+          <StatCard label="Online now" value={stats.onlineUsers} hint="Active in the last 5 minutes" icon={<IconPulse />} tone="success" />
           <StatCard
             label="Total users"
             value={data.total}

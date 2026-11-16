@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 
-const ONLINE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const CHART_DAYS = 7;
 
 function buildDailySeries<T extends Record<string, unknown>>(
@@ -62,7 +62,7 @@ export async function GET(req: Request) {
   const since = new Date();
   since.setHours(0, 0, 0, 0);
   since.setDate(since.getDate() - (CHART_DAYS - 1));
-  const twoMinsAgo = new Date(Date.now() - ONLINE_WINDOW_MS);
+  const fiveMinsAgo = new Date(Date.now() - ONLINE_WINDOW_MS);
 
   // mode=list: 3 cheap queries — no charts/activity
   if (mode === "list") {
@@ -137,7 +137,7 @@ export async function GET(req: Request) {
     prisma.user.count(),
     prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
     prisma.user.findMany({
-      where: { lastSeenAt: { gte: twoMinsAgo } },
+      where: { lastSeenAt: { gte: fiveMinsAgo } },
       select: { role: true },
     }),
     prisma.user.findMany({
