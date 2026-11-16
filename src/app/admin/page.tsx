@@ -56,6 +56,7 @@ interface AdminData {
     adminCount: number;
     activeSessionCount: number;
   };
+  onlineUsersList: { id: string; name: string; email: string; role: string; lastSeenAt: string | null }[];
   charts: {
     usersByDay: ChartPoint[];
     teachersByDay: ChartPoint[];
@@ -91,6 +92,12 @@ function getTimeAgo(isoString: string): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function getRoleTone(role: string) {
+  if (role === "SUPER_ADMIN") return "bg-danger/10 text-danger";
+  if (role === "TEACHER") return "bg-primary/10 text-primary";
+  return "bg-success/10 text-success";
 }
 
 function formatServerTime(ms: number) {
@@ -278,6 +285,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activityMetric, setActivityMetric] = useState<"participants" | "sessions">("participants");
   const [growthMetric, setGrowthMetric] = useState<"students" | "teachers">("students");
+  const [showOnlineUsers, setShowOnlineUsers] = useState(false);
 
   async function fetchData() {
     const res = await fetch("/api/admin/users", { cache: "no-store" });
@@ -318,6 +326,7 @@ export default function AdminDashboard() {
   if (!data) return null;
 
   const { stats, charts } = data;
+  const onlineUsers = data.onlineUsersList ?? [];
   const roleItems = [
     { label: "Teachers", value: stats.teacherCount, color: "var(--primary)" },
     { label: "Students", value: stats.studentCount, color: "var(--success)" },
@@ -340,7 +349,14 @@ export default function AdminDashboard() {
         />
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Online now" value={stats.onlineUsers} hint="Active in the last 5 minutes" icon={<IconPulse />} tone="success" />
+          <button
+            type="button"
+            onClick={() => setShowOnlineUsers(true)}
+            className="w-full text-left disabled:cursor-default disabled:opacity-100"
+            disabled={stats.onlineUsers === 0}
+          >
+            <StatCard label="Online now" value={stats.onlineUsers} hint="Active in the last 5 minutes" icon={<IconPulse />} tone="success" />
+          </button>
           <StatCard
             label="Total users"
             value={data.total}
@@ -489,6 +505,61 @@ export default function AdminDashboard() {
 
         <ComputeUsage />
       </div>
+
+      {showOnlineUsers && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4" onClick={() => setShowOnlineUsers(false)}>
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Active users</h3>
+                <p className="text-xs text-muted">Users active in the last 5 minutes</p>
+              </div>
+              <button type="button" onClick={() => setShowOnlineUsers(false)} className="rounded-lg border border-border px-2.5 py-1.5 text-sm text-muted hover:text-foreground">
+                Close
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto">
+              {onlineUsers.length === 0 ? (
+                <div className="px-5 py-10 text-center text-sm text-muted">No users are currently online.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {onlineUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          {user.name
+                            .split(" ")
+                            .map((part) => part[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase() || "U"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                          <p className="truncate text-xs text-muted">{user.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${getRoleTone(user.role)}`}>
+                          {user.role}
+                        </span>
+                        <span className="text-[11px] text-muted">
+                          {user.lastSeenAt ? getTimeAgo(user.lastSeenAt) : "just now"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

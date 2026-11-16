@@ -138,7 +138,8 @@ export async function GET(req: Request) {
     prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
     prisma.user.findMany({
       where: { lastSeenAt: { gte: fiveMinsAgo } },
-      select: { role: true },
+      orderBy: { lastSeenAt: "desc" },
+      select: { id: true, name: true, email: true, role: true, lastSeenAt: true },
     }),
     prisma.user.findMany({
       where: { createdAt: { gte: since } },
@@ -188,10 +189,20 @@ export async function GET(req: Request) {
   const studentCount = roleMap["STUDENT"] ?? 0;
   const adminCount = roleMap["SUPER_ADMIN"] ?? 0;
 
-  const onlineAll = onlineRoles.length;
-  const onlineTeachers = onlineRoles.filter((u: (typeof onlineRoles)[number]) => u.role === "TEACHER").length;
-  const onlineStudents = onlineRoles.filter((u: (typeof onlineRoles)[number]) => u.role === "STUDENT").length;
-  const onlineAdmins = onlineRoles.filter((u: (typeof onlineRoles)[number]) => u.role === "SUPER_ADMIN").length;
+  const onlineUsersList: Array<{ id: string; name: string; email: string; role: string; lastSeenAt: string | null }> = onlineRoles.map(
+    (u: (typeof onlineRoles)[number]) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
+    }),
+  );
+
+  const onlineAll = onlineUsersList.length;
+  const onlineTeachers = onlineUsersList.filter((u) => u.role === "TEACHER").length;
+  const onlineStudents = onlineUsersList.filter((u) => u.role === "STUDENT").length;
+  const onlineAdmins = onlineUsersList.filter((u) => u.role === "SUPER_ADMIN").length;
 
   const pagedWithPresence = pagedUsers.map((u: (typeof pagedUsers)[number]) => ({
     ...u,
@@ -238,6 +249,7 @@ export async function GET(req: Request) {
       activeSessionCount: activeCount,
       endedSessionCount: endedCount,
     },
+    onlineUsersList,
     charts: {
       usersByDay: buildDailySeries(recentUsers, "createdAt"),
       teachersByDay: buildDailySeries(recentUsers.filter((u: (typeof recentUsers)[number]) => u.role === "TEACHER"), "createdAt"),
