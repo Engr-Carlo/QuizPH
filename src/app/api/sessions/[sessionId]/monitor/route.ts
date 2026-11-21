@@ -38,7 +38,7 @@ export async function GET(
           questionSelectionMode: true,
           questionDrawCount: true,
           teacherId: true,
-          questions: { select: { id: true, includedInQuiz: true } },
+          questions: { select: { id: true, order: true, includedInQuiz: true } },
         },
       },
       participants: {
@@ -74,7 +74,7 @@ export async function GET(
         mode: quizSession.quiz.questionSelectionMode,
         drawCount: quizSession.quiz.questionDrawCount,
       }),
-      questions: quizSession.quiz.questions.map((question: (typeof quizSession.quiz.questions)[number]) => ({ id: question.id })),
+      questions: quizSession.quiz.questions.map((question: (typeof quizSession.quiz.questions)[number]) => ({ id: question.id, order: question.order })),
       duration: quizSession.quiz.duration,
       timerType: quizSession.quiz.timerType,
     },
