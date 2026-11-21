@@ -52,28 +52,22 @@ const Q_TYPE_LABELS: Record<string, string> = {
 export default function StudentResultsPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const [participantId, setParticipantId] = useState<string | null>(null);
 
   const [data, setData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchResults = useCallback(async () => {
-    const query = participantId ? `?participantId=${encodeURIComponent(participantId)}` : "";
-    const res = await fetch(`/api/sessions/${sessionId}${query}`);
+    const res = await fetch(`/api/sessions/${sessionId}/student/results`);
     if (res.ok) setData(await res.json());
     setLoading(false);
-  }, [participantId, sessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setParticipantId(params.get("participantId") || "");
-  }, []);
-
-  useEffect(() => {
-    if (participantId !== null) {
-      fetchResults();
-    }
-  }, [fetchResults, participantId]);
+    const timer = setTimeout(() => {
+      void fetchResults();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchResults]);
 
   if (loading) {
     return (
@@ -93,7 +87,7 @@ export default function StudentResultsPage() {
     );
   }
 
-  const participant = data.participants.find((p) => p.id === (participantId || ""));
+  const participant = data.participants[0];
   if (!participant) {
     return (
       <DashboardLayout>

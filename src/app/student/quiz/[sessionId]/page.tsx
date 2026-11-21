@@ -84,6 +84,9 @@ function StudentQuizContent() {
   const timeWarningShownRef = useRef(false);
   const questionsInitializedRef = useRef(false);
   const questionTimerRemainingRef = useRef<Record<string, number>>({});
+  const resumeWriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingResumeIndexRef = useRef<number | null>(null);
+  const resumeWriteChainRef = useRef<Promise<void>>(Promise.resolve());
   const focusLostRef = useRef(false); // tracks focus state without stale-closure risk
   const antiCheatEnabledRef = useRef(false); // mirrors sessionData.quiz.antiCheatEnabled as a ref
   const [showTimeWarning, setShowTimeWarning] = useState(false);
@@ -136,8 +139,7 @@ function StudentQuizContent() {
     // Never reset the UI once the student has submitted
     if (hasFinishedRef.current) return;
 
-    const query = participantId ? `?participantId=${encodeURIComponent(participantId)}` : "";
-    const res = await fetch(`/api/sessions/${sessionId}${query}`);
+    const res = await fetch(`/api/sessions/${sessionId}/student`);
     if (res.ok) {
       const data: SessionData = await res.json();
       setSessionData(data);
@@ -204,11 +206,37 @@ function StudentQuizContent() {
     fetchSession();
   }, [fetchSession]);
 
+  const syncSessionState = useCallback(async () => {
+    if (hasFinishedRef.current) return;
+    const res = await fetch(`/api/sessions/${sessionId}/state`, { cache: "no-store" });
+    if (!res.ok) return;
+
+    const data: Pick<SessionData, "status" | "resumeData"> = await res.json();
+    if (data.status === "ACTIVE" && data.resumeData?.isFinished) {
+      hasFinishedRef.current = true;
+      setAlreadyCompleted(Boolean(data.resumeData.alreadyCompleted));
+      setScore(data.resumeData.score ?? null);
+      setStatus("finished");
+      return;
+    }
+    if (data.status === "ENDED") {
+      hasFinishedRef.current = true;
+      setStatus("finished");
+      return;
+    }
+    if (data.status !== "ACTIVE" || !data.resumeData) return;
+
+    setStatus("active");
+    setTimerEndsAt(data.resumeData.timerEndsAt);
+    setTimeLeft(getTimeLeftFromEndsAt(data.resumeData.timerEndsAt, data.resumeData.timeLeft));
+    if (data.resumeData.timerEndsAt) {
+      sessionStorage.setItem(`timerEndsAt:${participantId}`, data.resumeData.timerEndsAt);
+    }
+  }, [participantId, sessionId]);
+
   useEffect(() => {
     const syncFromServer = () => {
-      if (!document.hidden) {
-        fetchSession();
-      }
+      if (!document.hidden) void syncSessionState();
     };
 
     document.addEventListener("visibilitychange", syncFromServer);
@@ -218,7 +246,7 @@ function StudentQuizContent() {
       document.removeEventListener("visibilitychange", syncFromServer);
       window.removeEventListener("focus", syncFromServer);
     };
-  }, [fetchSession]);
+  }, [syncSessionState]);
 
   // Listen for session status changes
   useEffect(() => {
@@ -251,7 +279,6 @@ function StudentQuizContent() {
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Timer (PER_QUIZ only — PER_QUESTION handled separately below)
@@ -543,22 +570,62 @@ function StudentQuizContent() {
     return () => clearInterval(iv);
   }, [status, sessionData?.quiz.duration]);
 
-  // Persist lastQuestionIndex to server so student can resume if they close the browser
-  const persistQuestionIndex = useCallback(
-    async (index: number) => {
-      if (!participantId) return;
-      try {
+  const flushQuestionIndex = useCallback((keepalive = false) => {
+    if (!participantId || pendingResumeIndexRef.current === null) return;
+
+    const index = pendingResumeIndexRef.current;
+    pendingResumeIndexRef.current = null;
+    resumeWriteChainRef.current = resumeWriteChainRef.current
+      .catch(() => {})
+      .then(async () => {
         await fetch(`/api/participants/${participantId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lastQuestionIndex: index }),
+          keepalive,
         });
-      } catch {
-        // non-critical
+      })
+      .catch(() => {});
+  }, [participantId]);
+
+  // Keep the newest navigation position and write once after rapid clicks settle.
+  const persistQuestionIndex = useCallback((index: number) => {
+    if (!participantId) return;
+
+    pendingResumeIndexRef.current = index;
+    if (resumeWriteTimerRef.current) {
+      clearTimeout(resumeWriteTimerRef.current);
+    }
+    resumeWriteTimerRef.current = setTimeout(() => {
+      resumeWriteTimerRef.current = null;
+      flushQuestionIndex();
+    }, 1200);
+  }, [flushQuestionIndex, participantId]);
+
+  useEffect(() => {
+    const flushOnExit = () => {
+      if (resumeWriteTimerRef.current) {
+        clearTimeout(resumeWriteTimerRef.current);
+        resumeWriteTimerRef.current = null;
       }
-    },
-    [participantId]
-  );
+      flushQuestionIndex(true);
+    };
+    const flushOnHide = () => {
+      if (document.hidden) flushOnExit();
+    };
+
+    window.addEventListener("pagehide", flushOnExit);
+    document.addEventListener("visibilitychange", flushOnHide);
+    return () => {
+      window.removeEventListener("pagehide", flushOnExit);
+      document.removeEventListener("visibilitychange", flushOnHide);
+      if (resumeWriteTimerRef.current) {
+        clearTimeout(resumeWriteTimerRef.current);
+        resumeWriteTimerRef.current = null;
+      }
+      flushQuestionIndex(true);
+    };
+  }, [flushQuestionIndex]);
 
   // Handle answer selection
   async function handleAnswer(questionId: string, answerText: string) {
@@ -584,6 +651,7 @@ function StudentQuizContent() {
     if (isSubmittingRef.current || hasFinishedRef.current) return;
     isSubmittingRef.current = true;
     hasFinishedRef.current = true;
+    flushQuestionIndex(true);
 
     // Clean up persisted timer data from sessionStorage
     if (participantId) {
@@ -816,7 +884,6 @@ function StudentQuizContent() {
   const secureModeMessage = focusLost || warningCount > 0
     ? "The quiz was covered because fullscreen or focus was lost. Your teacher has been notified. Return to secure mode to continue."
     : "This quiz is protected. Question content stays hidden until fullscreen is active on this device.";
-  const isPerQuestion = sessionData.quiz.timerType === "PER_QUESTION";
 
   // Biometrics derived display values
   const hrColor = heartRate > 108 ? "#f87171" : heartRate > 88 ? "#facc15" : "#34d399";

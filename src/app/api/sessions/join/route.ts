@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
   if (quizSession.status === "ENDED") {
     return NextResponse.json({ error: "This quiz has already ended" }, { status: 400 });
   }
+
+  await touchUserActivity(session.user.id);
 
   // Check if already joined
   const existing = await prisma.participant.findFirst({
@@ -59,8 +62,6 @@ export async function POST(req: Request) {
   // Notify teacher dashboard a new participant joined
   await pusherServer.trigger(`session-${quizSession.id}`, "participant-joined", {
     participantId: participant.id,
-    name: session.user.name,
-    joinedAt: participant.joinedAt,
   });
 
   return NextResponse.json({

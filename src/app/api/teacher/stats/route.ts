@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 const MONTHS = 12;
@@ -58,6 +59,7 @@ export async function GET() {
   }
 
   const teacherId = session.user.id;
+  await touchUserActivity(teacherId);
   const ownedBy = { quiz: { teacherId } };
   const currentMonth = manilaMonthIndex(new Date());
   const firstMonth = currentMonth - (MONTHS - 1);

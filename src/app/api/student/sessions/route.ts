@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getQuizActiveQuestionCount } from "@/lib/utils";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 
 // GET /api/student/sessions — last 8 sessions the current student participated in
 export async function GET() {
@@ -9,6 +10,8 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await touchUserActivity(session.user.id);
 
   const participants = await prisma.participant.findMany({
     where: { userId: session.user.id },

@@ -4,6 +4,7 @@ import { pusherServer } from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 import type { Option } from "@prisma/client";
 import { selectQuestionsForSession } from "@/lib/utils";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
         session: {
           select: {
             id: true,
+            status: true,
             quiz: {
               select: {
                 questionSelectionMode: true,
@@ -52,8 +54,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (participant.isFinished) {
-      return NextResponse.json({ error: "Quiz already submitted" }, { status: 400 });
+    await touchUserActivity(session.user.id);
+
+    if (participant.isFinished || participant.session.status !== "ACTIVE") {
+      return NextResponse.json({ error: "Quiz is not active for this participant" }, { status: 400 });
     }
 
     const allowedQuestions = selectQuestionsForSession({
@@ -67,15 +71,6 @@ export async function POST(req: Request) {
     });
     if (!allowedQuestions.some((question) => question.id === questionId)) {
       return NextResponse.json({ error: "Question is not assigned to this participant" }, { status: 403 });
-    }
-
-    // Check if already answered this question
-    const existing = await prisma.answer.findFirst({
-      where: { participantId, questionId },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: "Already answered" }, { status: 409 });
     }
 
     // Check answer correctness
@@ -115,27 +110,22 @@ export async function POST(req: Request) {
       }
     }
 
-    const answer = await prisma.answer.create({
-      data: {
-        participantId,
-        questionId,
-        answerText: String(answerText),
-        isCorrect,
-      },
-    });
-
-    // Update score if correct and capture new score in one query.
-    // Default is 1 point per question unless a custom question value is assigned.
-    let finalScore = participant.score;
-    if (isCorrect) {
-      const pointsAwarded = question.points ?? 1;
-      const updated = await prisma.participant.update({
+    const [answer, updatedParticipant] = await prisma.$transaction([
+      prisma.answer.create({
+        data: {
+          participantId,
+          questionId,
+          answerText: String(answerText),
+          isCorrect,
+        },
+      }),
+      prisma.participant.update({
         where: { id: participantId },
-        data: { score: { increment: pointsAwarded } },
+        data: { score: { increment: isCorrect ? (question.points ?? 1) : 0 } },
         select: { score: true },
-      });
-      finalScore = updated.score;
-    }
+      }),
+    ]);
+    const finalScore = updatedParticipant.score;
 
     // Notify leaderboard update — name already loaded in the initial fetch
     await pusherServer.trigger(
@@ -149,8 +139,11 @@ export async function POST(req: Request) {
       }
     );
 
-    return NextResponse.json({ answer, isCorrect }, { status: 201 });
-  } catch {
+    return NextResponse.json({ answer, isCorrect, score: finalScore }, { status: 201 });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+      return NextResponse.json({ error: "Already answered" }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Failed to submit answer" },
       { status: 500 }

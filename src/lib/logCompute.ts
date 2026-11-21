@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
 
-// Set COMPUTE_LOGGING=false in Vercel env to disable without redeploying
-const ENABLED = process.env.COMPUTE_LOGGING !== "false";
+// Compute logging is opt-in because every measurement currently adds database writes.
+const ENABLED = process.env.COMPUTE_LOGGING === "true";
 
 /**
  * Atomically upserts a daily aggregate row for a route and optionally tracks

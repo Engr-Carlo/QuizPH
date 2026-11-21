@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { RateLimiter } from "@/lib/rate-limit";
 import { violationBatchSchema } from "@/lib/validations";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 // In-memory guard: spam is dropped before any DB work (best-effort per instance).
@@ -42,6 +43,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    await touchUserActivity(session.user.id);
+
     // Trust the participant's real session, not the client-supplied one.
     const sessionId = participant.sessionId;
     const timestamp = new Date();
@@ -50,14 +53,7 @@ export async function POST(req: Request) {
       data: types.map((type) => ({ participantId, sessionId, type, timestamp })),
     });
 
-    // One aggregate query instead of loading every violation row.
-    const grouped = await prisma.violationLog.groupBy({
-      by: ["type"],
-      where: { participantId },
-      _count: { _all: true },
-    });
-    const typeCounts = grouped.map((g: (typeof grouped)[number]) => ({ type: g.type, count: g._count._all }));
-    const totalCount = typeCounts.reduce((sum: number, g: { count: number }) => sum + g.count, 0);
+    const totalCount = await prisma.violationLog.count({ where: { participantId } });
 
     await pusherServer.trigger(`session-${sessionId}`, "violation", {
       participantId,
@@ -65,7 +61,6 @@ export async function POST(req: Request) {
       type: types[0],
       types,
       totalCount,
-      typeCounts,
       timestamp,
     });
 

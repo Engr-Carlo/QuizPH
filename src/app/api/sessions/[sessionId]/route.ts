@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { getQuizActiveQuestionCount, selectQuestionsForSession } from "@/lib/utils";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 function buildTimerState(startedAt: Date | null, durationSeconds: number) {
@@ -73,8 +74,6 @@ export async function PATCH(
   // Notify all participants via Pusher
   await pusherServer.trigger(`session-${sessionId}`, "session-status", {
     status: updated.status,
-    startedAt: updated.startedAt,
-    endedAt: updated.endedAt,
   });
 
   return NextResponse.json(updated);
@@ -116,6 +115,9 @@ export async function GET(
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.user.role === "STUDENT") {
+    return NextResponse.json({ error: "Use the student session endpoint" }, { status: 403 });
   }
 
   let currentUserId: string | null = session.user.id ?? null;
@@ -215,6 +217,8 @@ export async function GET(
   if (!isTeacher && !isAdmin && !isParticipant) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  await touchUserActivity(currentUserId);
 
   const participantId = new URL(req.url).searchParams.get("participantId") || "";
   const seed = quizSession.quiz.questionSelectionMode === "RANDOM"

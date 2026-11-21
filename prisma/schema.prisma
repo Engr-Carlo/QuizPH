@@ -256,7 +256,7 @@ model Answer {
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
-  @@index([participantId, questionId])
+  @@unique([participantId, questionId])
   @@index([participantId])
   @@index([questionId])
 }

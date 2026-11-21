@@ -35,7 +35,6 @@ export async function PATCH(
 
   await pusherServer.trigger(`session-${sessionId}`, "session-status", {
     status: "ENDED",
-    endedAt: updated.endedAt,
   });
 
   return NextResponse.json({ message: "Session ended", session: updated });

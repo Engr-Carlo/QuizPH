@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -32,6 +33,8 @@ export async function GET(req: Request) {
   if (!session?.user || session.user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await touchUserActivity(session.user.id);
 
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"));

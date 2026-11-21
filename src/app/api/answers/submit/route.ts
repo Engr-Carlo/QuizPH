@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
     if (!participant || participant.userId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    await touchUserActivity(session.user.id);
 
     // Idempotent: if already finished, return existing state without side effects
     if (participant.isFinished) {

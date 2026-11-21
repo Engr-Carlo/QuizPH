@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
 
 // PATCH /api/participants/:id — save lastQuestionIndex for resume
@@ -26,6 +27,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  await touchUserActivity(session.user.id);
   await prisma.participant.update({
     where: { id: participantId },
     data: { lastQuestionIndex },

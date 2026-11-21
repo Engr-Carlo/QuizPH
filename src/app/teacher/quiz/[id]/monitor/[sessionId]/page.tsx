@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher-client";
 import { formatTime } from "@/lib/utils";
@@ -12,8 +12,8 @@ interface ViolationEvent {
   participantId: string;
   participantName: string;
   type: string;
+  types?: string[];
   totalCount: number;
-  typeCounts: { type: string; count: number }[];
   timestamp: string;
 }
 
@@ -27,7 +27,7 @@ interface Participant {
   timerEndsAt: string | null;
   user: { name: string; email: string };
   violations: { type: string; timestamp: string }[];
-  answers: { isCorrect: boolean }[];
+  answerCount: number;
 }
 
 interface SessionData {
@@ -134,7 +134,7 @@ export default function MonitorPage() {
 
   const fetchSession = useCallback(async () => {
     try {
-      const res = await fetch(`/api/sessions/${sessionId}`);
+      const res = await fetch(`/api/sessions/${sessionId}/monitor`, { cache: "no-store" });
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
         setFetchError(payload?.error || "Session could not be loaded.");
@@ -154,7 +154,12 @@ export default function MonitorPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => { fetchSession(); }, [fetchSession]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchSession();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchSession]);
 
   // Coalesce bursts of live events into one refetch per window (N students => 1 request, not N).
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -175,7 +180,20 @@ export default function MonitorPage() {
     const ch = pusher.subscribe(`session-${sessionId}`);
     ch.bind("violation", (data: ViolationEvent) => {
       setToasts((prev) => [data, ...prev].slice(0, 8));
-      scheduleFetch();
+      setSessionData((current) => current ? {
+        ...current,
+        participants: current.participants.map((participant) =>
+          participant.id === data.participantId
+            ? {
+                ...participant,
+                violations: [
+                  ...(data.types ?? [data.type]).map((type) => ({ type, timestamp: data.timestamp })),
+                  ...participant.violations,
+                ],
+              }
+            : participant
+        ),
+      } : current);
     });
     ch.bind("session-status", () => {
       setStartingQuiz(false);
@@ -192,8 +210,26 @@ export default function MonitorPage() {
       }, 3000);
       scheduleFetch();
     });
-    ch.bind("answer-submitted", scheduleFetch);
-    ch.bind("participant-finished", scheduleFetch);
+    ch.bind("answer-submitted", (data: { participantId: string; score: number }) => {
+      setSessionData((current) => current ? {
+        ...current,
+        participants: current.participants.map((participant) =>
+          participant.id === data.participantId
+            ? { ...participant, score: data.score, answerCount: participant.answerCount + 1 }
+            : participant
+        ),
+      } : current);
+    });
+    ch.bind("participant-finished", (data: { participantId: string; score: number }) => {
+      setSessionData((current) => current ? {
+        ...current,
+        participants: current.participants.map((participant) =>
+          participant.id === data.participantId
+            ? { ...participant, score: data.score, isFinished: true, timeLeft: 0, timerEndsAt: null, finishedAt: new Date().toISOString() }
+            : participant
+        ),
+      } : current);
+    });
     return () => { ch.unbind_all(); pusher.unsubscribe(`session-${sessionId}`); };
   }, [sessionId, fetchSession, scheduleFetch]);
 
@@ -221,12 +257,12 @@ export default function MonitorPage() {
   const withViolations = sessionData?.participants.filter((p) => p.violations.length > 0).length ?? 0;
 
   // Leaderboard: sort by score desc, then violations asc
-  const leaderboard = sessionData
+  const leaderboard = useMemo(() => sessionData
     ? [...sessionData.participants].sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return a.violations.length - b.violations.length;
       })
-    : [];
+    : [], [sessionData]);
 
   const leaderboardSignature = leaderboard
     .map((participant) => `${participant.id}:${participant.score}:${participant.violations.length}`)
@@ -564,7 +600,7 @@ export default function MonitorPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {sessionData.participants.map((p) => {
                     const vCount = p.violations.length;
-                    const progress = totalQ > 0 ? (p.answers.length / totalQ) * 100 : 0;
+                    const progress = totalQ > 0 ? (p.answerCount / totalQ) * 100 : 0;
                     const timeLeft = getLiveTimeLeft(p);
                     const completionDuration = formatCompletionDuration(p);
 
@@ -610,7 +646,7 @@ export default function MonitorPage() {
                         {/* Progress bar */}
                         <div className="mb-2">
                           <div className="flex justify-between text-[10px] text-muted mb-1">
-                            <span>{p.answers.length}/{totalQ} answered</span>
+                            <span>{p.answerCount}/{totalQ} answered</span>
                             <span key={p.score} className="score-bump font-semibold text-primary">{p.score} pts</span>
                           </div>
                           <div className="h-1.5 bg-surface rounded-full overflow-hidden">
@@ -760,7 +796,7 @@ export default function MonitorPage() {
               <div className="grid grid-cols-2 gap-2.5 mb-5">
                 {[
                   { label: "Score", value: selectedP.score, color: "text-primary", bg: "bg-primary/8" },
-                  { label: "Answers", value: `${selectedP.answers.length}/${totalQ}`, color: "text-foreground", bg: "bg-surface" },
+                  { label: "Answers", value: `${selectedP.answerCount}/${totalQ}`, color: "text-foreground", bg: "bg-surface" },
                   { label: "Violations", value: selectedP.violations.length, color: "text-danger", bg: "bg-danger/8" },
                   { label: "Time Left", value: selectedP.isFinished ? "Done" : formatTime(getLiveTimeLeft(selectedP)), color: getLiveTimeLeft(selectedP) <= 60 && !selectedP.isFinished ? "text-danger" : "text-foreground", bg: getLiveTimeLeft(selectedP) <= 60 && !selectedP.isFinished ? "bg-danger/8" : "bg-surface" },
                   { label: "Finish Time", value: formatCompletionDuration(selectedP), color: "text-success", bg: "bg-success/8" },
