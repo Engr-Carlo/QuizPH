@@ -23,19 +23,19 @@ export async function GET(req: Request) {
   const [sessions, total] = await Promise.all([
     prisma.quizSession.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        startedAt: true,
+        endedAt: true,
+        createdAt: true,
         quiz: {
           select: {
             id: true,
             title: true,
             teacher: { select: { id: true, name: true, email: true } },
           },
-        },
-        participants: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { score: "desc" },
         },
         _count: { select: { participants: true, violations: true } },
       },

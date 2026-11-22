@@ -3,6 +3,8 @@ import { logCompute } from "@/lib/logCompute";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { touchUserActivity } from "@/lib/touch-user-activity";
+import { checkRateLimit, jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
+import { submitLimiter } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -13,7 +15,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { participantId } = await req.json();
+    const { participantId } = await readJsonBody(req, 4_000);
+    const rate = await checkRateLimit(submitLimiter, req, "/api/answers/submit", requestIdentity(req, session.user.id));
+    if (rate instanceof NextResponse) return rate;
+    if (typeof participantId !== "string" || participantId.length > 100) {
+      return NextResponse.json({ error: "Invalid participant" }, { status: 400 });
+    }
 
     const participant = await prisma.participant.findUnique({
       where: { id: participantId },
@@ -55,7 +62,10 @@ export async function POST(req: Request) {
 
     await logCompute("/api/answers/submit", "session", performance.now() - t0, session.user.id);
     return NextResponse.json(updated);
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && (error.message === "BODY_TOO_LARGE" || error.message === "INVALID_JSON")) {
+      return jsonBodyError(error);
+    }
     return NextResponse.json(
       { error: "Failed to submit quiz" },
       { status: 500 }

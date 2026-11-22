@@ -1,13 +1,11 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
-import { RateLimiter } from "@/lib/rate-limit";
+import { violationLimiter } from "@/lib/rate-limit";
 import { violationBatchSchema } from "@/lib/validations";
+import { jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
 import { touchUserActivity } from "@/lib/touch-user-activity";
 import { NextResponse } from "next/server";
-
-// In-memory guard: spam is dropped before any DB work (best-effort per instance).
-const violationLimiter = new RateLimiter(20, 60_000);
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -16,7 +14,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const raw = await req.json();
+    const raw = await readJsonBody(req, 8_000);
     // Accept the legacy single `type` payload from clients cached before batching shipped.
     const input = raw && !raw.types && raw.type ? { ...raw, types: [raw.type] } : raw;
     const parsed = violationBatchSchema.safeParse(input);
@@ -30,8 +28,9 @@ export async function POST(req: Request) {
 
     const { participantId, types } = parsed.data;
 
-    if (!violationLimiter.hit(participantId).allowed) {
-      return NextResponse.json({ message: "ok" }, { status: 200 });
+    const rateCheck = await violationLimiter.hit(requestIdentity(req, session.user.id), "/api/violations");
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ message: "ok" }, { status: 429, headers: { "Retry-After": String(Math.max(1, Math.ceil(rateCheck.retryAfterMs / 1000))) } });
     }
 
     const participant = await prisma.participant.findUnique({
@@ -65,7 +64,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true, totalCount }, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && (error.message === "BODY_TOO_LARGE" || error.message === "INVALID_JSON")) {
+      return jsonBodyError(error);
+    }
     return NextResponse.json(
       { error: "Failed to log violation" },
       { status: 500 }

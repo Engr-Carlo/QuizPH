@@ -2,9 +2,23 @@ import { prisma } from "@/lib/prisma";
 import { verifyResetToken, consumeResetToken } from "@/lib/password-reset";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import { checkRateLimit, jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
+import { passwordResetLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
-  const { email, token, password } = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonBody(req, 8_000);
+  } catch (error) {
+    return jsonBodyError(error);
+  }
+  const { email, token, password } = body;
+  const rate = await checkRateLimit(passwordResetLimiter, req, "/api/reset-password", requestIdentity(req, typeof email === "string" ? email.trim().toLowerCase() : null));
+  if (rate instanceof NextResponse) return rate;
+
+  if (typeof email !== "string" || typeof token !== "string" || typeof password !== "string" || email.length > 320 || token.length > 500) {
+    return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
+  }
 
   if (!email || !token || !password) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

@@ -3,10 +3,14 @@ import { registerSchema } from "@/lib/validations";
 import { createAndSendVerificationCode } from "@/lib/email-verification";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import { checkRateLimit, jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
+import { registerLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await readJsonBody(req, 24_000);
+    const rate = await checkRateLimit(registerLimiter, req, "/api/register", requestIdentity(req));
+    if (rate instanceof NextResponse) return rate;
     const parsed = registerSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -140,7 +144,10 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && (error.message === "BODY_TOO_LARGE" || error.message === "INVALID_JSON")) {
+      return jsonBodyError(error);
+    }
     return NextResponse.json(
       { error: "Something went wrong" },
       { status: 500 }

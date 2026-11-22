@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 interface BugReportUser {
@@ -33,6 +33,7 @@ interface BugReport {
   createdAt: string;
   updatedAt: string;
   user: BugReportUser;
+  messageCount: number;
   messages: BugReportMessage[];
 }
 
@@ -132,6 +133,8 @@ function StatusBadge({ status }: { status: BugReport["status"] }) {
 
 export default function AdminBugReportsPage() {
   const [reports, setReports] = useState<BugReport[]>([]);
+  const [reportPage, setReportPage] = useState(1);
+  const [reportTotal, setReportTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -142,49 +145,24 @@ export default function AdminBugReportsPage() {
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
   const [replyError, setReplyError] = useState("");
+  const [loadingMessagesId, setLoadingMessagesId] = useState<string | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
 
-  async function fetchReports() {
+  const fetchReports = useCallback(async () => {
     setLoading(true);
-    const response = await fetch("/api/admin/bug-reports");
+    const response = await fetch(`/api/admin/bug-reports?page=${reportPage}&limit=20`);
     if (response.ok) {
       const data = (await response.json()) as BugReport[];
       setReports(data);
+      setReportTotal(Number(response.headers.get("X-Total-Count") || data.length));
     }
     setLoading(false);
-  }
+  }, [reportPage]);
 
   useEffect(() => {
-    void fetchReports();
-  }, []);
-
-  useEffect(() => {
-    if (!reports.length) {
-      setStatusDrafts({});
-      setNoteDrafts({});
-      return;
-    }
-
-    setStatusDrafts((current) => {
-      const next = { ...current };
-      for (const report of reports) {
-        if (!(report.id in next)) {
-          next[report.id] = report.status;
-        }
-      }
-      return next;
-    });
-
-    setNoteDrafts((current) => {
-      const next = { ...current };
-      for (const report of reports) {
-        if (!(report.id in next)) {
-          next[report.id] = report.adminNote ?? "";
-        }
-      }
-      return next;
-    });
-  }, [reports]);
+    const timer = setTimeout(() => void fetchReports(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchReports]);
 
   const counts = useMemo(
     () => ({
@@ -211,9 +189,34 @@ export default function AdminBugReportsPage() {
     threadEndRef.current?.scrollIntoView({ block: "nearest" });
   }, [selected?.id, selected?.messages.length]);
 
+  useEffect(() => {
+    if (!selected?.id || selected.screenshotDataUrl) return;
+    fetch(`/api/admin/bug-reports/${selected.id}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((detail) => {
+        if (!detail) return;
+        setReports((current) => current.map((report) => report.id === selected.id ? { ...report, ...detail, messages: report.messages } : report));
+      })
+      .catch(() => {});
+  }, [selected?.id, selected?.screenshotDataUrl]);
+
+  async function loadEarlierMessages(report: BugReport) {
+    setLoadingMessagesId(report.id);
+    const page = Math.floor(report.messages.length / 40) + 1;
+    const response = await fetch(`/api/admin/bug-reports/${report.id}/messages?page=${page}&limit=40`);
+    if (response.ok) {
+      const data = await response.json();
+      const older = data.messages as BugReportMessage[];
+      setReports((current) => current.map((item) => item.id === report.id
+        ? { ...item, messages: [...older.filter((message) => !item.messages.some((existing) => existing.id === message.id)), ...item.messages] }
+        : item));
+    }
+    setLoadingMessagesId(null);
+  }
+
   async function updateStatus(reportId: string) {
-    const status = statusDrafts[reportId] ?? "OPEN";
-    const adminNote = (noteDrafts[reportId] ?? "").trim();
+    const status = statusDrafts[reportId] ?? reports.find((report) => report.id === reportId)?.status ?? "OPEN";
+    const adminNote = (noteDrafts[reportId] ?? reports.find((report) => report.id === reportId)?.adminNote ?? "").trim();
     setSavingId(reportId);
     setSaveError("");
 
@@ -366,6 +369,13 @@ export default function AdminBugReportsPage() {
                     })
                   )}
                 </div>
+                {reportTotal > 20 && (
+                  <div className="flex items-center justify-between border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/80">
+                    <button type="button" disabled={reportPage === 1 || loading} onClick={() => setReportPage((page) => page - 1)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 disabled:opacity-40 dark:border-slate-700">Prev</button>
+                    <span className="text-[11px] text-slate-500">Page {reportPage} of {Math.ceil(reportTotal / 20)}</span>
+                    <button type="button" disabled={reportPage * 20 >= reportTotal || loading} onClick={() => setReportPage((page) => page + 1)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 disabled:opacity-40 dark:border-slate-700">Next</button>
+                  </div>
+                )}
               </div>
             </aside>
 
@@ -425,6 +435,7 @@ export default function AdminBugReportsPage() {
 
                         {selected.screenshotDataUrl && (
                           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={selected.screenshotDataUrl}
                               alt={selected.screenshotName || "Bug report screenshot"}
@@ -445,7 +456,15 @@ export default function AdminBugReportsPage() {
                             {selected.messages.length === 0 ? (
                               <p className="text-sm text-slate-500 dark:text-slate-400">No follow-up messages yet.</p>
                             ) : (
-                              selected.messages.map((message) => {
+                              <>
+                                {selected.messages.length < selected.messageCount && (
+                                  <div className="flex justify-center pb-2">
+                                    <button type="button" disabled={loadingMessagesId === selected.id} onClick={() => loadEarlierMessages(selected)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 disabled:opacity-50 dark:border-slate-700 dark:text-slate-400">
+                                      {loadingMessagesId === selected.id ? "Loading…" : "Load earlier replies"}
+                                    </button>
+                                  </div>
+                                )}
+                                {selected.messages.map((message) => {
                                 const isAdmin = message.sender === "ADMIN";
 
                                 return (
@@ -469,7 +488,8 @@ export default function AdminBugReportsPage() {
                                     </div>
                                   </div>
                                 );
-                              })
+                              })}
+                              </>
                             )}
                           </div>
                         </div>
@@ -510,7 +530,7 @@ export default function AdminBugReportsPage() {
                         <div>
                           <label className="block text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Admin note</label>
                           <textarea
-                            value={noteDrafts[selected.id] ?? ""}
+                            value={noteDrafts[selected.id] ?? selected.adminNote ?? ""}
                             onChange={(event) =>
                               setNoteDrafts((current) => ({
                                 ...current,

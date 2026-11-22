@@ -1,9 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { createAndSendResetToken } from "@/lib/password-reset";
 import { NextResponse } from "next/server";
+import { checkRateLimit, jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
+import { passwordResetLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
-  const { email } = await req.json();
+  let email: unknown;
+  try {
+    ({ email } = await readJsonBody(req, 8_000));
+  } catch (error) {
+    return jsonBodyError(error);
+  }
+  const rate = await checkRateLimit(passwordResetLimiter, req, "/api/forgot-password", requestIdentity(req, typeof email === "string" ? email.trim().toLowerCase() : null));
+  if (rate instanceof NextResponse) return rate;
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }

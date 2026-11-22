@@ -1,10 +1,14 @@
 import { createAndSendVerificationCode } from "@/lib/email-verification";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { checkRateLimit, jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
+import { verificationResendLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await readJsonBody(req, 8_000);
+    const rate = await checkRateLimit(verificationResendLimiter, req, "/api/email-verification/resend", requestIdentity(req));
+    if (rate instanceof NextResponse) return rate;
     const email = String(body?.email || "").trim().toLowerCase();
 
     if (!email) {
@@ -50,7 +54,10 @@ export async function POST(req: Request) {
       message: "Verification code sent",
       previewCode: result.previewCode,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && (error.message === "BODY_TOO_LARGE" || error.message === "INVALID_JSON")) {
+      return jsonBodyError(error);
+    }
     return NextResponse.json({ error: "Failed to resend verification code" }, { status: 500 });
   }
 }

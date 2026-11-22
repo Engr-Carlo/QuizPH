@@ -5,6 +5,8 @@ import { NextResponse } from "next/server";
 import type { Option } from "@prisma/client";
 import { selectQuestionsForSession } from "@/lib/utils";
 import { touchUserActivity } from "@/lib/touch-user-activity";
+import { checkRateLimit, jsonBodyError, readJsonBody, requestIdentity } from "@/lib/api-protection";
+import { answerLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -13,9 +15,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { participantId, questionId, answerText } = await req.json();
+    const body = await readJsonBody(req, 24_000);
+    const { participantId, questionId, answerText } = body;
+    const rate = await checkRateLimit(answerLimiter, req, "/api/answers", requestIdentity(req, session.user.id));
+    if (rate instanceof NextResponse) return rate;
 
-    if (!participantId || !questionId || answerText === undefined) {
+    if (
+      typeof participantId !== "string" || participantId.length > 100 ||
+      typeof questionId !== "string" || questionId.length > 100 ||
+      typeof answerText !== "string" || answerText.length > 20_000
+    ) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
@@ -141,6 +150,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ answer, isCorrect, score: finalScore }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && (error.message === "BODY_TOO_LARGE" || error.message === "INVALID_JSON")) {
+      return jsonBodyError(error);
+    }
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "Already answered" }, { status: 409 });
     }

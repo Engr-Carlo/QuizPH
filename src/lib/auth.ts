@@ -15,11 +15,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        if (String(credentials.email).length > 320 || String(credentials.password).length > 200) return null;
 
         const normalizedEmail = (credentials.email as string).toLowerCase().trim();
 
         // Brute-force protection: max 10 failed attempts per email per 15 min
-        const rateCheck = loginLimiter.hit(normalizedEmail);
+        const rateCheck = await loginLimiter.hit(normalizedEmail, "/api/auth/signin");
         if (!rateCheck.allowed) {
           // Returning null causes NextAuth to emit a generic CredentialsSignin error
           return null;
@@ -44,7 +45,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!isValid) return null;
 
         // Successful login — reset the counter
-        loginLimiter.reset(normalizedEmail);
+        await loginLimiter.reset(normalizedEmail);
 
         await prisma.user.update({
           where: { id: user.id },

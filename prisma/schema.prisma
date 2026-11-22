@@ -137,6 +137,7 @@ model EmailVerificationCode {
 
   @@index([userId, createdAt])
   @@index([userId, codeHash])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {
@@ -151,6 +152,7 @@ model PasswordResetToken {
 
   @@index([userId, createdAt])
   @@index([tokenHash])
+  @@index([expiresAt])
 }
 
 model Quiz {
@@ -174,6 +176,8 @@ model Quiz {
 
   questions Question[]
   sessions  QuizSession[]
+
+  @@index([teacherId, createdAt])
 }
 
 model Question {
@@ -192,7 +196,7 @@ model Question {
   options Option[]
   answers Answer[]
 
-  @@index([quizId])
+  @@index([quizId, order])
 }
 
 model Option {
@@ -220,6 +224,9 @@ model QuizSession {
 
   participants Participant[]
   violations   ViolationLog[]
+
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model Participant {
@@ -240,7 +247,7 @@ model Participant {
   answers    Answer[]
   violations ViolationLog[]
 
-  @@index([sessionId])
+  @@unique([sessionId, userId])
   @@index([userId, sessionId])
 }
 
@@ -277,6 +284,8 @@ model ViolationLog {
   @@index([participantId])
   @@index([participantId, timestamp])
   @@index([sessionId])
+  @@index([sessionId, timestamp])
+  @@index([timestamp])
 }
 
 model PatchNote {
@@ -324,6 +333,7 @@ model BugReport {
   messages BugReportMessage[]
 
   @@index([userId])
+  @@index([userId, createdAt])
   @@index([status, createdAt])
 }
 
@@ -359,6 +369,18 @@ model RouteLog {
 }
 
 // Tracks which user triggered compute per route per day
+model RateLimitEvent {
+  id          String   @id @default(cuid())
+  date        String
+  route       String
+  mode        String
+  count       Int      @default(1)
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([date, route, mode])
+  @@index([date])
+}
+
 model RouteLogUser {
   id     String @id @default(cuid())
   date   String // "2026-04-25"

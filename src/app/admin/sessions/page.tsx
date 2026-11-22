@@ -32,7 +32,6 @@ interface SessionData {
     title: string;
     teacher: { id: string; name: string; email: string };
   };
-  participants: ParticipantData[];
   _count: { participants: number; violations: number };
 }
 
@@ -55,8 +54,35 @@ export default function AdminSessionsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [expandedParticipants, setExpandedParticipants] = useState<ParticipantData[]>([]);
+  const [participantPage, setParticipantPage] = useState(1);
+  const [participantTotal, setParticipantTotal] = useState(0);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
   const [forceEndTarget, setForceEndTarget] = useState<SessionData | null>(null);
   const [forceEndLoading, setForceEndLoading] = useState(false);
+
+  async function loadParticipants(sessionId: string, nextPage = 1) {
+    setParticipantsLoading(true);
+    const res = await fetch(`/api/admin/sessions/${sessionId}?page=${nextPage}&limit=25`, { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      setExpandedParticipants(data.participants);
+      setParticipantTotal(data.total);
+      setParticipantPage(data.page);
+    }
+    setParticipantsLoading(false);
+  }
+
+  function toggleParticipants(sessionId: string) {
+    if (expandedSession === sessionId) {
+      setExpandedSession(null);
+      return;
+    }
+    setExpandedSession(sessionId);
+    setExpandedParticipants([]);
+    setParticipantPage(1);
+    void loadParticipants(sessionId, 1);
+  }
 
   // Answers modal
   const [answersModal, setAnswersModal] = useState<{ sessionId: string; participantId: string; participantName: string } | null>(null);
@@ -72,10 +98,6 @@ export default function AdminSessionsPage() {
     setAnswersLoading(false);
   }
 
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter]);
-
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
@@ -90,7 +112,7 @@ export default function AdminSessionsPage() {
   }, [page, statusFilter]);
 
   useEffect(() => {
-    fetchData();
+    const initialFetch = setTimeout(() => void fetchData(), 0);
     let interval = setInterval(fetchData, 30_000);
 
     function onVisibilityChange() {
@@ -104,6 +126,7 @@ export default function AdminSessionsPage() {
 
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      clearTimeout(initialFetch);
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
@@ -143,7 +166,10 @@ export default function AdminSessionsPage() {
             {filterTabs.map((tab) => (
               <button
                 key={tab.value}
-                onClick={() => setStatusFilter(tab.value)}
+                onClick={() => {
+                  setStatusFilter(tab.value);
+                  setPage(1);
+                }}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === tab.value ? "bg-primary text-white" : "bg-white text-muted hover:text-foreground border border-border"}`}
               >
                 {tab.label}
@@ -193,9 +219,9 @@ export default function AdminSessionsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {s.participants.length > 0 && (
+                      {s._count.participants > 0 && (
                         <button
-                          onClick={() => setExpandedSession(isExpanded ? null : s.id)}
+                          onClick={() => toggleParticipants(s.id)}
                           className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:border-primary/30 hover:text-primary"
                         >
                           {isExpanded ? "Hide" : "View"} Participants
@@ -213,9 +239,9 @@ export default function AdminSessionsPage() {
                   </div>
 
                   {/* Participant List */}
-                  {isExpanded && s.participants.length > 0 && (
+                  {isExpanded && (
                     <div className="border-t border-border/40 bg-surface/50 px-5 pb-4 pt-3">
-                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Participants ({s.participants.length})</p>
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Participants ({participantTotal})</p>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
@@ -228,10 +254,10 @@ export default function AdminSessionsPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/30">
-                            {s.participants.map((p, idx) => (
+                            {expandedParticipants.map((p, idx) => (
                               <tr key={p.id}>
                                 <td className="py-2 pr-4 font-medium text-foreground">
-                                  <span className="mr-2 text-xs text-muted">#{idx + 1}</span>
+                                  <span className="mr-2 text-xs text-muted">#{(participantPage - 1) * 25 + idx + 1}</span>
                                   {p.user.name}
                                 </td>
                                 <td className="py-2 pr-4 text-xs text-muted">{p.user.email}</td>
@@ -254,6 +280,14 @@ export default function AdminSessionsPage() {
                           </tbody>
                         </table>
                       </div>
+                      {participantsLoading && <p className="py-4 text-center text-xs text-muted">Loading participants…</p>}
+                      {participantTotal > 25 && (
+                        <div className="mt-3 flex items-center justify-end gap-2">
+                          <button disabled={participantPage === 1 || participantsLoading} onClick={() => loadParticipants(s.id, participantPage - 1)} className="rounded-lg border border-border px-3 py-1 text-xs text-muted disabled:opacity-40">Prev</button>
+                          <span className="text-xs text-muted">Page {participantPage} of {Math.ceil(participantTotal / 25)}</span>
+                          <button disabled={participantPage * 25 >= participantTotal || participantsLoading} onClick={() => loadParticipants(s.id, participantPage + 1)} className="rounded-lg border border-border px-3 py-1 text-xs text-muted disabled:opacity-40">Next</button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

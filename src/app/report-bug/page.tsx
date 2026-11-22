@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 interface BugReportMessageItem {
@@ -31,6 +31,7 @@ interface BugReportHistoryItem {
   adminNote?: string | null;
   createdAt: string;
   updatedAt: string;
+  messageCount: number;
   messages: BugReportMessageItem[];
 }
 
@@ -139,25 +140,32 @@ function StatusBadge({ status }: { status: ReportStatus }) {
 
 export default function ReportBugPage() {
   const [reports, setReports] = useState<BugReportHistoryItem[]>([]);
+  const [reportPage, setReportPage] = useState(1);
+  const [reportTotal, setReportTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sendError, setSendError] = useState("");
+  const [loadingMessagesId, setLoadingMessagesId] = useState<string | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      const response = await fetch("/api/bug-reports");
-      if (response.ok) {
-        setReports(await response.json());
-      }
-      setLoading(false);
+  const loadReports = useCallback(async () => {
+    setLoading(true);
+    const response = await fetch(`/api/bug-reports?page=${reportPage}&limit=20`);
+    if (response.ok) {
+      const data = await response.json();
+      setReports(data);
+      setReportTotal(Number(response.headers.get("X-Total-Count") || data.length));
     }
+    setLoading(false);
+  }, [reportPage]);
 
-    load();
-  }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => void loadReports(), 0);
+    return () => clearTimeout(timer);
+  }, [loadReports]);
 
   const counts = useMemo(() => {
     return {
@@ -184,6 +192,20 @@ export default function ReportBugPage() {
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: "nearest" });
   }, [selected?.id, selectedMessageCount]);
+
+  async function loadEarlierMessages(report: BugReportHistoryItem) {
+    setLoadingMessagesId(report.id);
+    const page = Math.floor(report.messages.length / 40) + 1;
+    const response = await fetch(`/api/bug-reports/${report.id}/messages?page=${page}&limit=40`);
+    if (response.ok) {
+      const data = await response.json();
+      const older = data.messages as BugReportMessageItem[];
+      setReports((current) => current.map((item) => item.id === report.id
+        ? { ...item, messages: [...older.filter((message) => !item.messages.some((existing) => existing.id === message.id)), ...item.messages] }
+        : item));
+    }
+    setLoadingMessagesId(null);
+  }
 
   async function sendReply(reportId: string) {
     const content = drafts[reportId]?.trim();
@@ -330,6 +352,13 @@ export default function ReportBugPage() {
                     })
                   )}
                 </div>
+                {reportTotal > 20 && (
+                  <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 dark:border-slate-800">
+                    <button type="button" disabled={reportPage === 1 || loading} onClick={() => setReportPage((page) => page - 1)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 disabled:opacity-40 dark:border-slate-700">Prev</button>
+                    <span className="text-[11px] text-slate-500">Page {reportPage} of {Math.ceil(reportTotal / 20)}</span>
+                    <button type="button" disabled={reportPage * 20 >= reportTotal || loading} onClick={() => setReportPage((page) => page + 1)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 disabled:opacity-40 dark:border-slate-700">Next</button>
+                  </div>
+                )}
               </div>
             </aside>
 
@@ -401,6 +430,14 @@ export default function ReportBugPage() {
                             <p className="whitespace-pre-wrap break-words">{selected.adminNote}</p>
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {selected.messages.length < selected.messageCount && (
+                      <div className="flex justify-center">
+                        <button type="button" disabled={loadingMessagesId === selected.id} onClick={() => loadEarlierMessages(selected)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 disabled:opacity-50 dark:border-slate-700 dark:text-slate-400">
+                          {loadingMessagesId === selected.id ? "Loading…" : "Load earlier replies"}
+                        </button>
                       </div>
                     )}
 
